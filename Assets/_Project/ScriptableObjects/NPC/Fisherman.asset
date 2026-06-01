@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 484c915584d8bd74eae247106a72e442, type: 3}
+  m_Name: Fisherman
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.NPC.NPCProfile
+  npcType: 0
+  npcName: Fisherman
+  minPatience: 20
+  maxPatience: 40
+  tipChance: 0.3
+  minDrinkTime: 5
+  maxDrinkTime: 10
+  possibleColorTints:
+  - {r: 0.30565417, g: 0.23800063, b: 0.67687595, a: 1}
+  - {r: 0.1352273, g: 0.20976627, b: 0.6864736, a: 1}
