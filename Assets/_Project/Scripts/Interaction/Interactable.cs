@@ -7,7 +7,7 @@ namespace GanhHangRong.Interaction
     /// </summary>
     public abstract class Interactable : MonoBehaviour
     {
-        [SerializeField] protected string promptText = "Nhấn E để tương tác";
+        [SerializeField] protected string promptText = "Nhấn F để tương tác";
         [SerializeField] protected bool canInteract = true;
         [SerializeField] protected float interactionCooldown = 0.5f;
 

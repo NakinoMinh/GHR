@@ -1,0 +1,10 @@
+Tea Tin Prefab Analysis:
+Old logic (-90, 0, 0): Height=0.02, Offset=0.01
+New logic (-90, 180, 0): Height=0.02, Offset=0.01
+
+Children Hierarchy:
+Total MeshRenderers: 1
+  Name: TeaTinPropTemp
+    Active: True
+    Local Bounds: Center=(0.00, 0.00, 0.00), Size=(0.02, 0.02, 0.02)
+    Local Pos=(0.00, 0.00, 0.00), Local Rot=(270.00, 0.00, 0.00), Local Scale=(100.00, 100.00, 100.00)

@@ -15,8 +15,9 @@ namespace GanhHangRong.Player
         [SerializeField] private float iceLevel = Constants.ICE_MAX;
 
         [Header("Kho Đồ")]
-        [SerializeField] private int teaSupply = 10;
-        [SerializeField] private int sugarSupply = 10;
+        [SerializeField] private int teaSupply = 1000;
+        [SerializeField] private int sugarSupply = 2000;
+        [SerializeField] private int coffeeSupply = 1500;
         [SerializeField] private int cupSupply = 20;
 
         // Properties
@@ -26,6 +27,7 @@ namespace GanhHangRong.Player
         public float IceLevel => iceLevel;
         public int TeaSupply => teaSupply;
         public int SugarSupply => sugarSupply;
+        public int CoffeeSupply => coffeeSupply;
         public int CupSupply => cupSupply;
 
         // Tracking cho hệ thống cảm xúc
@@ -139,21 +141,34 @@ namespace GanhHangRong.Player
         // ═══════════════════════════════════════════
         public bool HasSuppliesForTea()
         {
-            return teaSupply > 0 && sugarSupply > 0 && cupSupply > 0 && iceLevel > 5f;
+            return Interaction.CartItem.HasPreparedTea;
         }
 
         public void UseTeaSupplies()
         {
-            teaSupply--;
-            sugarSupply--;
-            cupSupply--;
+            Interaction.CartItem.HasPreparedTea = false;
+        }
+
+        public void TakeOneCup()
+        {
+            cupSupply = Mathf.Max(0, cupSupply - 1);
+        }
+
+        public void ConsumeTea(int amount)
+        {
+            teaSupply = Mathf.Max(0, teaSupply - amount);
         }
 
         public void AddSupplies(int tea, int sugar, int cups)
         {
-            teaSupply += tea;
-            sugarSupply += sugar;
+            teaSupply = Mathf.Min(1000, teaSupply + tea);
+            sugarSupply = Mathf.Min(2000, sugarSupply + sugar);
             cupSupply += cups;
+        }
+
+        public void AddCoffee(int coffee)
+        {
+            coffeeSupply = Mathf.Min(1500, coffeeSupply + coffee);
         }
 
         public void RecordCustomerServed()

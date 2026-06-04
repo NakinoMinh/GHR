@@ -12,6 +12,7 @@ namespace GanhHangRong.Systems
         public float fatigue;
         public int teaSupply;
         public int sugarSupply;
+        public int coffeeSupply;
         public int cupSupply;
 
         // Progress

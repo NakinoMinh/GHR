@@ -32,6 +32,7 @@ namespace GanhHangRong.NPC
         private TextMeshPro bubbleText;
 
         public NPCState CurrentState => currentState;
+        public CustomerSeat TargetSeat => targetSeat;
 
         private void Awake()
         {

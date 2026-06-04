@@ -34,7 +34,6 @@ namespace GanhHangRong.Player
         private bool isPushingCart = false;
         private bool isRunning = false;
         private Interaction.Interactable nearestInteractable;
-        private Interaction.CustomerSeat currentSeat; // Ghế đang ngồi
 
         public PlayerState CurrentState => currentState;
         public bool FacingRight => transform.forward.x >= 0;
@@ -75,7 +74,7 @@ namespace GanhHangRong.Player
 
         private void Update()
         {
-            if (!canMove || !GameManager.Instance.IsPlaying)
+            if (!GameManager.Instance.IsPlaying)
             {
                 moveDirection = Vector3.zero;
                 horizontalInput = 0f;
@@ -83,28 +82,42 @@ namespace GanhHangRong.Player
                 return;
             }
 
-            // Nếu đang ngồi, chặn mọi di chuyển bằng WASD, chỉ cho phép nhấn E để đứng lên
-            if (currentState == PlayerState.Sitting)
+            // Nếu đang tương tác với xe đẩy (góc nhìn thứ 1 từ mặt bàn)
+            if (currentState == PlayerState.Interacting)
             {
                 moveDirection = Vector3.zero;
                 horizontalInput = 0f;
                 verticalInput = 0f;
                 isRunning = false;
 
-                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                // Phục vụ khách hàng bằng phím Space
+                if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
                 {
-                    // Đứng dậy trực tiếp từ ghế đang ngồi
-                    if (currentSeat != null)
+                    var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                    if (cart != null)
                     {
-                        currentSeat.OnPlayerStandUp(this);
-                        currentSeat = null;
+                        cart.ServeFromFirstPerson(this);
                     }
-                    else
-                    {
-                        SetState(PlayerState.Idle);
-                    }
-                    EventManager.TriggerInteractionPromptHide();
                 }
+
+                // Nhấn F để thoát góc nhìn xe đẩy
+                if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                    if (cart != null)
+                    {
+                        cart.Interact(this); // Sẽ gọi ExitCartInteraction
+                    }
+                }
+                return;
+            }
+
+            // Nếu không thể di chuyển (ví dụ: đang thoại) thì chặn input đi lại
+            if (!canMove)
+            {
+                moveDirection = Vector3.zero;
+                horizontalInput = 0f;
+                verticalInput = 0f;
                 return;
             }
 
@@ -151,9 +164,17 @@ namespace GanhHangRong.Player
 
             // Tương tác
             CheckInteraction();
-            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            if (currentState != PlayerState.Interacting)
             {
-                TryInteract();
+                // Nhấn F để tương tác với vật thể gần nhất/đang trỏ vào
+                if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    if (nearestInteractable != null)
+                    {
+                        nearestInteractable.Interact(this);
+                        return;
+                    }
+                }
             }
 
             // Cập nhật trạng thái
@@ -209,22 +230,51 @@ namespace GanhHangRong.Player
 
         private void CheckInteraction()
         {
-            // Dùng QueryTriggerInteraction.Collide để detect cả BoxCollider có isTrigger = true (như ghế, xe đẩy)
-            Collider[] hits = Physics.OverlapSphere(transform.position, interactionRange, ~0, QueryTriggerInteraction.Collide);
-
             Interaction.Interactable closest = null;
-            float closestDist = float.MaxValue;
 
-            foreach (var hit in hits)
+            // 1. Ưu tiên Raycast từ tâm camera (hỗ trợ trỏ tâm ngắm vào xe đẩy)
+            if (Camera.main != null)
             {
-                var interactable = hit.GetComponent<Interaction.Interactable>();
-                if (interactable != null && interactable.CanInteract)
+                Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                RaycastHit hit;
+                // Tầm quét rộng hơn một chút cho thoải mái khi xoay camera
+                if (Physics.Raycast(ray, out hit, interactionRange + 2.5f, ~0, QueryTriggerInteraction.Collide))
                 {
-                    float dist = Vector3.Distance(transform.position, hit.transform.position);
-                    if (dist < closestDist)
+                    var interactable = hit.collider.GetComponent<Interaction.Interactable>();
+                    if (interactable == null)
                     {
-                        closestDist = dist;
-                        closest = interactable;
+                        interactable = hit.collider.GetComponentInParent<Interaction.Interactable>();
+                    }
+
+                    if (interactable != null && interactable.CanInteract)
+                    {
+                        // Đảm bảo người chơi không đứng quá xa vật thể
+                        float dist = Vector3.Distance(transform.position, interactable.transform.position);
+                        if (dist <= interactionRange + 2.0f)
+                        {
+                            closest = interactable;
+                        }
+                    }
+                }
+            }
+
+            // 2. Dự phòng: Quét OverlapSphere nếu không trỏ thẳng tâm camera
+            if (closest == null)
+            {
+                Collider[] hits = Physics.OverlapSphere(transform.position, interactionRange, ~0, QueryTriggerInteraction.Collide);
+                float closestDist = float.MaxValue;
+
+                foreach (var hit in hits)
+                {
+                    var interactable = hit.GetComponent<Interaction.Interactable>();
+                    if (interactable != null && interactable.CanInteract)
+                    {
+                        float dist = Vector3.Distance(transform.position, hit.transform.position);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closest = interactable;
+                        }
                     }
                 }
             }
@@ -243,12 +293,6 @@ namespace GanhHangRong.Player
         {
             if (nearestInteractable != null && nearestInteractable.CanInteract)
             {
-                // Nếu tương tác với ghế, lưu lại tham chiếu để đứng dậy sau
-                var seat = nearestInteractable as Interaction.CustomerSeat;
-                if (seat != null && currentState != PlayerState.Sitting)
-                {
-                    currentSeat = seat;
-                }
                 nearestInteractable.Interact(this);
             }
         }

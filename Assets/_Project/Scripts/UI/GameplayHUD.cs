@@ -33,6 +33,7 @@ namespace GanhHangRong.UI
         [SerializeField] private CanvasGroup canvasGroup;
 
         private PlayerStats playerStats;
+        private GameObject reticleObj;
 
         private void OnEnable()
         {
@@ -76,6 +77,24 @@ namespace GanhHangRong.UI
             }
 
             if (playerNameText != null) playerNameText.text = "Hoàng Hôn";
+
+            CreateReticle();
+        }
+
+        private void CreateReticle()
+        {
+            reticleObj = new GameObject("ReticleCircle");
+            reticleObj.transform.SetParent(this.transform, false);
+            var rect = reticleObj.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(6f, 6f); // Chấm ngắm nhỏ gọn ở tâm màn hình
+
+            var img = reticleObj.AddComponent<Image>();
+            img.sprite = null; // Đặt null để tránh lỗi tải tài nguyên Builtin của Unity, hiển thị dưới dạng chấm vuông mặc định
+            img.color = new Color(1f, 1f, 1f, 0.8f); // Màu trắng trong suốt nhẹ dễ nhìn
         }
 
         private void Update()
@@ -85,6 +104,12 @@ namespace GanhHangRong.UI
             if (Time.frameCount % 30 == 0 && playerStats != null) 
             {
                 UpdateInventory();
+            }
+
+            // Tự động ẩn/hiện tâm tròn tùy theo con trỏ chuột có bị khóa hay không
+            if (reticleObj != null)
+            {
+                reticleObj.SetActive(Cursor.lockState == CursorLockMode.Locked);
             }
         }
 
@@ -123,9 +148,23 @@ namespace GanhHangRong.UI
 
         private void UpdateInventory()
         {
-            if (teaCountText != null) teaCountText.text = $"TRÀ:\n{playerStats.TeaSupply}";
-            if (sugarCountText != null) sugarCountText.text = $"ĐƯỜNG:\n{playerStats.SugarSupply}";
-            if (cupCountText != null) cupCountText.text = $"LY:\n{playerStats.CupSupply}";
+            if (teaCountText != null) teaCountText.text = $"TRÀ:\n{playerStats.TeaSupply}g";
+            if (sugarCountText != null) sugarCountText.text = $"ĐƯỜNG:\n{playerStats.SugarSupply}g";
+            if (cupCountText != null)
+            {
+                if (Interaction.CartItem.IsHoldingCup)
+                {
+                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: Trà {Interaction.CartItem.TeaInCup}g, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
+                }
+                else if (Interaction.CartItem.HasPreparedTea)
+                {
+                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Sẵn sàng!)";
+                }
+                else
+                {
+                    cupCountText.text = $"LY:\n{playerStats.CupSupply}";
+                }
+            }
         }
 
         private void UpdateClock(float hour)

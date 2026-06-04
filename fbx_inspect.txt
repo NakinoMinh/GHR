@@ -1,6 +1,6 @@
-Loading FBX at: Assets/Meshy_AI_A_highly_detailed_3D__0531115205_texture_fbx/Meshy_AI_A_highly_detailed_3D__0531115205_texture.fbx
+Loading FBX at: Assets/ganhnuoc/Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture.fbx
 Prefab is null? False
-Prefab Name: Meshy_AI_A_highly_detailed_3D__0531115205_texture
+Prefab Name: Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture
 Number of MeshRenderers: 1
-- Renderer: Meshy_AI_A_highly_detailed_3D__0531115205_texture, Active: False
+- Renderer: Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture, Active: False
   Mesh Bounds: Center: (0.00, 0.00, 0.00), Extents: (0.01, 0.01, 0.01)

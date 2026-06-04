@@ -23,6 +23,7 @@ namespace GanhHangRong.Systems
                 data.fatigue = playerStats.Fatigue;
                 data.teaSupply = playerStats.TeaSupply;
                 data.sugarSupply = playerStats.SugarSupply;
+                data.coffeeSupply = playerStats.CoffeeSupply;
                 data.cupSupply = playerStats.CupSupply;
             }
 

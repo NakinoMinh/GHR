@@ -242,7 +242,7 @@ namespace GanhHangRong.Editor
             // ==========================================
             // 4. XE TRÀ ĐÁ & GHẾ NHỰA
             // ==========================================
-            string cartModelPath = "Assets/Meshy_AI_A_highly_detailed_3D__0531115205_texture_fbx/Meshy_AI_A_highly_detailed_3D__0531115205_texture.fbx";
+            string cartModelPath = "Assets/ganhnuoc/Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture.fbx";
             GameObject cartModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(cartModelPath);
             GameObject cartObj = null;
 
@@ -310,7 +310,7 @@ namespace GanhHangRong.Editor
                 // Mô hình FBX của bạn có kích thước Mesh rất nhỏ (extents 0.01 -> size 0.02)
                 // Chúng ta sẽ scale tự động để xe cao khoảng 1.6m
                 float targetHeight = 1.6f;
-                float unscaledHeight = CalculateModelHeight(cartObj, Quaternion.Euler(-90f, 0f, 0f), out float bottomOffsetAtScale1);
+                float unscaledHeight = CalculateModelHeight(cartObj, Quaternion.Euler(-90f, 180f, 0f), out float bottomOffsetAtScale1);
                 float scaleFactor = targetHeight / unscaledHeight;
 
                 cartObj.transform.localScale = Vector3.one * scaleFactor;
@@ -318,7 +318,7 @@ namespace GanhHangRong.Editor
                 // Đặt vị trí sao cho đáy của xe khớp sát mặt vỉa hè
                 float yPos = sidewalkTopY + (bottomOffsetAtScale1 * scaleFactor) + 0.002f;
                 cartObj.transform.position = new Vector3(4f, yPos, 0f);
-                cartObj.transform.rotation = Quaternion.Euler(-90f, 0f, 0f); // Đứng thẳng và xoay ngang 90 độ
+                cartObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f); // Xoay ngược lại 180 độ (yaw = 180)
 
                 // Gán vật liệu chi tiết
                 Material modelMat = CreateCartModelMaterial();
@@ -341,7 +341,428 @@ namespace GanhHangRong.Editor
                     boxCol.size = new Vector3(1.5f, 1.5f, 1.5f);
                 }
                 
-                cartObj.AddComponent<TeaCart>();
+                var teaCartComp = cartObj.AddComponent<TeaCart>();
+
+                // --- Add Kettle Prop ---
+                string kettleModelPath = "Assets/amnuoc/amdunnuoc.fbx";
+                GameObject kettlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(kettleModelPath);
+                if (kettlePrefab != null)
+                {
+                    GameObject kettleObj = (GameObject)PrefabUtility.InstantiatePrefab(kettlePrefab);
+                    kettleObj.name = "KettleProp";
+                    
+                    float kettleTargetHeight = 0.22f; // Thu nhỏ lại vừa vặn hơn (22cm)
+                    // Đo kích thước trước khi set parent để tránh bị ảnh hưởng bởi scale của cha
+                    float kettleUnscaledHeight = CalculateModelHeight(kettleObj, Quaternion.identity, out float kettleOffset);
+                    float kettleScaleFactor = kettleTargetHeight / kettleUnscaledHeight;
+                    
+                    kettleObj.transform.SetParent(cartObj.transform);
+                    // Quy đổi tỉ lệ cục bộ tương đối với cha
+                    kettleObj.transform.localScale = Vector3.one * (kettleScaleFactor / scaleFactor);
+                    
+                    float tableWorldY = sidewalkTopY + 0.63f; // Hạ độ cao xuống mặt bàn chính (khoảng 63cm trên vỉa hè)
+                    kettleObj.transform.position = new Vector3(3.65f, tableWorldY + (kettleOffset * kettleScaleFactor), -0.12f);
+                    kettleObj.transform.rotation = Quaternion.identity;
+                    
+                    Material kettleMat = CreateKettleMaterial();
+                    var kettleRenderers = kettleObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in kettleRenderers) r.sharedMaterial = kettleMat;
+
+                    // Đảm bảo vật phẩm đứng yên cố định (kinematic), không bị trượt hay rơi do vật lý
+                    var rbs = kettleObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    // Tự động gán CartItem component và Collider để tương tác ngắm tâm tròn click được luôn
+                    var cartItem = kettleObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.WaterKettle;
+                    so.FindProperty("itemName").stringValue = "Ấm Nước (Bình Thủy)";
+                    so.FindProperty("itemDescription").stringValue = "Ấm nước nóng để pha trà.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (kettleObj.GetComponent<Collider>() == null)
+                    {
+                        var col = kettleObj.AddComponent<BoxCollider>();
+                        var meshFilter = kettleObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Tea Tin Prop ---
+                string tinModelPath = "Assets/binhtra/Meshy_AI_Red_Vintage_Tea_Tin_0603084617_texture.fbx";
+                GameObject tinPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tinModelPath);
+                if (tinPrefab != null)
+                {
+                    GameObject tinObj = (GameObject)PrefabUtility.InstantiatePrefab(tinPrefab);
+                    tinObj.name = "TeaTinProp";
+                    
+                    float tinTargetHeight = 0.20f; // Thu nhỏ lại vừa vặn hơn (20cm)
+                    // Đo kích thước trước khi set parent theo góc đứng thẳng (-90 độ X, 180 độ Y) để khớp hoàn hảo
+                    float tinUnscaledHeight = CalculateModelHeight(tinObj, Quaternion.Euler(-90f, 180f, 0f), out float tinOffset);
+                    float tinScaleFactor = tinTargetHeight / tinUnscaledHeight;
+                    
+                    tinObj.transform.SetParent(cartObj.transform);
+                    // Quy đổi tỉ lệ cục bộ tương đối với cha
+                    tinObj.transform.localScale = Vector3.one * (tinScaleFactor / scaleFactor);
+                    
+                    float tableWorldY = sidewalkTopY + 0.63f; // Hạ độ cao xuống mặt bàn chính
+                    tinObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f); // Xoay đứng thẳng (-90 độ X) trước để khớp pivot đứng
+                    tinObj.transform.position = new Vector3(4.15f, tableWorldY + (tinOffset * tinScaleFactor), 0.12f);
+
+                    
+                    Material tinMat = CreateTeaTinMaterial();
+                    var tinRenderers = tinObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in tinRenderers) r.sharedMaterial = tinMat;
+
+                    // Đảm bảo vật phẩm đứng yên cố định (kinematic)
+                    var rbs = tinObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    // Tự động gán CartItem component và Collider
+                    var cartItem = tinObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.TeaTin;
+                    so.FindProperty("itemName").stringValue = "Bình Trà";
+                    so.FindProperty("itemDescription").stringValue = "Bình trà đỏ chứa lá trà.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (tinObj.GetComponent<Collider>() == null)
+                    {
+                        var col = tinObj.AddComponent<BoxCollider>();
+                        var meshFilter = tinObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Sugar Jar Prop ---
+                string sugarModelPath = "Assets/huduong/Meshy_AI_Cracked_Vintage_Jar_w_0603195416_texture.fbx";
+                GameObject sugarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(sugarModelPath);
+                if (sugarPrefab != null)
+                {
+                    GameObject sugarObj = (GameObject)PrefabUtility.InstantiatePrefab(sugarPrefab);
+                    sugarObj.name = "SugarJarProp";
+                    
+                    float sugarTargetHeight = 0.18f; // 18cm
+                    float sugarUnscaledHeight = CalculateModelHeight(sugarObj, Quaternion.Euler(-90f, 180f, 0f), out float sugarOffset);
+                    float sugarScaleFactor = sugarTargetHeight / sugarUnscaledHeight;
+                    
+                    sugarObj.transform.SetParent(cartObj.transform);
+                    sugarObj.transform.localScale = Vector3.one * (sugarScaleFactor / scaleFactor);
+                    
+                    float tableWorldY = sidewalkTopY + 0.63f;
+                    sugarObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    sugarObj.transform.position = new Vector3(3.8f, tableWorldY + (sugarOffset * sugarScaleFactor), 0.12f);
+                    
+                    Material sugarMat = CreateSugarJarMaterial();
+                    var sugarRenderers = sugarObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in sugarRenderers) r.sharedMaterial = sugarMat;
+
+                    var rbs = sugarObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    var cartItem = sugarObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.SugarJar;
+                    so.FindProperty("itemName").stringValue = "Hũ Đường";
+                    so.FindProperty("itemDescription").stringValue = "Hũ đựng đường cát để pha chế.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (sugarObj.GetComponent<Collider>() == null)
+                    {
+                        var col = sugarObj.AddComponent<BoxCollider>();
+                        var meshFilter = sugarObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Gas Stove Prop ---
+                string stoveModelPath = "Assets/bepga/Meshy_AI_Namilux_High_Power_Po_0603212351_texture.fbx";
+                GameObject stovePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(stoveModelPath);
+                if (stovePrefab != null)
+                {
+                    GameObject stoveObj = (GameObject)PrefabUtility.InstantiatePrefab(stovePrefab);
+                    stoveObj.name = "GasStoveProp";
+                    
+                    float stoveTargetHeight = 0.08f; // 8cm dẹt dẹp
+                    float stoveUnscaledHeight = CalculateModelHeight(stoveObj, Quaternion.Euler(-90f, 180f, 0f), out float stoveOffset);
+                    float stoveScaleFactor = stoveTargetHeight / stoveUnscaledHeight;
+                    
+                    stoveObj.transform.SetParent(cartObj.transform);
+                    stoveObj.transform.localScale = Vector3.one * (stoveScaleFactor / scaleFactor);
+                    
+                    float tableWorldY = sidewalkTopY + 0.63f;
+                    stoveObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    stoveObj.transform.position = new Vector3(3.95f, tableWorldY + (stoveOffset * stoveScaleFactor), -0.12f);
+                    
+                    Material stoveMat = CreateGasStoveMaterial();
+                    var stoveRenderers = stoveObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in stoveRenderers) r.sharedMaterial = stoveMat;
+
+                    var rbs = stoveObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    var cartItem = stoveObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.GasStove;
+                    so.FindProperty("itemName").stringValue = "Bếp Ga";
+                    so.FindProperty("itemDescription").stringValue = "Bếp ga mini Namilux.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (stoveObj.GetComponent<Collider>() == null)
+                    {
+                        var col = stoveObj.AddComponent<BoxCollider>();
+                        var meshFilter = stoveObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Coffee Jar Prop ---
+                string coffeeModelPath = "Assets/caphe/Meshy_AI_Cà_Phê_Phổ_Cổ_V_0603204206_texture.fbx";
+                GameObject coffeePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(coffeeModelPath);
+                if (coffeePrefab != null)
+                {
+                    GameObject coffeeObj = (GameObject)PrefabUtility.InstantiatePrefab(coffeePrefab);
+                    coffeeObj.name = "CoffeeProp";
+                    
+                    float coffeeTargetHeight = 0.18f; // 18cm
+                    float coffeeUnscaledHeight = CalculateModelHeight(coffeeObj, Quaternion.Euler(-90f, 180f, 0f), out float coffeeOffset);
+                    float coffeeScaleFactor = coffeeTargetHeight / coffeeUnscaledHeight;
+                    
+                    coffeeObj.transform.SetParent(cartObj.transform);
+                    coffeeObj.transform.localScale = Vector3.one * (coffeeScaleFactor / scaleFactor);
+                    
+                    float tableWorldY = sidewalkTopY + 0.63f;
+                    coffeeObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    coffeeObj.transform.position = new Vector3(4.35f, tableWorldY + (coffeeOffset * coffeeScaleFactor), -0.12f);
+                    
+                    Material coffeeMat = CreateCoffeeMaterial();
+                    var coffeeRenderers = coffeeObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in coffeeRenderers) r.sharedMaterial = coffeeMat;
+
+                    var rbs = coffeeObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    var cartItem = coffeeObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.Coffee;
+                    so.FindProperty("itemName").stringValue = "Bình Cà Phê";
+                    so.FindProperty("itemDescription").stringValue = "Bột cà phê nguyên chất.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (coffeeObj.GetComponent<Collider>() == null)
+                    {
+                        var col = coffeeObj.AddComponent<BoxCollider>();
+                        var meshFilter = coffeeObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Ice Cooler Prop ---
+                string iceModelPath = "Assets/binhdungda/Meshy_AI_Open_Red_Cooler_with__0603212035_texture.fbx";
+                GameObject icePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(iceModelPath);
+                if (icePrefab != null)
+                {
+                    GameObject iceObj = (GameObject)PrefabUtility.InstantiatePrefab(icePrefab);
+                    iceObj.name = "IceCoolerProp";
+                    
+                    float iceTargetHeight = 0.45f; // 45cm tall
+                    float iceUnscaledHeight = CalculateModelHeight(iceObj, Quaternion.Euler(-90f, 180f, 0f), out float iceOffset);
+                    float iceScaleFactor = iceTargetHeight / iceUnscaledHeight;
+                    
+                    iceObj.transform.SetParent(envParent.transform);
+                    iceObj.transform.localScale = Vector3.one * iceScaleFactor;
+                    
+                    iceObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    iceObj.transform.position = new Vector3(3.0f, sidewalkTopY + (iceOffset * iceScaleFactor) + 0.002f, -0.6f);
+                    
+                    Material iceMat = CreateIceCoolerMaterial();
+                    var iceRenderers = iceObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in iceRenderers) r.sharedMaterial = iceMat;
+
+                    var rbs = iceObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    var cartItem = iceObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.IceCooler;
+                    so.FindProperty("itemName").stringValue = "Bình Đựng Đá";
+                    so.FindProperty("itemDescription").stringValue = "Thùng chứa đá lạnh.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (iceObj.GetComponent<Collider>() == null)
+                    {
+                        var col = iceObj.AddComponent<BoxCollider>();
+                        var meshFilter = iceObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Water Bottle Prop ---
+                string waterModelPath = "Assets/binhnuoc/Meshy_AI_Sài_Gòn_Aquwa_Bottl_0603204228_texture.fbx";
+                GameObject waterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(waterModelPath);
+                if (waterPrefab != null)
+                {
+                    GameObject waterObj = (GameObject)PrefabUtility.InstantiatePrefab(waterPrefab);
+                    waterObj.name = "WaterBottleProp";
+                    
+                    float waterTargetHeight = 0.40f; // 40cm tall
+                    float waterUnscaledHeight = CalculateModelHeight(waterObj, Quaternion.Euler(-90f, 180f, 0f), out float waterOffset);
+                    float waterScaleFactor = waterTargetHeight / waterUnscaledHeight;
+                    
+                    waterObj.transform.SetParent(envParent.transform);
+                    waterObj.transform.localScale = Vector3.one * waterScaleFactor;
+                    
+                    waterObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    waterObj.transform.position = new Vector3(2.6f, sidewalkTopY + (waterOffset * waterScaleFactor) + 0.002f, -0.6f);
+                    
+                    Material waterMat = CreateWaterBottleMaterial();
+                    var waterRenderers = waterObj.GetComponentsInChildren<MeshRenderer>(true);
+                    foreach (var r in waterRenderers) r.sharedMaterial = waterMat;
+
+                    var rbs = waterObj.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+
+                    var cartItem = waterObj.AddComponent<CartItem>();
+                    var so = new SerializedObject(cartItem);
+                    so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.WaterBottle;
+                    so.FindProperty("itemName").stringValue = "Bình Nước";
+                    so.FindProperty("itemDescription").stringValue = "Bình nước lọc pha chế.";
+                    so.ApplyModifiedPropertiesWithoutUndo();
+
+                    if (waterObj.GetComponent<Collider>() == null)
+                    {
+                        var col = waterObj.AddComponent<BoxCollider>();
+                        var meshFilter = waterObj.GetComponentInChildren<MeshFilter>();
+                        if (meshFilter != null && meshFilter.sharedMesh != null)
+                        {
+                            col.center = meshFilter.sharedMesh.bounds.center;
+                            col.size = meshFilter.sharedMesh.bounds.size;
+                        }
+                    }
+                }
+
+                // --- Add Water Cups ---
+                string cupModelPath = "Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture.fbx";
+                GameObject cupPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(cupModelPath);
+                if (cupPrefab != null)
+                {
+                    Vector3[] cupPositions = new Vector3[]
+                    {
+                        new Vector3(3.48f, 0f, 0.04f),
+                        new Vector3(3.56f, 0f, 0.04f),
+                        new Vector3(3.48f, 0f, 0.12f),
+                        new Vector3(3.56f, 0f, 0.12f),
+                        new Vector3(3.52f, 0f, 0.20f)
+                    };
+
+                    Material cupMat = CreateWaterCupMaterial();
+
+                    for (int i = 0; i < cupPositions.Length; i++)
+                    {
+                        GameObject cupObj = (GameObject)PrefabUtility.InstantiatePrefab(cupPrefab);
+                        cupObj.name = $"WaterCupProp_{i + 1}";
+
+                        float cupTargetHeight = 0.10f; // 10cm tall (typical glass)
+                        float cupUnscaledHeight = CalculateModelHeight(cupObj, Quaternion.Euler(-90f, 180f, 0f), out float cupOffset);
+                        float cupScaleFactor = cupTargetHeight / cupUnscaledHeight;
+
+                        cupObj.transform.SetParent(cartObj.transform);
+                        cupObj.transform.localScale = Vector3.one * (cupScaleFactor / scaleFactor);
+
+                        float tableWorldY = sidewalkTopY + 0.63f;
+                        cupObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                        cupObj.transform.position = new Vector3(cupPositions[i].x, tableWorldY + (cupOffset * cupScaleFactor), cupPositions[i].z);
+
+                        var cupRenderers = cupObj.GetComponentsInChildren<MeshRenderer>(true);
+                        foreach (var r in cupRenderers) r.sharedMaterial = cupMat;
+
+                        var rbs = cupObj.GetComponentsInChildren<Rigidbody>(true);
+                        foreach (var rb in rbs)
+                        {
+                            rb.isKinematic = true;
+                            rb.useGravity = false;
+                        }
+
+                        var cartItem = cupObj.AddComponent<CartItem>();
+                        var so = new SerializedObject(cartItem);
+                        so.FindProperty("itemType").enumValueIndex = (int)CartItem.CartItemType.WaterCup;
+                        so.FindProperty("itemName").stringValue = "Ly Nước";
+                        so.FindProperty("itemDescription").stringValue = "Ly nước dùng để pha chế trà đá.";
+                        so.ApplyModifiedPropertiesWithoutUndo();
+
+                        if (cupObj.GetComponent<Collider>() == null)
+                        {
+                            var col = cupObj.AddComponent<BoxCollider>();
+                            var meshFilter = cupObj.GetComponentInChildren<MeshFilter>();
+                            if (meshFilter != null && meshFilter.sharedMesh != null)
+                            {
+                                col.center = meshFilter.sharedMesh.bounds.center;
+                                col.size = meshFilter.sharedMesh.bounds.size;
+                            }
+                        }
+                    }
+                }
+
+                // --- Add First Person Camera Point ---
+                GameObject camPointObj = new GameObject("FirstPersonCameraPoint");
+                camPointObj.transform.SetParent(cartObj.transform);
+                camPointObj.transform.position = new Vector3(4.0f, sidewalkTopY + 1.55f, 0.9f);
+                camPointObj.transform.rotation = Quaternion.Euler(30f, 180f, 0f);
+                
+                var camField = typeof(TeaCart).GetField("cameraViewPoint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (camField != null) camField.SetValue(teaCartComp, camPointObj.transform);
             }
             else
             {
@@ -396,17 +817,7 @@ namespace GanhHangRong.Editor
             SpawnTable(tablePos4, tablesGroup, tableMat);
             SpawnChairsAroundTable(tablePos4, chairsGroup, chairMat);
 
-            // Dãy xe đẩy: Ghế màu đỏ của xe đẩy để người chơi ngồi đợi khách, nghỉ mệt
-            Vector3 cartStoolPos = new Vector3(4.8f, sidewalkTopY, -0.3f);
-            GameObject cartSeatObj = SpawnChair(cartStoolPos, -90f, chairsGroup, chairMat);
-            if (cartSeatObj != null)
-            {
-                var seatComp = cartSeatObj.GetComponent<CustomerSeat>();
-                if (seatComp != null)
-                {
-                    seatComp.IsPlayerOnly = true;
-                }
-            }
+            // Đã xóa ghế đỏ cạnh xe đẩy theo yêu cầu
 
             GameObject playerObj = new GameObject("Player_HoangHon");
             playerObj.tag = "Player";
@@ -789,94 +1200,16 @@ namespace GanhHangRong.Editor
             var clockOutline = clockText.gameObject.AddComponent<UnityEngine.UI.Outline>();
             clockOutline.effectColor = Color.black; clockOutline.effectDistance = new Vector2(2, -2);
 
-            // 4. Bottom Center - Mặt Bàn Pha Chế
-            GameObject invPanel = new GameObject("InventoryPanel");
-            invPanel.transform.SetParent(hudObj.transform, false);
-            var invRect = invPanel.AddComponent<RectTransform>();
-            invRect.anchorMin = new Vector2(0.5f, 0); invRect.anchorMax = new Vector2(0.5f, 0);
-            invRect.pivot = new Vector2(0.5f, 0);
-            invRect.anchoredPosition = new Vector2(0, 0);
-            invRect.sizeDelta = new Vector2(1200, 200);
-            
-            if (sprCounter != null) {
-                var invImg = invPanel.AddComponent<UnityEngine.UI.Image>();
-                invImg.sprite = sprCounter;
-                invImg.type = UnityEngine.UI.Image.Type.Simple;
-                invImg.preserveAspect = false; // Stretch để fill toàn bộ thanh dưới
-            } else {
-                invPanel.AddComponent<UnityEngine.UI.Image>().color = new Color(0.6f, 0.6f, 0.6f, 1f);
-            }
-            
-            var invTitle = new GameObject("Title").AddComponent<TMPro.TextMeshProUGUI>();
-            invTitle.transform.SetParent(invPanel.transform, false);
-            invTitle.rectTransform.anchoredPosition = new Vector2(-400, 80);
-            invTitle.rectTransform.sizeDelta = new Vector2(300, 40);
-            invTitle.text = "Mặt Bàn Pha Chế";
-            invTitle.fontSize = 24; invTitle.alignment = TMPro.TextAlignmentOptions.Center;
-            invTitle.color = new Color(1f, 0.9f, 0.8f);
-            invTitle.fontStyle = TMPro.FontStyles.Bold;
-
-            var hlgObj = new GameObject("SlotContainer");
-            hlgObj.transform.SetParent(invPanel.transform, false);
-            var hlgRect = hlgObj.AddComponent<RectTransform>();
-            hlgRect.anchorMin = Vector2.zero; hlgRect.anchorMax = Vector2.one;
-            hlgRect.offsetMin = new Vector2(50, 10); hlgRect.offsetMax = new Vector2(-50, -30);
-
-            var hlg = hlgObj.AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-            hlg.childAlignment = TextAnchor.MiddleCenter; hlg.spacing = 30;
-            hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
-
-            TMPro.TextMeshProUGUI[] invTexts = new TMPro.TextMeshProUGUI[4];
-            string[] invNames = { "TRÀ:\n10", "ĐƯỜNG:\n10", "LY:\n20", "ĐÁ:\n100%" };
-            Sprite[] invSprites = { sprTea, sprSugar, sprCup, sprIce };
-
-            for(int i=0; i<4; i++) {
-                GameObject slot = new GameObject($"Slot_{i}");
-                slot.transform.SetParent(hlgObj.transform, false);
-                var le = slot.AddComponent<UnityEngine.UI.LayoutElement>();
-                le.minWidth = 180; le.minHeight = 120;
-                
-                // Icon
-                GameObject iconObj = new GameObject("Icon");
-                iconObj.transform.SetParent(slot.transform, false);
-                var iconRect = iconObj.AddComponent<RectTransform>();
-                iconRect.anchorMin = new Vector2(0, 0); iconRect.anchorMax = new Vector2(0, 1);
-                iconRect.pivot = new Vector2(0, 0.5f);
-                iconRect.anchoredPosition = new Vector2(0, 0);
-                iconRect.sizeDelta = new Vector2(100, 100);
-                
-                var iconImg = iconObj.AddComponent<UnityEngine.UI.Image>();
-                if (invSprites[i] != null) {
-                    iconImg.sprite = invSprites[i];
-                    iconImg.preserveAspect = true;
-                }
-                
-                // Text
-                var text = new GameObject("Text").AddComponent<TMPro.TextMeshProUGUI>();
-                text.transform.SetParent(slot.transform, false);
-                text.rectTransform.anchorMin = new Vector2(1, 0); text.rectTransform.anchorMax = new Vector2(1, 1);
-                text.rectTransform.pivot = new Vector2(1, 0.5f);
-                text.rectTransform.anchoredPosition = new Vector2(0, 0);
-                text.rectTransform.sizeDelta = new Vector2(80, 100);
-                
-                text.text = invNames[i]; 
-                text.fontSize = 24; 
-                text.alignment = TMPro.TextAlignmentOptions.Center;
-                text.color = new Color(0.2f, 0.2f, 0.2f);
-                text.fontStyle = TMPro.FontStyles.Bold;
-                invTexts[i] = text;
-            }
-
             // Gán reference cho GameplayHUD qua Reflection
             gameplayHUD.GetType().GetField("playerNameText", bf).SetValue(gameplayHUD, nameText);
             gameplayHUD.GetType().GetField("energySlider", bf).SetValue(gameplayHUD, energySlider);
             gameplayHUD.GetType().GetField("stressSlider", bf).SetValue(gameplayHUD, stressSlider);
             gameplayHUD.GetType().GetField("moneyText", bf).SetValue(gameplayHUD, moneyText);
             gameplayHUD.GetType().GetField("clockText", bf).SetValue(gameplayHUD, clockText);
-            gameplayHUD.GetType().GetField("teaCountText", bf).SetValue(gameplayHUD, invTexts[0]);
-            gameplayHUD.GetType().GetField("sugarCountText", bf).SetValue(gameplayHUD, invTexts[1]);
-            gameplayHUD.GetType().GetField("cupCountText", bf).SetValue(gameplayHUD, invTexts[2]);
-            gameplayHUD.GetType().GetField("iceLevelText", bf).SetValue(gameplayHUD, invTexts[3]);
+            gameplayHUD.GetType().GetField("teaCountText", bf).SetValue(gameplayHUD, null);
+            gameplayHUD.GetType().GetField("sugarCountText", bf).SetValue(gameplayHUD, null);
+            gameplayHUD.GetType().GetField("cupCountText", bf).SetValue(gameplayHUD, null);
+            gameplayHUD.GetType().GetField("iceLevelText", bf).SetValue(gameplayHUD, null);
 
             GameObject promptObj = new GameObject("InteractionPrompt");
             promptObj.transform.SetParent(canvasObj.transform, false);
@@ -897,7 +1230,7 @@ namespace GanhHangRong.Editor
             var promptText = pTextObj.AddComponent<TMPro.TextMeshProUGUI>();
             promptText.rectTransform.anchorMin = Vector2.zero; promptText.rectTransform.anchorMax = Vector2.one;
             promptText.rectTransform.sizeDelta = Vector2.zero;
-            promptText.text = "Nhấn E";
+            promptText.text = "Nhấn F";
             promptText.fontSize = 28; promptText.color = Color.white;
             promptText.alignment = TMPro.TextAlignmentOptions.Center;
             promptUI.GetType().GetField("promptText", bf).SetValue(promptUI, promptText);
@@ -993,39 +1326,40 @@ namespace GanhHangRong.Editor
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
                 mat = new Material(shader);
-
-                // Gán Albedo
-                Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Meshy_AI_A_highly_detailed_3D__0531115205_texture_fbx/Meshy_AI_A_highly_detailed_3D__0531115205_texture.png");
-                if (albedoTex != null)
-                {
-                    if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
-                    else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
-                }
-
-                // Gán Normal map và cấu hình TextureImporter
-                string normalPath = "Assets/Meshy_AI_A_highly_detailed_3D__0531115205_texture_fbx/Meshy_AI_A_highly_detailed_3D__0531115205_texture_normal.png";
-                var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
-                if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
-                {
-                    normalImporter.textureType = TextureImporterType.NormalMap;
-                    normalImporter.SaveAndReimport();
-                }
-
-                Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
-                if (normalTex != null)
-                {
-                    if (mat.HasProperty("_BumpMap"))
-                    {
-                        mat.SetTexture("_BumpMap", normalTex);
-                        mat.EnableKeyword("_NORMALMAP");
-                    }
-                }
-
                 if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
                     System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
-
                 AssetDatabase.CreateAsset(mat, matPath);
             }
+
+            // Gán Albedo
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ganhnuoc/Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            // Gán Normal map và cấu hình TextureImporter
+            string normalPath = "Assets/ganhnuoc/Meshy_AI_Vietnam_Sugarcane_Jui_0602210551_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
             return mat;
         }
 
@@ -1252,7 +1586,7 @@ namespace GanhHangRong.Editor
 
         private static void SpawnChairsAroundTable(Vector3 tablePos, GameObject parent, Material chairMat)
         {
-            float offset = 0.45f;
+            float offset = 0.7f;
             // Trái (hướng Đông)
             SpawnChair(new Vector3(tablePos.x - offset, tablePos.y, tablePos.z), 90f, parent, chairMat);
             // Phải (hướng Tây)
@@ -1708,18 +2042,385 @@ namespace GanhHangRong.Editor
             }
         }
 
+        private static Material CreateKettleMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/KettleMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                mat.color = new Color(0.8f, 0.8f, 0.8f);
+                if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0.9f);
+                if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.8f);
+                if (mat.HasProperty("_Roughness")) mat.SetFloat("_Roughness", 0.2f);
+                
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+            return mat;
+        }
+
+        private static Material CreateTeaTinMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/TeaTinMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            // Gán Albedo
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/binhtra/Meshy_AI_Red_Vintage_Tea_Tin_0603084617_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            // Gán Normal map
+            string normalPath = "Assets/binhtra/Meshy_AI_Red_Vintage_Tea_Tin_0603084617_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            // Gán Metallic
+            string metallicPath = "Assets/binhtra/Meshy_AI_Red_Vintage_Tea_Tin_0603084617_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateSugarJarMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/SugarJarMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/huduong/Meshy_AI_Cracked_Vintage_Jar_w_0603195416_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/huduong/Meshy_AI_Cracked_Vintage_Jar_w_0603195416_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/huduong/Meshy_AI_Cracked_Vintage_Jar_w_0603195416_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateGasStoveMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/GasStoveMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/bepga/Meshy_AI_Namilux_High_Power_Po_0603212351_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/bepga/Meshy_AI_Namilux_High_Power_Po_0603212351_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/bepga/Meshy_AI_Namilux_High_Power_Po_0603212351_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateCoffeeMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/CoffeeMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/caphe/Meshy_AI_Cà_Phê_Phổ_Cổ_V_0603204206_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/caphe/Meshy_AI_Cà_Phê_Phổ_Cổ_V_0603204206_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/caphe/Meshy_AI_Cà_Phê_Phổ_Cổ_V_0603204206_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateIceCoolerMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/IceCoolerMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/binhdungda/Meshy_AI_Open_Red_Cooler_with__0603212035_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/binhdungda/Meshy_AI_Open_Red_Cooler_with__0603212035_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/binhdungda/Meshy_AI_Open_Red_Cooler_with__0603212035_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateWaterBottleMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/WaterBottleMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/binhnuoc/Meshy_AI_Sài_Gòn_Aquwa_Bottl_0603204228_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/binhnuoc/Meshy_AI_Sài_Gòn_Aquwa_Bottl_0603204228_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/binhnuoc/Meshy_AI_Sài_Gòn_Aquwa_Bottl_0603204228_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
+        private static Material CreateWaterCupMaterial()
+        {
+            string matPath = "Assets/_Project/Art/Materials/WaterCupMat.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                if (!System.IO.Directory.Exists("Assets/_Project/Art/Materials"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Art/Materials");
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+
+            Texture2D albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture.png");
+            if (albedoTex != null)
+            {
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedoTex);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedoTex);
+            }
+
+            string normalPath = "Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture_normal.png";
+            var normalImporter = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normalTex != null)
+            {
+                if (mat.HasProperty("_BumpMap"))
+                {
+                    mat.SetTexture("_BumpMap", normalTex);
+                    mat.EnableKeyword("_NORMALMAP");
+                }
+            }
+
+            string metallicPath = "Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture_metallic.png";
+            Texture2D metallicTex = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallicTex != null)
+            {
+                if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", metallicTex);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
+        }
+
         private static float CalculateModelHeight(GameObject obj, Quaternion rotation, out float bottomOffsetAtScale1)
         {
-            Vector3 originalScale = obj.transform.localScale;
-            Quaternion originalRotation = obj.transform.rotation;
-            Vector3 originalPosition = obj.transform.position;
-
-            obj.transform.localScale = Vector3.one;
-            obj.transform.rotation = rotation;
-            obj.transform.position = Vector3.zero;
-
             Bounds worldBounds = new Bounds();
             bool hasBounds = false;
+
+            Matrix4x4 rootToWorld = Matrix4x4.TRS(Vector3.zero, rotation, Vector3.one);
 
             var renderers = obj.GetComponentsInChildren<MeshRenderer>(true);
             foreach (var mr in renderers)
@@ -1727,6 +2428,17 @@ namespace GanhHangRong.Editor
                 var mf = mr.GetComponent<MeshFilter>();
                 if (mf != null && mf.sharedMesh != null)
                 {
+                    // Compute localToRoot matrix manually to bypass stale world transform issues in Editor
+                    Matrix4x4 localToRoot = Matrix4x4.identity;
+                    Transform t = mr.transform;
+                    while (t != obj.transform && t != null)
+                    {
+                        localToRoot = Matrix4x4.TRS(t.localPosition, t.localRotation, t.localScale) * localToRoot;
+                        t = t.parent;
+                    }
+
+                    Matrix4x4 childToWorld = rootToWorld * localToRoot;
+
                     Bounds localBounds = mf.sharedMesh.bounds;
                     Vector3[] corners = new Vector3[8];
                     Vector3 min = localBounds.min;
@@ -1743,7 +2455,7 @@ namespace GanhHangRong.Editor
 
                     foreach (var corner in corners)
                     {
-                        Vector3 worldCorner = mr.transform.TransformPoint(corner);
+                        Vector3 worldCorner = childToWorld.MultiplyPoint3x4(corner);
                         if (!hasBounds)
                         {
                             worldBounds = new Bounds(worldCorner, Vector3.zero);
@@ -1762,6 +2474,17 @@ namespace GanhHangRong.Editor
             {
                 if (smr.sharedMesh != null)
                 {
+                    // Compute localToRoot matrix manually
+                    Matrix4x4 localToRoot = Matrix4x4.identity;
+                    Transform t = smr.transform;
+                    while (t != obj.transform && t != null)
+                    {
+                        localToRoot = Matrix4x4.TRS(t.localPosition, t.localRotation, t.localScale) * localToRoot;
+                        t = t.parent;
+                    }
+
+                    Matrix4x4 childToWorld = rootToWorld * localToRoot;
+
                     Bounds localBounds = smr.sharedMesh.bounds;
                     Vector3[] corners = new Vector3[8];
                     Vector3 min = localBounds.min;
@@ -1778,7 +2501,7 @@ namespace GanhHangRong.Editor
 
                     foreach (var corner in corners)
                     {
-                        Vector3 worldCorner = smr.transform.TransformPoint(corner);
+                        Vector3 worldCorner = childToWorld.MultiplyPoint3x4(corner);
                         if (!hasBounds)
                         {
                             worldBounds = new Bounds(worldCorner, Vector3.zero);
@@ -1791,11 +2514,6 @@ namespace GanhHangRong.Editor
                     }
                 }
             }
-
-            // Restore original transform
-            obj.transform.localScale = originalScale;
-            obj.transform.rotation = originalRotation;
-            obj.transform.position = originalPosition;
 
             if (hasBounds)
             {
