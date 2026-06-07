@@ -223,11 +223,17 @@ namespace GanhHangRong.Editor
                 spawnPrefab("Stone Floor prefab.prefab", $"StoneFloor_2_{x}", new Vector3(x, 0f, stoneZ2), Quaternion.identity, envParent.transform);
             }
 
-            // Spawn một hàng nền đá (Stone Floor) chạy dọc ở bên trái vỉa hè người chơi (phía sau xe trà đá)
+            // Spawn 4 hàng nền đá (Stone Floor) mở rộng ra hướng biển (Z dương)
             float stoneLeftZ = (stepSidewalkZ / 2f) + (stepStoneZ / 2f);
-            for (float x = -40f; x <= 120f; x += stepStoneX)
+            float fenceZ = stoneLeftZ;
+            for (int i = 0; i < 4; i++)
             {
-                spawnPrefab("Stone Floor prefab.prefab", $"StoneFloor_Left_{x}", new Vector3(x, 0f, stoneLeftZ), Quaternion.identity, envParent.transform);
+                float z = stoneLeftZ + i * stepStoneZ;
+                for (float x = -40f; x <= 120f; x += stepStoneX)
+                {
+                    spawnPrefab("Stone Floor prefab.prefab", $"StoneFloor_Sea_{i}_{x}", new Vector3(x, 0f, z), Quaternion.identity, envParent.transform);
+                }
+                fenceZ = z + (stepStoneZ / 2f) - 0.2f; // Mép ngoài cùng của nền đá, lui vào 0.2m
             }
 
             // Spawn 1 căn nhà Building_N_Prefab ở phía bên phải trên nền Stone Floor (Z = stoneZ2) quay mặt về phía đường
@@ -238,6 +244,10 @@ namespace GanhHangRong.Editor
 
             // Spawn 1 máy bán nước ColaMachine prefab ở bên trái tòa Building_N_Prefab (X = 20f, dịch hẳn ra ngoài để không bị chìm vào trong tường nhà)
             spawnPrefab("ColaMachine prefab.prefab", "ColaMachine_Foreground", new Vector3(20f, 0f, stoneZ2), Quaternion.identity, envParent.transform);
+
+            CreateSea(envParent, matWater);
+            CreateBoats(envParent);
+            CreateRailing(envParent, matRailing, fenceZ);
 
             // ==========================================
             // 4. XE TRÀ ĐÁ & GHẾ NHỰA
@@ -971,53 +981,13 @@ namespace GanhHangRong.Editor
             managersObj.AddComponent<GanhHangRong.Systems.GameplayLoop>();
             var npcVisualFactory = managersObj.AddComponent<NPCVisualFactory>();
             
-            // Tìm và gán model Grab rider (biped có animation đi bộ)
-            string grabModelPath = "Assets/ronaldo/Meshy_AI_Grab_Delivery_Rider_biped_Animation_Running_withSkin.fbx";
-            GameObject grabModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(grabModelPath);
-
-            // Tạo/Load Animator Controller cho Grab rider
-            string controllerPath = "Assets/_Project/Animations/NPC/NPCGrabAnimController.controller";
-            RuntimeAnimatorController grabController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath);
-            if (grabController == null)
-            {
-                if (!System.IO.Directory.Exists("Assets/_Project/Animations"))
-                    System.IO.Directory.CreateDirectory("Assets/_Project/Animations");
-                if (!System.IO.Directory.Exists("Assets/_Project/Animations/NPC"))
-                    System.IO.Directory.CreateDirectory("Assets/_Project/Animations/NPC");
-
-                AnimationClip clip = null;
-                var assets = AssetDatabase.LoadAllAssetsAtPath(grabModelPath);
-                foreach (var asset in assets)
-                {
-                    if (asset is AnimationClip && !asset.name.StartsWith("__preview__"))
-                    {
-                        clip = (AnimationClip)asset;
-                        break;
-                    }
-                }
-
-                if (clip != null)
-                {
-                    var animController = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
-                    var rootStateMachine = animController.layers[0].stateMachine;
-                    var state = rootStateMachine.AddState("WalkOrRun");
-                    state.motion = clip;
-                    grabController = animController;
-                    Debug.Log($"[SceneBuilder] Created Animator Controller at {controllerPath} with clip {clip.name}");
-                }
-                else
-                {
-                    Debug.LogError($"[SceneBuilder] Could not find AnimationClip in FBX at {grabModelPath}");
-                }
-            }
-            
             var serializedFactory = new SerializedObject(npcVisualFactory);
-            serializedFactory.FindProperty("npcModelPrefab").objectReferenceValue = grabModelPrefab;
             
-            // Tạo vật liệu Grab rider nếu chưa có
-            Material grabMat = CreateGrabRiderMaterial();
-            serializedFactory.FindProperty("npcModelMaterial").objectReferenceValue = grabMat;
-            serializedFactory.FindProperty("npcModelAnimatorController").objectReferenceValue = grabController;
+            Material npcMat = CreateGrabRiderMaterial(); 
+            
+            AddNPCModelData(serializedFactory, 0, "Assets/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_withSkin.glb", "NPCGrabController", npcMat);
+            AddNPCModelData(serializedFactory, 1, "Assets/Meshy_AI_Maroon_Tunic_Portrait_biped/Meshy_AI_Maroon_Tunic_Portrait_biped_Animation_Walking_withSkin.glb", "NPCMaroonController", npcMat);
+            AddNPCModelData(serializedFactory, 2, "Assets/Meshy_AI_T_Pose_in_the_Studio_biped/Meshy_AI_T_Pose_in_the_Studio_biped_Animation_Walking_withSkin.glb", "NPCTPoseController", npcMat);
             
             serializedFactory.ApplyModifiedPropertiesWithoutUndo();
 
@@ -1771,15 +1741,62 @@ namespace GanhHangRong.Editor
             animator.applyRootMotion = false;
         }
 
-        private static void CreateRailing(GameObject parent, Material mat)
+        private static void AddNPCModelData(SerializedObject factoryObj, int index, string modelPath, string controllerName, Material mat)
+        {
+            GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (modelPrefab == null)
+            {
+                Debug.LogWarning($"[SceneBuilder] Không tìm thấy NPC model tại {modelPath}");
+                return;
+            }
+
+            string controllerPath = $"Assets/_Project/Animations/NPC/{controllerName}.controller";
+            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath);
+            if (controller == null)
+            {
+                if (!System.IO.Directory.Exists("Assets/_Project/Animations/NPC"))
+                    System.IO.Directory.CreateDirectory("Assets/_Project/Animations/NPC");
+
+                AnimationClip clip = null;
+                var assets = AssetDatabase.LoadAllAssetsAtPath(modelPath);
+                foreach (var asset in assets)
+                {
+                    if (asset is AnimationClip && !asset.name.StartsWith("__preview__"))
+                    {
+                        clip = (AnimationClip)asset;
+                        break;
+                    }
+                }
+
+                if (clip != null)
+                {
+                    var animController = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
+                    var rootStateMachine = animController.layers[0].stateMachine;
+                    var state = rootStateMachine.AddState("WalkOrRun");
+                    state.motion = clip;
+                    controller = animController;
+                }
+            }
+
+            var arrayProp = factoryObj.FindProperty("npcModels");
+            if (arrayProp.arraySize <= index) arrayProp.arraySize = index + 1;
+            
+            var element = arrayProp.GetArrayElementAtIndex(index);
+            element.FindPropertyRelative("prefab").objectReferenceValue = modelPrefab;
+            element.FindPropertyRelative("material").objectReferenceValue = mat;
+            element.FindPropertyRelative("animatorController").objectReferenceValue = controller;
+        }
+
+        private static void CreateRailing(GameObject parent, Material mat, float zPos)
         {
             GameObject railingGroup = new GameObject("Railing_Group");
             railingGroup.transform.SetParent(parent.transform);
 
-            float startX = -30f;
-            float endX = 30f;
+            float startX = -40f;
+            float endX = 120f;
             float step = 3f;
-            float zPos = 2.4f;
+            float length = endX - startX;
+            float centerX = startX + length / 2f;
 
             // Cột lan can đứng
             for (float x = startX; x <= endX; x += step)
@@ -1797,8 +1814,8 @@ namespace GanhHangRong.Editor
             GameObject topRail = GameObject.CreatePrimitive(PrimitiveType.Cube);
             topRail.name = "TopRail";
             topRail.transform.SetParent(railingGroup.transform);
-            topRail.transform.position = new Vector3(0f, 0.95f, zPos);
-            topRail.transform.localScale = new Vector3(60f, 0.04f, 0.04f);
+            topRail.transform.position = new Vector3(centerX, 0.95f, zPos);
+            topRail.transform.localScale = new Vector3(length, 0.04f, 0.04f);
             topRail.GetComponent<MeshRenderer>().sharedMaterial = mat;
             Object.DestroyImmediate(topRail.GetComponent<BoxCollider>());
 
@@ -1806,10 +1823,17 @@ namespace GanhHangRong.Editor
             GameObject bottomRail = GameObject.CreatePrimitive(PrimitiveType.Cube);
             bottomRail.name = "BottomRail";
             bottomRail.transform.SetParent(railingGroup.transform);
-            bottomRail.transform.position = new Vector3(0f, 0.5f, zPos);
-            bottomRail.transform.localScale = new Vector3(60f, 0.03f, 0.03f);
+            bottomRail.transform.position = new Vector3(centerX, 0.5f, zPos);
+            bottomRail.transform.localScale = new Vector3(length, 0.03f, 0.03f);
             bottomRail.GetComponent<MeshRenderer>().sharedMaterial = mat;
             Object.DestroyImmediate(bottomRail.GetComponent<BoxCollider>());
+
+            // Thêm một BoxCollider lớn vô hình để chặn người chơi rơi xuống biển
+            GameObject invisibleWall = new GameObject("InvisibleWall_Collider");
+            invisibleWall.transform.SetParent(railingGroup.transform);
+            invisibleWall.transform.position = new Vector3(centerX, 2f, zPos);
+            BoxCollider col = invisibleWall.AddComponent<BoxCollider>();
+            col.size = new Vector3(length, 10f, 0.5f);
         }
 
         private static void CreateStreetLights(GameObject parent, Material poleMat, Material lightMat)
@@ -1866,74 +1890,64 @@ namespace GanhHangRong.Editor
             }
         }
 
-        private static void CreateBoats(GameObject parent, Material woodMat, Material cabinMat)
+        private static void CreateBoats(GameObject parent)
         {
             GameObject boatsGroup = new GameObject("Boats_Group");
             boatsGroup.transform.SetParent(parent.transform);
 
-            // Các vị trí ngẫu nhiên tương đối giống concept mockup
+            // Đặt ghe thuyền bên trái, gần bờ để người chơi quan sát (Nâng cao độ Y để không bị chìm)
             Vector3[] positions = {
-                new Vector3(-18f, -0.2f, 15f),
-                new Vector3(-9f, -0.2f, 22f),
-                new Vector3(2f, -0.2f, 18f),
-                new Vector3(12f, -0.2f, 13f),
-                new Vector3(22f, -0.2f, 20f)
+                new Vector3(-15f, 1.2f, 15f),
+                new Vector3(-28f, 1.2f, 18f),
+                new Vector3(-42f, 1.2f, 14f)
             };
 
-            Vector3[] scales = {
-                new Vector3(3.2f, 0.8f, 1.4f),
-                new Vector3(2.5f, 0.6f, 1.2f),
-                new Vector3(2.8f, 0.7f, 1.3f),
-                new Vector3(3.5f, 0.9f, 1.5f),
-                new Vector3(2.6f, 0.6f, 1.2f)
-            };
+            float[] rotations = { 105f, 130f, 95f };
 
-            float[] rotations = { -15f, 10f, 5f, -8f, 12f };
+            string boatPath = "Assets/Taughe.glb";
+            GameObject boatPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(boatPath);
 
-            for (int i = 0; i < positions.Length; i++)
+            if (boatPrefab != null)
             {
-                GameObject boat = new GameObject($"FishingBoat_{i}");
-                boat.transform.SetParent(boatsGroup.transform);
-                boat.transform.position = positions[i];
-                boat.transform.rotation = Quaternion.Euler(0f, rotations[i], 0f);
-
-                // Thân thuyền (Cube)
-                GameObject hull = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                hull.name = "Hull";
-                hull.transform.SetParent(boat.transform);
-                hull.transform.localPosition = Vector3.zero;
-                hull.transform.localScale = scales[i];
-                hull.GetComponent<MeshRenderer>().sharedMaterial = woodMat;
-                Object.DestroyImmediate(hull.GetComponent<BoxCollider>());
-
-                // Cabin thuyền (Cube nhỏ hơn màu trắng/kem)
-                GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cabin.name = "Cabin";
-                cabin.transform.SetParent(boat.transform);
-                cabin.transform.localPosition = new Vector3(-0.2f * scales[i].x, scales[i].y * 0.8f, 0f);
-                cabin.transform.localScale = new Vector3(scales[i].x * 0.4f, scales[i].y * 1.2f, scales[i].z * 0.8f);
-                cabin.GetComponent<MeshRenderer>().sharedMaterial = cabinMat;
-                Object.DestroyImmediate(cabin.GetComponent<BoxCollider>());
-
-                // Cột buồm (Cylinder)
-                GameObject mast = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                mast.name = "Mast";
-                mast.transform.SetParent(boat.transform);
-                mast.transform.localPosition = new Vector3(0.2f * scales[i].x, scales[i].y * 1.5f, 0f);
-                mast.transform.localScale = new Vector3(0.06f, scales[i].y * 1.5f, 0.06f);
-                mast.GetComponent<MeshRenderer>().sharedMaterial = woodMat;
-                Object.DestroyImmediate(mast.GetComponent<CapsuleCollider>());
-                
-                // Đèn định vị của thuyền đêm
-                GameObject boatLight = new GameObject("LightSource");
-                boatLight.transform.SetParent(boat.transform);
-                boatLight.transform.localPosition = new Vector3(-0.2f * scales[i].x, scales[i].y * 1.6f, 0f);
-                Light bLight = boatLight.AddComponent<Light>();
-                bLight.type = LightType.Point;
-                bLight.color = new Color(1f, 0.9f, 0.5f);
-                bLight.intensity = 0.5f;
-                bLight.range = 3f;
+                for (int i = 0; i < positions.Length; i++)
+                {
+                    GameObject boat = (GameObject)PrefabUtility.InstantiatePrefab(boatPrefab);
+                    boat.name = $"TauGhe_{i}";
+                    boat.transform.SetParent(boatsGroup.transform);
+                    boat.transform.position = positions[i];
+                    boat.transform.rotation = Quaternion.Euler(0f, rotations[i], 0f);
+                    boat.transform.localScale = new Vector3(6f, 6f, 6f); // Tăng gấp đôi kích thước
+                }
             }
+            else
+            {
+                Debug.LogWarning("[SceneBuilder] Không tìm thấy Taughe.glb");
+            }
+        }
+
+        private static void CreateSea(GameObject parent, Material waterMat)
+        {
+            GameObject seaGroup = new GameObject("Sea_Group");
+            seaGroup.transform.SetParent(parent.transform);
+
+            // Sử dụng Plane mặc định của Unity kết hợp với shader URP WaterSurface của project
+            // vì SUIMONO sử dụng shader Standard cũ không tương thích với URP (gây lỗi màu hồng)
+            GameObject seaPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            seaPlane.name = "WaterSurface";
+            seaPlane.transform.SetParent(seaGroup.transform);
+            
+            // Xóa collider vì không cần va chạm với mặt nước xa
+            Object.DestroyImmediate(seaPlane.GetComponent<MeshCollider>());
+
+            // Mở rộng mặt biển bao phủ toàn bộ chân trời phía trước
+            seaPlane.transform.position = new Vector3(40f, -0.6f, 30f);
+            seaPlane.transform.localScale = new Vector3(30f, 1f, 30f);
+
+            // Gán material nước URP
+            MeshRenderer renderer = seaPlane.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = waterMat;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
         }
 
         private static void CreateMountains(GameObject parent, Material mat)
