@@ -9630,7 +9630,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &263563382
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11867,7 +11867,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &365029016
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12226,7 +12226,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &374832430
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18807,7 +18807,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &448969347
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -26969,7 +26969,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &928438892
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28386,7 +28386,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &980603812
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -33464,7 +33464,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1 &1277867991
 GameObject:
   m_ObjectHideFlags: 0
@@ -37190,7 +37190,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &1491351964
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -38937,7 +38937,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &1595738053
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -40369,7 +40369,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &1659100366
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -44764,7 +44764,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &1869972558
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -45018,7 +45018,7 @@ MonoBehaviour:
   hoverBobSpeed: 2
   hoverBobAmount: 0.05
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
-  teaCupHeldPrefab: {fileID: 0}
+  teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
 --- !u!1001 &1877435766
 PrefabInstance:
   m_ObjectHideFlags: 0
