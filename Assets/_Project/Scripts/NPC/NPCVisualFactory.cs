@@ -8,13 +8,19 @@ namespace GanhHangRong.NPC
     /// </summary>
     public class NPCVisualFactory : MonoBehaviour
     {
+        [System.Serializable]
+        public class NPCModelData
+        {
+            public GameObject prefab;
+            public Material material;
+            public RuntimeAnimatorController animatorController;
+        }
+
         [Header("Materials")]
         [SerializeField] private Material baseMaterial;
 
         [Header("NPC Model Settings")]
-        [SerializeField] private GameObject npcModelPrefab;
-        [SerializeField] private Material npcModelMaterial;
-        [SerializeField] private RuntimeAnimatorController npcModelAnimatorController;
+        [SerializeField] private System.Collections.Generic.List<NPCModelData> npcModels = new System.Collections.Generic.List<NPCModelData>();
 
         // Bảng màu cho từng loại NPC
         private Color colorFisherman = new Color(0.2f, 0.4f, 0.8f);    // Xanh dương
@@ -29,10 +35,16 @@ namespace GanhHangRong.NPC
             visualRoot.transform.SetParent(parent);
             visualRoot.transform.localPosition = Vector3.zero;
 
-            if (npcModelPrefab != null)
+            NPCModelData selectedModelData = null;
+            if (npcModels != null && npcModels.Count > 0)
+            {
+                selectedModelData = npcModels[UnityEngine.Random.Range(0, npcModels.Count)];
+            }
+
+            if (selectedModelData != null && selectedModelData.prefab != null)
             {
                 // Instantiate mô hình NPC (biped có animation đi bộ)
-                GameObject modelObj = Instantiate(npcModelPrefab, visualRoot.transform);
+                GameObject modelObj = Instantiate(selectedModelData.prefab, visualRoot.transform);
                 modelObj.name = "NPCModel";
                 
                 // Kích hoạt tất cả renderers (MeshRenderer + SkinnedMeshRenderer)
@@ -41,14 +53,14 @@ namespace GanhHangRong.NPC
                 {
                     mr.gameObject.SetActive(true);
                     mr.enabled = true;
-                    if (npcModelMaterial != null) mr.sharedMaterial = npcModelMaterial;
+                    if (selectedModelData.material != null) mr.sharedMaterial = selectedModelData.material;
                 }
                 var skinnedRenderers = modelObj.GetComponentsInChildren<SkinnedMeshRenderer>(true);
                 foreach (var smr in skinnedRenderers)
                 {
                     smr.gameObject.SetActive(true);
                     smr.enabled = true;
-                    if (npcModelMaterial != null) smr.sharedMaterial = npcModelMaterial;
+                    if (selectedModelData.material != null) smr.sharedMaterial = selectedModelData.material;
                 }
 
                 // Tính toán bounds của model để tự động scale
@@ -88,8 +100,8 @@ namespace GanhHangRong.NPC
                     }
                 }
 
-                // Chiều cao NPC mong muốn — bằng với visual player (khoảng 1.0m world units)
-                float targetHeight = 1.0f;
+                // Chiều cao NPC mong muốn (khoảng 1.8m world units)
+                float targetHeight = 1.8f;
                 float scaleFactor = 1f;
                 float meshHeight = Mathf.Max(combinedBounds.size.y, Mathf.Max(combinedBounds.size.x, combinedBounds.size.z));
                 if (hasBounds && meshHeight > 0.001f)
@@ -98,7 +110,7 @@ namespace GanhHangRong.NPC
                 }
                 else
                 {
-                    scaleFactor = 50f; // Giá trị dự phòng
+                    scaleFactor = 1.8f; // Giá trị dự phòng nếu không đo được
                 }
 
                 modelObj.transform.localScale = Vector3.one * scaleFactor;
@@ -116,9 +128,9 @@ namespace GanhHangRong.NPC
                 var animator = modelObj.GetComponentInChildren<Animator>();
                 if (animator != null)
                 {
-                    if (npcModelAnimatorController != null)
+                    if (selectedModelData.animatorController != null)
                     {
-                        animator.runtimeAnimatorController = npcModelAnimatorController;
+                        animator.runtimeAnimatorController = selectedModelData.animatorController;
                     }
                     animator.enabled = true;
                     // Đặt tốc độ animation chậm lại để giống đi bộ (model gốc là Running)
