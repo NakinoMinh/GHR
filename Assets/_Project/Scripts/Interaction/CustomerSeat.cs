@@ -80,6 +80,12 @@ namespace GanhHangRong.Interaction
             {
                 if (CartItem.HasPreparedTea)
                 {
+                    if (seatNPC.CurrentState != NPCState.Waiting)
+                    {
+                        EventManager.TriggerDialogueLine("Khách hàng", "Cảm ơn em, để lát nữa nhé.");
+                        return;
+                    }
+
                     // 1. Kích hoạt trạng thái uống nước của khách
                     seatNPC.ServeDrink();
 

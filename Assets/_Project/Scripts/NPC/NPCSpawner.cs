@@ -18,35 +18,44 @@ namespace GanhHangRong.NPC
         
         private float spawnTimer = 0f;
         private int currentCustomerCount = 0;
+        private Economy.DayNightCycle dayNightCycle;
 
         private void OnEnable()
         {
-            EventManager.OnCustomerArrived += OnCustomerAdded;
             EventManager.OnCustomerLeftHappy += OnCustomerRemoved;
             EventManager.OnCustomerLeftSad += OnCustomerRemoved;
         }
 
         private void OnDisable()
         {
-            EventManager.OnCustomerArrived -= OnCustomerAdded;
             EventManager.OnCustomerLeftHappy -= OnCustomerRemoved;
             EventManager.OnCustomerLeftSad -= OnCustomerRemoved;
         }
 
+        private void Start()
+        {
+            dayNightCycle = FindAnyObjectByType<Economy.DayNightCycle>();
+        }
+
         private void Update()
         {
-            if (!GameManager.Instance.IsPlaying || 
+            if (!GameManager.HasInstance || !GameManager.Instance.IsPlaying || 
                 GameManager.Instance.CurrentPhase != GamePhase.Playing) 
                 return;
 
             // Chỉ spawn khách vào ban đêm hoặc buổi tối từ 18:00 trở đi
-            var timeManager = FindAnyObjectByType<Economy.DayNightCycle>();
-            if (timeManager != null)
+            if (dayNightCycle == null)
+                dayNightCycle = FindAnyObjectByType<Economy.DayNightCycle>();
+
+            if (dayNightCycle != null)
             {
-                float hour = timeManager.CurrentHour;
+                float hour = dayNightCycle.CurrentHour;
                 // Chỉ spawn khách từ 18:00 đến 01:00 sáng hôm sau
                 if (hour < 18f && hour >= 1f)
+                {
+                    spawnTimer = 0f;
                     return;
+                }
             }
 
             if (currentCustomerCount >= Constants.MAX_CONCURRENT_CUSTOMERS) return;
@@ -113,6 +122,7 @@ namespace GanhHangRong.NPC
             }
 
             if (emptySeat == null) return;
+            if (exitPoints == null || exitPoints.Length == 0) return;
 
             emptySeat.OccupySeat();
 
@@ -131,8 +141,6 @@ namespace GanhHangRong.NPC
             currentCustomerCount++;
         }
 
-        private void OnCustomerAdded(NPCType type) { }
-        
         private void OnCustomerRemoved(NPCType type)
         {
             currentCustomerCount--;

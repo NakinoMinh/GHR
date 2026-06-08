@@ -86,6 +86,21 @@ namespace GanhHangRong.Interaction
         // Mô hình ly trà đá đang cầm trên tay nhân vật
         private static GameObject heldTeaCupObj = null;
 
+        public static void ResetBrewingState()
+        {
+            isBoilingWater = false;
+            isWaterBoiled = false;
+            bottleWater = 30f;
+            kettleWater = maxKettleWater;
+            isHoldingCup = false;
+            teaInCup = 0;
+            waterInCup = 0f;
+            iceInCup = 0f;
+            hasPreparedTea = false;
+            activeCoolDownCoroutine = null;
+            DetachTeaCup();
+        }
+
         public static void ConsumeWater(float amount)
         {
             kettleWater = Mathf.Max(0f, kettleWater - amount);
@@ -107,6 +122,11 @@ namespace GanhHangRong.Interaction
 
         private void Awake()
         {
+            if (activeInstance == null)
+            {
+                ResetBrewingState();
+            }
+
             if (itemType == CartItemType.WaterKettle)
             {
                 activeInstance = this;
@@ -969,6 +989,8 @@ namespace GanhHangRong.Interaction
         private void OnDestroy()
         {
             // Cleanup materials
+            if (renderers == null) return;
+
             for (int i = 0; i < renderers.Length; i++)
             {
                 if (renderers[i] != null && renderers[i].material != null)

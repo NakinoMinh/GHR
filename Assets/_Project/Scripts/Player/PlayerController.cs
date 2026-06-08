@@ -74,6 +74,8 @@ namespace GanhHangRong.Player
 
         private void Update()
         {
+            if (!GameManager.HasInstance) return;
+
             if (!GameManager.Instance.IsPlaying)
             {
                 moveDirection = Vector3.zero;
@@ -183,6 +185,8 @@ namespace GanhHangRong.Player
 
         private void FixedUpdate()
         {
+            if (!GameManager.HasInstance) return;
+
             if (!canMove || !GameManager.Instance.IsPlaying)
             {
                 rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
@@ -330,16 +334,20 @@ namespace GanhHangRong.Player
 
         private void HandleDialogueStarted()
         {
+            if (currentState == PlayerState.Interacting) return;
             DisableMovement();
         }
 
         private void HandleDialogueEnded()
         {
+            if (currentState == PlayerState.Interacting) return;
             EnableMovement();
         }
 
         public void UpdateCursorState()
         {
+            if (!GameManager.HasInstance) return;
+
             if (canMove && GameManager.Instance.IsPlaying && !GameManager.Instance.IsPaused)
             {
                 Cursor.lockState = CursorLockMode.Locked;
