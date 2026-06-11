@@ -13,6 +13,7 @@ namespace GanhHangRong.Economy
         
         private float currentHour = 17f; // Mặc định bắt đầu lúc 17:00 (chuẩn bị bán)
         private TimeOfDay currentTimeOfDay = TimeOfDay.Evening;
+        private int calendarDayOffset = 0;
 
         public float CurrentHour => currentHour;
         public TimeOfDay CurrentTimeOfDay => currentTimeOfDay;
@@ -26,7 +27,7 @@ namespace GanhHangRong.Economy
 
         private void Update()
         {
-            if (!GameManager.Instance.IsPlaying) return;
+            if (!GameManager.HasInstance || !GameManager.Instance.IsPlaying) return;
 
             // Chuyển đổi giây thực sang giờ trong game
             // 1 giây thực = timeScaleMultiplier phút game
@@ -36,7 +37,7 @@ namespace GanhHangRong.Economy
             if (currentHour >= 24f)
             {
                 currentHour -= 24f;
-                GameManager.Instance.AdvanceDay();
+                calendarDayOffset++;
             }
 
             EventManager.TriggerHourChanged(currentHour);
@@ -63,9 +64,16 @@ namespace GanhHangRong.Economy
 
         public void SkipToHour(float targetHour)
         {
-            currentHour = targetHour;
+            currentHour = Mathf.Repeat(targetHour, Constants.HOURS_IN_DAY);
             EventManager.TriggerHourChanged(currentHour);
             UpdateTimeOfDay();
+        }
+
+        public int ConsumeCalendarDayOffset()
+        {
+            int offset = calendarDayOffset;
+            calendarDayOffset = 0;
+            return offset;
         }
     }
 }

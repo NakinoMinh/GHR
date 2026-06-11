@@ -11,11 +11,14 @@ namespace GanhHangRong.Systems
         public void SaveGame()
         {
             var data = new SaveData();
-            
-            // Lấy data từ GameManager
-            data.currentDay = GameManager.Instance.CurrentDay;
 
-            // Lấy data từ PlayerStats
+            if (GameManager.HasInstance)
+            {
+                data.currentDay = GameManager.Instance.CurrentDay;
+                data.currentChapter = GameManager.Instance.CurrentChapter;
+                data.chapter1Completed = GameManager.Instance.Chapter1Completed;
+            }
+
             var playerStats = FindAnyObjectByType<Player.PlayerStats>();
             if (playerStats != null)
             {
@@ -25,17 +28,19 @@ namespace GanhHangRong.Systems
                 data.sugarSupply = playerStats.SugarSupply;
                 data.coffeeSupply = playerStats.CoffeeSupply;
                 data.cupSupply = playerStats.CupSupply;
+                data.totalCustomersServed = playerStats.TotalCustomersServed;
+                data.totalMoneyEarned = playerStats.TotalMoneyEarned;
             }
 
             try
             {
                 string json = JsonUtility.ToJson(data, true);
                 File.WriteAllText(SavePath, json);
-                Debug.Log($"[SaveManager] Đã lưu game tại: {SavePath}");
+                Debug.Log($"[SaveManager] Saved game at: {SavePath}");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[SaveManager] Lỗi khi lưu: {e.Message}");
+                Debug.LogError($"[SaveManager] Save failed: {e.Message}");
             }
         }
 
@@ -43,7 +48,7 @@ namespace GanhHangRong.Systems
         {
             if (!File.Exists(SavePath))
             {
-                Debug.LogWarning("[SaveManager] Không tìm thấy file save.");
+                Debug.LogWarning("[SaveManager] Save file not found.");
                 return false;
             }
 
@@ -53,33 +58,36 @@ namespace GanhHangRong.Systems
                 SaveData data = JsonUtility.FromJson<SaveData>(json);
 
                 if (data.version != Constants.SAVE_VERSION)
-                {
-                    Debug.LogWarning("[SaveManager] Phiên bản save không khớp!");
-                    // Trong thực tế, cần migration logic ở đây
-                }
+                    Debug.LogWarning("[SaveManager] Save version mismatch.");
 
-                // Cập nhật GameManager (sẽ bị ghi đè nếu load scene sau, nên thực tế có thể cần truyền qua scene bằng DTO)
-                // Hoặc load xong apply sau khi scene init
                 ApplySaveData(data);
-                
-                Debug.Log("[SaveManager] Đã tải game thành công.");
+                Debug.Log("[SaveManager] Loaded game successfully.");
                 return true;
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[SaveManager] Lỗi khi tải: {e.Message}");
+                Debug.LogError($"[SaveManager] Load failed: {e.Message}");
                 return false;
             }
         }
 
         private void ApplySaveData(SaveData data)
         {
-            // Note: Trong thiết kế thực tế, ApplySaveData nên được gọi khi Scene Chapter1 đã load xong.
+            if (GameManager.HasInstance)
+                GameManager.Instance.RestoreProgress(data.currentDay, data.currentChapter, data.chapter1Completed);
+
             var playerStats = FindAnyObjectByType<Player.PlayerStats>();
             if (playerStats != null)
             {
-                // Reflection hoặc methods công khai (cần bổ sung method Set ở PlayerStats nếu ko muốn reflection)
-                // Để đơn giản prototype, ta có thể bỏ qua nếu player chưa init
+                playerStats.RestoreFromSave(
+                    data.money,
+                    data.fatigue,
+                    data.teaSupply,
+                    data.sugarSupply,
+                    data.coffeeSupply,
+                    data.cupSupply,
+                    data.totalCustomersServed,
+                    data.totalMoneyEarned);
             }
         }
     }
