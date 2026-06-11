@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: HeavyRain
   m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Weather.WeatherPreset
   weatherType: 2
-  ambientLightColor: {r: 0.4, g: 0.4, b: 0.5, a: 1}
-  ambientLightIntensity: 0.3
-  fogDensity: 0.03
-  fogColor: {r: 0.5, g: 0.6, b: 0.7, a: 1}
+  ambientLightColor: {r: 0.3, g: 0.36, b: 0.42, a: 1}
+  ambientLightIntensity: 0.32
+  fogDensity: 0.035
+  fogColor: {r: 0.25, g: 0.34, b: 0.4, a: 1}
   rainIntensity: 1
-  rainEmissionRate: 0
-  windStrength: 0.7
-  customerSpawnModifier: 0.3
+  rainEmissionRate: 1200
+  windStrength: 0.82
+  customerSpawnModifier: 0.42
   iceMeltModifier: 0.5
