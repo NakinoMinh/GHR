@@ -249,6 +249,16 @@ namespace GanhHangRong.Editor
             CreateBoats(envParent);
             CreateRailing(envParent, matRailing, fenceZ);
 
+            // Tải thêm các thành phần mở rộng từ Prefab (Taxi, Bến tàu, Hành khách mới...) nếu có
+            string extensionsPath = "Assets/_Project/Art/Environment/Generated/Chapter1_Extensions.prefab";
+            GameObject extensionsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(extensionsPath);
+            if (extensionsPrefab != null)
+            {
+                GameObject extensionsObj = (GameObject)PrefabUtility.InstantiatePrefab(extensionsPrefab);
+                extensionsObj.name = "Chapter1_Extensions";
+                // Đảm bảo không bị lồng vào Environment nếu bạn muốn nó ngang hàng
+            }
+
             // ==========================================
             // 4. XE TRÀ ĐÁ & GHẾ NHỰA
             // ==========================================
