@@ -42,6 +42,7 @@ namespace GanhHangRong.Core
         public const int SUGAR_BUY_PRICE = 2000;           // giá mua đường
         public const int CUP_BUY_PRICE = 1000;             // giá mua ly
         public const int TRA_DA_SELL_PRICE = 5000;          // giá bán trà đá
+        public const int COFFEE_SELL_PRICE = 10000;         // giá bán cà phê
         public const int CART_REPAIR_COST = 20000;          // chi phí sửa xe
         public const float ICE_MELT_RATE = 1f;              // % tan/phút (bình thường)
         public const float ICE_MELT_RATE_RAIN = 0.5f;       // % tan/phút (khi mưa, lạnh hơn)

@@ -155,23 +155,56 @@ namespace GanhHangRong.Player
                 moveDirection = new Vector3(horizontalInput, 0f, verticalInput).normalized;
             }
 
-            // Xoay nhân vật về hướng di chuyển
-            if (moveDirection.magnitude > 0.1f)
+            // Xoay nhân vật về hướng di chuyển (chỉ tiến, không lùi)
+            if (moveDirection.sqrMagnitude > 0.01f)
             {
-                Quaternion targetRot = Quaternion.LookRotation(moveDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSpeed);
+                Quaternion targetRot = Quaternion.LookRotation(moveDirection, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation,
+                    targetRot,
+                    rotationSpeed * 360f * Time.deltaTime);
             }
 
             // Tương tác
             CheckInteraction();
             if (currentState != PlayerState.Interacting)
             {
-                // Nhấn F để tương tác với vật thể gần nhất/đang trỏ vào
+                // Nhấn F để tương tác phụ/hành động
                 if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
                 {
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.Interact(this);
+                        return;
+                    }
+                }
+                
+                // Nhấn E để trò chuyện/gọi món
+                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                {
+                    if (nearestInteractable != null)
+                    {
+                        nearestInteractable.InteractE(this);
+                        return;
+                    }
+                }
+
+                // Nhấn Q để phục vụ khách khi mang nước ra cho khách
+                if (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame)
+                {
+                    if (nearestInteractable != null)
+                    {
+                        nearestInteractable.InteractQ(this);
+                        return;
+                    }
+                }
+
+                // Nhấn R để cầm ly dơ / dọn ly
+                if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                {
+                    if (nearestInteractable != null)
+                    {
+                        nearestInteractable.InteractR(this);
                         return;
                     }
                 }
@@ -200,7 +233,16 @@ namespace GanhHangRong.Player
                 speed *= fatiguePenalty;
             }
 
-            Vector3 targetVelocity = moveDirection * speed;
+            // Luôn di chuyển theo hướng mặt nhân vật đang quay (tránh trượt/lùi khi xoay)
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = moveDirection;
+            else
+                forward.Normalize();
+
+            float moveAmount = moveDirection.sqrMagnitude > 0.01f ? speed : 0f;
+            Vector3 targetVelocity = forward * moveAmount;
             rb.linearVelocity = new Vector3(targetVelocity.x, rb.linearVelocity.y, targetVelocity.z);
         }
 
@@ -320,6 +362,13 @@ namespace GanhHangRong.Player
         {
             canMove = false;
             UpdateCursorState();
+            
+            // Ẩn interaction prompt khi bị cấm di chuyển (vd: đang trong hội thoại)
+            if (nearestInteractable != null)
+            {
+                EventManager.TriggerInteractionPromptHide();
+                nearestInteractable = null;
+            }
         }
 
         private void HandleGamePhaseChanged(GamePhase phase)

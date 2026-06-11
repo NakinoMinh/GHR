@@ -9,6 +9,7 @@ namespace GanhHangRong.UI
     public class DialogueUI : MonoBehaviour
     {
         [SerializeField] private GameObject dialoguePanel;
+        [SerializeField] private UnityEngine.UI.Image avatarImage;
         [SerializeField] private TextMeshProUGUI speakerNameText;
         [SerializeField] private TextMeshProUGUI dialogueText;
         [SerializeField] private CanvasGroup canvasGroup;
@@ -16,6 +17,7 @@ namespace GanhHangRong.UI
         private Coroutine typingCoroutine;
         private bool isTyping = false;
         private string currentFullText = "";
+        private int frameStarted = 0;
 
         private void OnEnable()
         {
@@ -40,53 +42,93 @@ namespace GanhHangRong.UI
         {
             if (Narrative.DialogueManager.HasInstance && Narrative.DialogueManager.Instance.IsDialogueActive)
             {
-                if ((Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) || 
-                    (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame))
+                // ESC to close dialogue
+                if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 {
-                    if (isTyping)
+                    Narrative.DialogueManager.Instance.EndDialogueEarly();
+                    return;
+                }
+
+                // Chờ ít nhất 1 frame sau khi bắt đầu thoại để tránh xử lý phím F của chính lệnh mở thoại
+                if (Time.frameCount > frameStarted + 1)
+                {
+                    if ((Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) || 
+                        (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) || 
+                        (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame))
                     {
-                        // Skip đánh máy
-                        if (typingCoroutine != null) StopCoroutine(typingCoroutine);
-                        dialogueText.text = currentFullText;
-                        isTyping = false;
-                    }
-                    else
-                    {
-                        // Câu tiếp theo
-                        Narrative.DialogueManager.Instance.DisplayNextLine();
+                        OnNextPressed();
                     }
                 }
             }
         }
 
+        public void OnNextPressed()
+        {
+            if (isTyping)
+            {
+                // Skip đánh máy
+                if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+                dialogueText.text = currentFullText;
+                isTyping = false;
+            }
+            else
+            {
+                // Câu tiếp theo
+                Narrative.DialogueManager.Instance.DisplayNextLine();
+            }
+        }
+
         private void ShowDialogue()
         {
-            dialoguePanel.SetActive(true);
+            frameStarted = Time.frameCount;
+            if (dialoguePanel != null) dialoguePanel.SetActive(true);
             if (canvasGroup != null) canvasGroup.alpha = 1f;
         }
 
         private void HideDialogue()
         {
-            dialoguePanel.SetActive(false);
+            if (dialoguePanel != null) dialoguePanel.SetActive(false);
             if (canvasGroup != null) canvasGroup.alpha = 0f;
         }
 
-        private void DisplayLine(string speaker, string text)
+        private void DisplayLine(string speaker, string text, Sprite avatar)
         {
             if (speakerNameText != null) speakerNameText.text = speaker;
             
+            if (avatarImage != null)
+            {
+                if (avatar != null)
+                {
+                    avatarImage.sprite = avatar;
+                    avatarImage.color = Color.white;
+                }
+                else
+                {
+                    avatarImage.sprite = null;
+                    avatarImage.color = new Color(1, 1, 1, 0); // Hide if no avatar
+                }
+            }
+
+            
             currentFullText = text;
             if (typingCoroutine != null) StopCoroutine(typingCoroutine);
-            typingCoroutine = StartCoroutine(TypeSentence(text));
+            if (gameObject.activeInHierarchy)
+            {
+                typingCoroutine = StartCoroutine(TypeSentence(text));
+            }
+            else
+            {
+                if (dialogueText != null) dialogueText.text = text;
+            }
         }
 
         private IEnumerator TypeSentence(string sentence)
         {
             isTyping = true;
-            dialogueText.text = "";
+            if (dialogueText != null) dialogueText.text = "";
             foreach (char letter in sentence.ToCharArray())
             {
-                dialogueText.text += letter;
+                if (dialogueText != null) dialogueText.text += letter;
                 yield return new WaitForSeconds(Constants.TYPEWRITER_SPEED);
             }
             isTyping = false;

@@ -68,6 +68,11 @@ namespace GanhHangRong.Player
         // Raycast cho tương tác vật phẩm trên xe đẩy
         private Interaction.CartItem currentHoveredItem;
 
+        // NPC Focus state
+        private bool isFocusingNPC = false;
+        private Vector3 focusPos;
+        private Quaternion focusRot;
+
         public bool IsCartOrbitMode => isCartOrbitMode;
         public bool IsCartFirstPersonMode => isCartFirstPersonMode;
 
@@ -84,6 +89,14 @@ namespace GanhHangRong.Player
 
         private void LateUpdate()
         {
+            // ═══ CHẾ ĐỘ FOCUS VÀO NPC (HỘI THOẠI) ═══
+            if (isFocusingNPC)
+            {
+                transform.position = Vector3.Lerp(transform.position, focusPos, Time.deltaTime * customViewSmoothSpeed);
+                transform.rotation = Quaternion.Slerp(transform.rotation, focusRot, Time.deltaTime * customViewSmoothSpeed);
+                return;
+            }
+
             // ═══ CHẾ ĐỘ NHÌN THỨ 1 TỪ MẶT BÀN XE ĐẨY ═══
             if (isCartFirstPersonMode && cartFPCenter != null)
             {
@@ -497,6 +510,42 @@ namespace GanhHangRong.Player
             transform.position = targetLookAt + (targetRotation * shoulderOffset) - (targetRotation * Vector3.forward * distance);
             transform.rotation = targetRotation;
             currentVelocity = Vector3.zero;
+        }
+
+        // ═══════════════════════════════════════════
+        // NPC FOCUS (DIALOGUE)
+        // ═══════════════════════════════════════════
+
+        public void FocusOnNPC(Transform npc, Transform player)
+        {
+            isFocusingNPC = true;
+            // Tính toán vị trí góc nhìn thứ nhất (từ mắt người chơi nhìn về NPC)
+            Vector3 dirToNPC = (npc.position - player.position).normalized;
+            dirToNPC.y = 0;
+            if (dirToNPC.sqrMagnitude < 0.01f) dirToNPC = player.forward;
+            dirToNPC.Normalize();
+
+            // Góc nhìn thứ nhất: Đặt camera ngay tại vị trí mắt của người chơi (cao 1.6m), nhích lên trước 0.2m để không bị vướng model
+            focusPos = player.position + Vector3.up * 1.6f + dirToNPC * 0.2f;
+            
+            // Nhìn thẳng vào mặt NPC (cao khoảng 1.5m)
+            focusRot = Quaternion.LookRotation(npc.position + Vector3.up * 1.5f - focusPos);
+
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        public void ResetFocus(Transform playerTransform)
+        {
+            isFocusingNPC = false;
+            target = playerTransform;
+            
+            // Xoay hướng nhìn về phía người chơi đang đứng
+            yaw = playerTransform.eulerAngles.y;
+            pitch = 12f;
+
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 }

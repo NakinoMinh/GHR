@@ -29,6 +29,36 @@ namespace GanhHangRong.Interaction
             }
         }
 
-        protected abstract void OnInteract(Player.PlayerController player);
+        public void InteractE(Player.PlayerController player)
+        {
+            if (CanInteract)
+            {
+                lastInteractTime = Time.time;
+                OnInteractE(player);
+            }
+        }
+
+        public void InteractQ(Player.PlayerController player)
+        {
+            if (CanInteract)
+            {
+                lastInteractTime = Time.time;
+                OnInteractQ(player);
+            }
+        }
+
+        public void InteractR(Player.PlayerController player)
+        {
+            if (CanInteract)
+            {
+                lastInteractTime = Time.time;
+                OnInteractR(player);
+            }
+        }
+
+        protected virtual void OnInteract(Player.PlayerController player) { }
+        protected virtual void OnInteractE(Player.PlayerController player) { }
+        protected virtual void OnInteractQ(Player.PlayerController player) { }
+        protected virtual void OnInteractR(Player.PlayerController player) { }
     }
 }

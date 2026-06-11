@@ -22,6 +22,8 @@ namespace GanhHangRong.Player
 
         [Header("References")]
         [SerializeField] private Transform visualTransform;
+        [Tooltip("Xoay model con quanh Y để khớp hướng animation Meshy AI (tránh đi lùi).")]
+        [SerializeField] private float modelYawOffset = 0f;
 
         [Header("Sitting Settings")]
         [SerializeField] private float sittingYOffset = 0f;
@@ -62,6 +64,7 @@ namespace GanhHangRong.Player
         private int currentAnimState = 0;
         private float currentSpeed = 0f;
         private float speedVelocity = 0f; // for SmoothDamp
+        private Quaternion modelBaseRotation = Quaternion.identity;
 
         private void Start()
         {
@@ -73,9 +76,14 @@ namespace GanhHangRong.Player
                     visualTransform = transform;
             }
 
+            modelBaseRotation = Quaternion.Euler(0f, modelYawOffset, 0f);
+            visualTransform.localRotation = modelBaseRotation;
             originalPosition = visualTransform.localPosition;
             animator = GetComponentInChildren<Animator>();
             
+            if (animator != null)
+                animator.applyRootMotion = false;
+
             // Kiểm tra xem có 3D Animator thật không
             has3DAnimator = (animator != null && animator.runtimeAnimatorController != null);
 
@@ -218,20 +226,20 @@ namespace GanhHangRong.Player
             float bob = Mathf.Abs(Mathf.Sin(animTimer * pushBobSpeed)) * pushBobAmount;
             float lean = Mathf.Sin(animTimer * pushBobSpeed * 0.5f) * 2f;
             visualTransform.localPosition = originalPosition + new Vector3(0, bob, 0);
-            visualTransform.localRotation = Quaternion.Euler(0, 0, lean);
+            visualTransform.localRotation = modelBaseRotation * Quaternion.Euler(0, 0, lean);
         }
 
         private void AnimateServing()
         {
             float lean = Mathf.Sin(animTimer * 3f) * 3f;
-            visualTransform.localRotation = Quaternion.Euler(0, 0, -5f + lean);
+            visualTransform.localRotation = modelBaseRotation * Quaternion.Euler(0, 0, -5f + lean);
         }
 
         private void AnimateSitting()
         {
             float breathe = Mathf.Sin(animTimer * 1f) * 0.01f;
             visualTransform.localPosition = originalPosition + new Vector3(0, sittingYOffset + breathe, 0);
-            visualTransform.localRotation = Quaternion.identity;
+            visualTransform.localRotation = modelBaseRotation;
         }
 
         private void LateUpdate()

@@ -114,7 +114,7 @@ namespace GanhHangRong.NPC
 
             if (emptySeat == null) return;
 
-            emptySeat.OccupySeat();
+            emptySeat.ReserveSeat();
 
             Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
             Transform exitPoint = exitPoints[Random.Range(0, exitPoints.Length)];

@@ -73,6 +73,12 @@ namespace GanhHangRong.Interaction
         private static float iceInCup = 0f;
         public static float IceInCup => iceInCup;
 
+        private static int coffeeInCup = 0;
+        public static int CoffeeInCup => coffeeInCup;
+
+        private static int sugarInCup = 0;
+        public static int SugarInCup => sugarInCup;
+
         private static bool hasPreparedTea = false;
         public static bool HasPreparedTea
         {
@@ -80,11 +86,22 @@ namespace GanhHangRong.Interaction
             set => hasPreparedTea = value;
         }
 
+        private static bool hasPreparedCoffee = false;
+        public static bool HasPreparedCoffee
+        {
+            get => hasPreparedCoffee;
+            set => hasPreparedCoffee = value;
+        }
+
         private static Coroutine activeCoolDownCoroutine = null;
         private static CartItem activeInstance = null;
 
         // Mô hình ly trà đá đang cầm trên tay nhân vật
         private static GameObject heldTeaCupObj = null;
+
+        // Trạng thái cầm ly dơ / ly pha sai
+        private static bool isHoldingDirtyCup = false;
+        public static bool IsHoldingDirtyCup => isHoldingDirtyCup;
 
         public static void ConsumeWater(float amount)
         {
@@ -336,13 +353,29 @@ namespace GanhHangRong.Interaction
 
         private void OnSugarJarInteract(Player.PlayerController player)
         {
-            // Hũ đường — lấy đường
             var stats = player.GetComponent<Player.PlayerStats>();
-            if (stats != null)
+            if (stats == null) return;
+
+            if (isHoldingCup)
             {
-                stats.AddSupplies(0, 200, 0); // Thêm 200g đường
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy đường từ hũ đường. (+200g đường, hiện có {stats.SugarSupply}g)");
+                if (stats.SugarSupply < 100)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ đường trong hũ (cần ít nhất 100g)!");
+                    return;
+                }
+
+                // Lấy 100g đường bỏ vào ly
+                stats.AddSupplies(0, -100, 0);
+                sugarInCup += 100;
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 100g đường vào ly. (Đường trong ly: {sugarInCup}g / 100g)");
+
+                CheckBrewingCompletion(player);
+                return;
             }
+
+            // Hũ đường — lấy đường (khi không cầm ly)
+            stats.AddSupplies(0, 200, 0); // Thêm 200g đường
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy đường từ hũ đường. (+200g đường, hiện có {stats.SugarSupply}g)");
             Debug.Log("[CartItem] Tương tác hũ đường");
         }
 
@@ -355,11 +388,27 @@ namespace GanhHangRong.Interaction
         private void OnCoffeeInteract(Player.PlayerController player)
         {
             var stats = player.GetComponent<Player.PlayerStats>();
-            if (stats != null)
+            if (stats == null) return;
+
+            if (isHoldingCup)
             {
-                stats.AddCoffee(150); // Thêm 150g cà phê
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy thêm bột cà phê. (+150g cà phê, hiện có {stats.CoffeeSupply}g)");
+                if (stats.CoffeeSupply < 50)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ cà phê (cần ít nhất 50g)!");
+                    return;
+                }
+
+                // Lấy 50g cà phê bỏ vào ly
+                stats.AddCoffee(-50);
+                coffeeInCup += 50;
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 50g cà phê vào ly. (Cà phê trong ly: {coffeeInCup}g / 50g)");
+
+                CheckBrewingCompletion(player);
+                return;
             }
+
+            stats.AddCoffee(150); // Thêm 150g cà phê
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy thêm bột cà phê. (+150g cà phê, hiện có {stats.CoffeeSupply}g)");
             Debug.Log("[CartItem] Tương tác hũ cà phê");
         }
 
@@ -370,22 +419,17 @@ namespace GanhHangRong.Interaction
 
             if (isHoldingCup)
             {
-                if (stats.IceLevel < 5f)
+                if (stats.IceLevel < 4f)
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Thùng đựng đá đã hết đá sạch! Hãy tiếp thêm đá.");
                     return;
                 }
 
-                if (iceInCup >= 5f)
-                {
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly nước đã có đủ đá lạnh rồi!");
-                    return;
-                }
-
-                // Lấy 5% đá cho vào ly
-                stats.ModifyIceLevel(-5f);
-                iceInCup += 5f;
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 5% đá vào ly. (Đá trong ly: {iceInCup}% / 5%)");
+                // Cho phép lấy đá vào ly nhiều lần
+                // Lấy 4% đá cho vào ly (2 lần bấm = 8% cho ly cà phê)
+                stats.ModifyIceLevel(-4f);
+                iceInCup += 4f;
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 4% đá vào ly. (Đá trong ly: {iceInCup}%)");
 
                 CheckBrewingCompletion(player);
                 return;
@@ -403,18 +447,40 @@ namespace GanhHangRong.Interaction
 
         private void CheckBrewingCompletion(Player.PlayerController player)
         {
-            if (isHoldingCup && teaInCup >= 50 && waterInCup >= 0.2f && iceInCup >= 5f)
+            if (isHoldingCup)
             {
-                isHoldingCup = false;
-                hasPreparedTea = true;
-                teaInCup = 0;
-                waterInCup = 0f;
-                iceInCup = 0f;
+                // Công thức trà đá: 50g trà, 0.2L nước sôi, 4% đá
+                if (teaInCup >= 50 && waterInCup >= 0.2f && iceInCup >= 4f && coffeeInCup == 0 && sugarInCup == 0)
+                {
+                    isHoldingCup = false;
+                    hasPreparedTea = true;
+                    teaInCup = 0;
+                    waterInCup = 0f;
+                    iceInCup = 0f;
+                    sugarInCup = 0;
+                    coffeeInCup = 0;
 
-                EventManager.TriggerDialogueLine("Hoàng Hôn", "★ Hoàn thành 1 ly nước trà đá mát lạnh! Hoàng Hôn cầm ly trà trên tay. Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "★ Hoàn thành 1 ly nước trà đá mát lạnh! Hoàng Hôn cầm ly trà trên tay. Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
 
-                // Gắn mô hình ly trà đá lên tay phải nhân vật
-                AttachTeaCupToPlayer(player);
+                    // Gắn mô hình ly trà đá lên tay phải nhân vật
+                    AttachTeaCupToPlayer(player);
+                }
+                // Công thức cà phê: 100g đường, 0.2L nước sôi, 50g cà phê, 8% đá
+                else if (coffeeInCup >= 50 && sugarInCup >= 100 && waterInCup >= 0.2f && iceInCup >= 8f && teaInCup == 0)
+                {
+                    isHoldingCup = false;
+                    hasPreparedCoffee = true;
+                    teaInCup = 0;
+                    waterInCup = 0f;
+                    iceInCup = 0f;
+                    sugarInCup = 0;
+                    coffeeInCup = 0;
+
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "★ Hoàn thành 1 ly cà phê đá thơm ngon! Hoàng Hôn cầm ly cà phê trên tay. Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
+
+                    // Gắn mô hình ly cà phê (tạm thời dùng chung mô hình ly)
+                    AttachTeaCupToPlayer(player);
+                }
             }
         }
 
@@ -493,6 +559,8 @@ namespace GanhHangRong.Interaction
             if (teaCupHeldPrefab != null)
             {
                 cupGO = Instantiate(teaCupHeldPrefab);
+                // Fix màu tím: gán lại material URP với texture đúng
+                ApplyTeaCupMaterial(cupGO, isDirty: false);
             }
             else
             {
@@ -510,7 +578,6 @@ namespace GanhHangRong.Interaction
                 float scaleZ = 0.12f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
                 cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
 
-                // Khắc phục vị trí theo tỉ lệ xương
                 float posX = 0f;
                 float posY = 0.08f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
                 float posZ = 0.03f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
@@ -532,6 +599,65 @@ namespace GanhHangRong.Interaction
             heldTeaCupObj = cupGO;
         }
 
+        /// <summary>Gán material URP Lit với texture đúng cho ly — tránh bị màu tím (magenta).</summary>
+        private static void ApplyTeaCupMaterial(GameObject cupGO, bool isDirty)
+        {
+            Shader urpShader = Shader.Find("Universal Render Pipeline/Lit")
+                            ?? Shader.Find("Universal Render Pipeline/Simple Lit")
+                            ?? Shader.Find("Standard");
+            if (urpShader == null) return;
+
+            // Load texture từ Resources hoặc AssetDatabase (Editor)
+            Texture2D albedo = null;
+            Texture2D normal = null;
+
+            albedo = Resources.Load<Texture2D>("lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture_albedo");
+#if UNITY_EDITOR
+            if (albedo == null)
+                albedo = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.png");
+            if (albedo == null)
+                albedo = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture.png");
+            if (normal == null)
+                normal = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture_normal.png");
+#endif
+
+            Material mat = new Material(urpShader);
+
+            if (isDirty)
+            {
+                // Ly dơ: màu vàng ngà
+                mat.color = new Color(0.72f, 0.58f, 0.30f, 1f);
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.72f, 0.58f, 0.30f, 1f));
+            }
+            else if (albedo != null)
+            {
+                // Ly sạch: dùng texture gốc
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", albedo);
+                else if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", albedo);
+                mat.color = Color.white;
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
+            }
+            else
+            {
+                // Fallback: ly thủy tinh trong suốt nhẹ
+                Color glassColor = new Color(0.85f, 0.92f, 1f, 0.85f);
+                mat.color = glassColor;
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", glassColor);
+            }
+
+            if (normal != null && mat.HasProperty("_BumpMap"))
+            {
+                mat.SetTexture("_BumpMap", normal);
+                mat.EnableKeyword("_NORMALMAP");
+            }
+
+            // Gán material vào tất cả renderer của ly
+            foreach (var rend in cupGO.GetComponentsInChildren<Renderer>(true))
+            {
+                rend.material = mat;
+            }
+        }
+
         /// <summary>Xóa mô hình ly trà khỏi tay khi phục vụ xong.</summary>
         public static void DetachTeaCup()
         {
@@ -541,6 +667,98 @@ namespace GanhHangRong.Interaction
                 heldTeaCupObj = null;
                 Debug.Log("[CartItem] Đã tháo mô hình ly trà khỏi tay sau khi phục vụ.");
             }
+            isHoldingDirtyCup = false;
+        }
+
+        /// <summary>Cầm ly dơ từ bàn khách — gắn mô hình ly dơ lên tay người chơi.</summary>
+        public static void PickUpDirtyCup(Player.PlayerController player)
+        {
+            if (isHoldingCup || isHoldingDirtyCup || hasPreparedTea || hasPreparedCoffee)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Tay đang cầm đồ rồi, cần dọn hết trước!");
+                return;
+            }
+
+            isHoldingDirtyCup = true;
+
+            // Dọn mô hình cũ nếu còn
+            if (heldTeaCupObj != null)
+            {
+                Destroy(heldTeaCupObj);
+                heldTeaCupObj = null;
+            }
+
+            // Load mô hình ly dơ (dùng chung fbx ly nước)
+            GameObject dirtyCupPrefab = null;
+            dirtyCupPrefab = Resources.Load<GameObject>("lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture");
+#if UNITY_EDITOR
+            if (dirtyCupPrefab == null)
+                dirtyCupPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/lynuoc/Meshy_AI_Steaming_Glass_Beer_M_0603223059_texture.fbx");
+#endif
+
+            GameObject cupGO = dirtyCupPrefab != null ? Instantiate(dirtyCupPrefab) : CreateFallbackTeaCupModel();
+
+            // Fix màu tím + đổi màu vàng để trông bẩn (gán material URP đúng)
+            ApplyTeaCupMaterial(cupGO, isDirty: true);
+
+            Transform attachPoint = FindRightHandBone(player.transform);
+            if (attachPoint != null)
+            {
+                cupGO.transform.SetParent(attachPoint, false);
+                Vector3 ps = attachPoint.lossyScale;
+                float sx = 0.12f / (ps.x != 0 ? Mathf.Abs(ps.x) : 1f);
+                float sy = 0.12f / (ps.y != 0 ? Mathf.Abs(ps.y) : 1f);
+                float sz = 0.12f / (ps.z != 0 ? Mathf.Abs(ps.z) : 1f);
+                cupGO.transform.localScale = new Vector3(sx, sy, sz);
+                cupGO.transform.localPosition = new Vector3(0f, 0.08f / (ps.y != 0 ? Mathf.Abs(ps.y) : 1f), 0.03f / (ps.z != 0 ? Mathf.Abs(ps.z) : 1f));
+                cupGO.transform.localRotation = Quaternion.identity;
+            }
+            else
+            {
+                cupGO.transform.SetParent(player.transform, false);
+                cupGO.transform.localPosition = new Vector3(0.35f, 0.85f, 0.15f);
+                cupGO.transform.localScale = Vector3.one * 0.12f;
+            }
+
+            cupGO.name = "HeldDirtyCup";
+            heldTeaCupObj = cupGO;
+            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã cầm ly dơ. Mang đến bồn rửa chén để rửa sạch!");
+        }
+
+        /// <summary>Rửa ly — xoá trạng thái cầm ly pha sai / ly dơ và trả lại 1 ly sạch.</summary>
+        public static void WashCup(Player.PlayerStats stats)
+        {
+            bool wasHoldingAnything = isHoldingCup || isHoldingDirtyCup || hasPreparedTea || hasPreparedCoffee;
+
+            if (!wasHoldingAnything)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Không có ly nào cần rửa!");
+                return;
+            }
+
+            // Reset tất cả trạng thái ly
+            isHoldingCup = false;
+            isHoldingDirtyCup = false;
+            hasPreparedTea = false;
+            hasPreparedCoffee = false;
+            teaInCup = 0;
+            waterInCup = 0f;
+            iceInCup = 0f;
+            sugarInCup = 0;
+            coffeeInCup = 0;
+
+            // Xoá mô hình đang cầm
+            if (heldTeaCupObj != null)
+            {
+                Destroy(heldTeaCupObj);
+                heldTeaCupObj = null;
+            }
+
+            // Trả lại 1 ly sạch vào kho
+            if (stats != null)
+                stats.AddSupplies(0, 0, 1);
+
+            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã rửa sạch ly! Ly được cất vào kho. (+1 ly sạch)");
         }
 
         public static GameObject CreateStaticTeaCupModel(Vector3 worldPosition)

@@ -15,11 +15,13 @@ namespace GanhHangRong.NPC
         [Header("Settings")]
         [SerializeField] private float walkSpeed = 2f;
         [SerializeField] private float stopDistance = 0.1f;
+        [SerializeField] private float rotationSpeed = 10f;
 
         private NPCProfile profile;
         private NPCState currentState = NPCState.Spawning;
         private CustomerSeat targetSeat;
         private Transform exitPoint;
+        private float startY;
         
         private float waitTimer = 0f;
         private float maxWaitTime;
@@ -27,9 +29,12 @@ namespace GanhHangRong.NPC
         private float drinkDuration;
         private bool isServed = false;
         
-        // UI
         private GameObject speechBubble;
         private TextMeshPro bubbleText;
+
+        private int orderedDrink = 0; // 0: Trà đá, 1: Cà phê
+        private NPCInteractable interactable;
+        private Player.PlayerController interactingPlayer;
 
         public NPCState CurrentState => currentState;
         public CustomerSeat TargetSeat => targetSeat;
@@ -61,6 +66,18 @@ namespace GanhHangRong.NPC
             bgObj.transform.localScale = new Vector3(2f, 1f, 1f);
 
             speechBubble.SetActive(false);
+
+            interactable = gameObject.AddComponent<NPCInteractable>();
+        }
+
+        private void OnEnable()
+        {
+            EventManager.OnDialogueEnded += HandleDialogueEnded;
+        }
+
+        private void OnDisable()
+        {
+            EventManager.OnDialogueEnded -= HandleDialogueEnded;
         }
 
         public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd)
@@ -69,6 +86,7 @@ namespace GanhHangRong.NPC
             this.targetSeat = seat;
             this.exitPoint = exit;
             this.walkSpeed = walkSpd;
+            this.startY = transform.position.y;
             
             this.maxWaitTime = Random.Range(profile.minPatience, profile.maxPatience);
             this.drinkDuration = Random.Range(profile.minDrinkTime, profile.maxDrinkTime);
@@ -96,13 +114,20 @@ namespace GanhHangRong.NPC
                 case NPCState.SittingDown:
                     // Animation ngồi, sau đó chuyển sang Order
                     transform.position = targetSeat.transform.position; // Snap vào ghế
+                    
+                    // Chỉ lấy góc xoay trục Y (Yaw) để NPC không bị ngã/nằm nếú ghế bị xoay trục X/Z
+                    Vector3 seatEuler = targetSeat.transform.rotation.eulerAngles;
+                    transform.rotation = Quaternion.Euler(0, seatEuler.y, 0); 
+                    
+                    targetSeat.OccupySeat(this);
                     ChangeState(NPCState.Ordering);
+                    if (interactable != null) interactable.SetInteractable(true);
+                    // Hiển thị bong bóng "..." để gợi ý
+                    ShowSpeechBubble("...");
                     break;
                     
                 case NPCState.Ordering:
-                    ShowSpeechBubble("Trà Đá!");
-                    EventManager.TriggerCustomerArrived(profile.npcType);
-                    ChangeState(NPCState.Waiting);
+                    // Đợi người chơi nhấn F (NPCInteractable sẽ gọi StartOrderingDialogue)
                     break;
                     
                 case NPCState.Waiting:
@@ -145,11 +170,13 @@ namespace GanhHangRong.NPC
                     
                 case NPCState.LeavingHappy:
                     ShowSpeechBubble("Ngon!", Color.blue);
+                    transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
                     ChangeState(NPCState.WalkingOut);
                     break;
                     
                 case NPCState.LeavingSad:
                     ShowSpeechBubble("Tệ quá!", Color.red);
+                    transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
                     ChangeState(NPCState.WalkingOut);
                     break;
                     
@@ -165,18 +192,22 @@ namespace GanhHangRong.NPC
 
         private void MoveTowards(Vector3 target, NPCState nextState)
         {
-            float step = walkSpeed * Time.deltaTime;
-            // Di chuyển 3D đầy đủ (cả X lẫn Z), giữ nguyên Y
             Vector3 targetPos = new Vector3(target.x, transform.position.y, target.z);
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
-
-            // Xoay mặt về hướng đang di chuyển (giống player)
             Vector3 direction = targetPos - transform.position;
+            direction.y = 0f;
+
+            // Xoay mặt về hướng đang di chuyển trước khi dịch chuyển (giống player)
             if (direction.sqrMagnitude > 0.001f)
             {
-                Quaternion targetRot = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 10f);
+                Quaternion targetRot = Quaternion.LookRotation(direction.normalized, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation,
+                    targetRot,
+                    rotationSpeed * 360f * Time.deltaTime);
             }
+
+            float step = walkSpeed * Time.deltaTime;
+            transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
 
             if (Vector3.Distance(transform.position, targetPos) <= stopDistance)
             {
@@ -200,7 +231,7 @@ namespace GanhHangRong.NPC
 
         private void PayForDrink()
         {
-            int basePrice = Constants.TRA_DA_SELL_PRICE;
+            int basePrice = orderedDrink == 1 ? Constants.COFFEE_SELL_PRICE : Constants.TRA_DA_SELL_PRICE;
             int total = basePrice;
             
             // Tính tip
@@ -215,6 +246,42 @@ namespace GanhHangRong.NPC
             {
                 playerStats.AddMoney(total);
                 playerStats.RecordCustomerServed();
+            }
+        }
+
+        public void StartOrderingDialogue(Player.PlayerController player)
+        {
+            interactingPlayer = player;
+            HideSpeechBubble();
+
+            // Đổi góc camera sang NPC
+            var cam = FindAnyObjectByType<Player.CinematicCamera>();
+            if (cam != null) cam.FocusOnNPC(transform, player.transform);
+
+            // Random món
+            orderedDrink = Random.value > 0.5f ? 1 : 0;
+            string drinkName = orderedDrink == 1 ? "Cà Phê đá" : "Trà Đá";
+            string text = $"Cho tui một ly {drinkName} nha!";
+
+            // Kích hoạt thoại
+            Narrative.DialogueManager.Instance.StartSingleDialogue(profile.npcType.ToString(), text);
+        }
+
+        private void HandleDialogueEnded()
+        {
+            if (interactingPlayer != null)
+            {
+                // Reset camera
+                var cam = FindAnyObjectByType<Player.CinematicCamera>();
+                if (cam != null) cam.ResetFocus(interactingPlayer.transform);
+
+                interactingPlayer = null;
+
+                // Chuyển state
+                EventManager.TriggerCustomerArrived(profile.npcType);
+                ChangeState(NPCState.Waiting);
+                string drinkName = orderedDrink == 1 ? "Cà Phê!" : "Trà Đá!";
+                ShowSpeechBubble(drinkName);
             }
         }
 

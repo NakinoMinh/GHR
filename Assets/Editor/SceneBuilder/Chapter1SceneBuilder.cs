@@ -845,7 +845,7 @@ namespace GanhHangRong.Editor
                 // Vì mô hình GLB thường có gốc tọa độ ở tâm (hoặc khác chuẩn), ta đặt localPosition = 0
                 // để tránh tình trạng nhân vật bị lún xuống đất một nửa.
                 visualObj.transform.localPosition = Vector3.zero; 
-                visualObj.transform.localRotation = Quaternion.identity; // Xoay hướng trước (3D di chuyển tự xoay)
+                visualObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // Khớp hướng animation Meshy AI
                 
                 SetupPlayerAnimator(visualObj);
             }

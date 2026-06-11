@@ -21,6 +21,8 @@ namespace GanhHangRong.NPC
 
         [Header("NPC Model Settings")]
         [SerializeField] private System.Collections.Generic.List<NPCModelData> npcModels = new System.Collections.Generic.List<NPCModelData>();
+        [Tooltip("Xoay model con quanh Y. Parent đã xoay theo hướng đi — để 0 nếu model Meshy AI hướng +Z.")]
+        [SerializeField] private float modelYawOffset = 0f;
 
         // Bảng màu cho từng loại NPC
         private Color colorFisherman = new Color(0.2f, 0.4f, 0.8f);    // Xanh dương
@@ -53,14 +55,16 @@ namespace GanhHangRong.NPC
                 {
                     mr.gameObject.SetActive(true);
                     mr.enabled = true;
-                    if (selectedModelData.material != null) mr.sharedMaterial = selectedModelData.material;
+                    // Tắt ghi đè material để giữ nguyên material gốc của prefab
+                    // if (selectedModelData.material != null) mr.sharedMaterial = selectedModelData.material;
                 }
                 var skinnedRenderers = modelObj.GetComponentsInChildren<SkinnedMeshRenderer>(true);
                 foreach (var smr in skinnedRenderers)
                 {
                     smr.gameObject.SetActive(true);
                     smr.enabled = true;
-                    if (selectedModelData.material != null) smr.sharedMaterial = selectedModelData.material;
+                    // Tắt ghi đè material để giữ nguyên material gốc của prefab
+                    // if (selectedModelData.material != null) smr.sharedMaterial = selectedModelData.material;
                 }
 
                 // Tính toán bounds của model để tự động scale
@@ -122,7 +126,7 @@ namespace GanhHangRong.NPC
                     localY = -(combinedBounds.min.y * scaleFactor);
                 }
                 modelObj.transform.localPosition = new Vector3(0f, localY, 0f);
-                modelObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // Xoay 180 độ quanh Y để đúng hướng di chuyển (tránh bị đi lùi)
+                modelObj.transform.localRotation = Quaternion.Euler(0f, modelYawOffset, 0f);
 
                 // Kiểm tra và thiết lập Animator cho animation đi bộ
                 var animator = modelObj.GetComponentInChildren<Animator>();
@@ -133,6 +137,7 @@ namespace GanhHangRong.NPC
                         animator.runtimeAnimatorController = selectedModelData.animatorController;
                     }
                     animator.enabled = true;
+                    animator.applyRootMotion = false;
                     // Đặt tốc độ animation chậm lại để giống đi bộ (model gốc là Running)
                     animator.speed = 0.35f;
                 }
@@ -187,6 +192,15 @@ namespace GanhHangRong.NPC
                 head.GetComponent<MeshRenderer>().material = headMat;
             }     // Thêm Procedural Animator
             var proceduralAnim = visualRoot.AddComponent<NPCProceduralAnimator>();
+            
+            // Inject controller trực tiếp thay vì dùng GetComponentInParent trong Start()
+            // để tránh race condition do Unity timing
+            var npcController = parent.GetComponent<NPCController>();
+            var npcAnimator = visualRoot.GetComponentInChildren<Animator>();
+            if (proceduralAnim != null)
+            {
+                proceduralAnim.Initialize(npcController, npcAnimator);
+            }
             return visualRoot;
         }
     }
@@ -204,6 +218,14 @@ namespace GanhHangRong.NPC
         private Quaternion originalRot;
         private Animator animator;
         private bool hasAnimator = false;
+        
+        // Sitting support
+        private Transform hipsBone;          // Xương Hips để theo dõi vị trí ngồi
+        private Transform npcModelTransform; // NPCModel child transform
+        private float npcModelOriginalLocalY = 0f; // LocalY gốc của NPCModel (khi đứng)
+        private float sittingYOffset = 0f;  // Độ bù Y khi ngồi, được tính 1 lần
+        private bool sittingOffsetCalculated = false;
+        private int sittingFrameCount = 0;  // Đếm frame để chờ animation blend
 
         // Walking animation parameters (chỉ dùng cho model static)
         private const float WALK_CYCLE_SPEED = 8f;
@@ -218,20 +240,69 @@ namespace GanhHangRong.NPC
         private const float IDLE_SWAY_SPEED = 1.2f;
         private const float IDLE_SWAY_AMOUNT = 1f;
 
+        /// <summary>
+        /// Khởi tạo trực tiếp với reference đến controller và animator.
+        /// Được gọi từ NPCVisualFactory.CreateNPCVisual() để tránh race condition.
+        /// </summary>
+        public void Initialize(NPCController npcController, Animator npcAnimator)
+        {
+            controller = npcController;
+            animator = npcAnimator;
+            originalPos = transform.localPosition;
+            originalRot = transform.localRotation;
+            hasAnimator = (animator != null && animator.runtimeAnimatorController != null);
+            if (animator != null && !hasAnimator)
+                hasAnimator = true;
+            
+            // Tìm Hips bone và NPCModel transform
+            if (animator != null)
+            {
+                npcModelTransform = animator.transform; // NPCModel
+                npcModelOriginalLocalY = npcModelTransform.localPosition.y; // Lưu Y gốc
+                var allTransforms = animator.GetComponentsInChildren<Transform>();
+                foreach (var t in allTransforms)
+                {
+                    if (t.name == "Hips") { hipsBone = t; break; }
+                }
+            }
+            sittingOffsetCalculated = false;
+            sittingFrameCount = 0;
+
+        }
+
         private void Start()
         {
-            controller = GetComponentInParent<NPCController>();
+            // Nếu Initialize() chưa được gọi (fallback), tự tìm
+            if (controller == null)
+            {
+                controller = GetComponentInParent<NPCController>(true);
+                if (controller == null)
+                {
+                    var parents = GetComponentsInParent<NPCController>(true);
+                    if (parents != null && parents.Length > 0)
+                        controller = parents[0];
+                }
+            }
+            if (animator == null)
+                animator = GetComponentInChildren<Animator>();
+            
             originalPos = transform.localPosition;
             originalRot = transform.localRotation;
             
-            // Kiểm tra model có Animator (biped skeleton) không
-            animator = GetComponentInChildren<Animator>();
-            hasAnimator = (animator != null && animator.runtimeAnimatorController != null);
-            
-            // Nếu có Animator nhưng không có controller, vẫn dùng để play clip trực tiếp
             if (animator != null && !hasAnimator)
             {
-                hasAnimator = true; // Model biped luôn có animation baked in
+                hasAnimator = (animator.runtimeAnimatorController != null);
+                if (!hasAnimator) hasAnimator = true; // biped luôn có animation
+            }
+            
+            // Fallback tìm Hips
+            if (hipsBone == null && animator != null)
+            {
+                npcModelTransform = animator.transform;
+                npcModelOriginalLocalY = npcModelTransform.localPosition.y; // Lưu Y gốc
+                var allTransforms = animator.GetComponentsInChildren<Transform>();
+                foreach (var t in allTransforms)
+                    if (t.name == "Hips") { hipsBone = t; break; }
             }
         }
 
@@ -241,30 +312,97 @@ namespace GanhHangRong.NPC
             animTimer += Time.deltaTime;
 
             bool isWalking = (controller.CurrentState == NPCState.WalkingIn || controller.CurrentState == NPCState.WalkingOut);
-            bool isSitting = (controller.CurrentState == NPCState.SittingDown || controller.CurrentState == NPCState.Waiting || controller.CurrentState == NPCState.Drinking);
+            bool isSitting = (controller.CurrentState == NPCState.SittingDown ||
+                              controller.CurrentState == NPCState.Ordering ||
+                              controller.CurrentState == NPCState.Waiting ||
+                              controller.CurrentState == NPCState.Drinking ||
+                              controller.CurrentState == NPCState.Paying);
 
             if (hasAnimator && animator != null)
             {
-                // === BIPED MODEL: Dùng animation gốc ===
+                // === BIPED MODEL: Dùng Animator parameter State (0=Walk, 1=Sit) ===
                 if (isWalking)
                 {
                     animator.enabled = true;
-                    animator.speed = 0.35f; // Chậm lại cho giống đi bộ (gốc là Running)
+                    animator.speed = 0.35f;
                     transform.localPosition = originalPos;
+                    // Restore NPCModel Y gốc khi đi bộ
+                    if (npcModelTransform != null)
+                    {
+                        var mp = npcModelTransform.localPosition;
+                        npcModelTransform.localPosition = new Vector3(mp.x, npcModelOriginalLocalY, mp.z);
+                    }
+                    if (HasParameter(animator, "State"))
+                        animator.SetInteger("State", 0);
+                    sittingOffsetCalculated = false;
+                    sittingFrameCount = 0;
                 }
                 else if (isSitting)
                 {
-                    // Dừng animation khi idle/ngồi
-                    animator.speed = 0f;
-                    // Hạ thấp xuống giống như đang ngồi ghế nhựa thấp
-                    float breathe = Mathf.Sin(animTimer * 2f) * 0.015f;
-                    transform.localPosition = originalPos + new Vector3(0, -0.35f + breathe, 0);
+                    animator.enabled = true;
+                    animator.speed = 1f;
+                    if (HasParameter(animator, "State"))
+                        animator.SetInteger("State", 1);
+                    
+                    // Tính VisualRoot Y offset để NPC ngồi đúng trên ghế.
+                    // Hips ở animation Sitting Idle có localY ≈ 57.49cm (trong Armature space).
+                    // Armature scale = 0.01 (GLB cm→m), NPCModel scale = npcModelTransform.lossyScale.y
+                    // => HipsWorldY = NPCModel.worldY + 57.49 * 0.01 * npcModelScale
+                    // Muốn HipsWorldY = seatSurfaceY
+                    // => offset = seatSurfaceY - HipsWorldY_khi_VR=0
+                    if (!sittingOffsetCalculated && controller.TargetSeat != null && npcModelTransform != null)
+                    {
+                        var seatRenderer = controller.TargetSeat.GetComponentInChildren<MeshRenderer>();
+                        float seatSurfaceY = seatRenderer != null
+                            ? seatRenderer.bounds.max.y
+                            : controller.TargetSeat.transform.position.y + 0.18f;
+                        
+                        // Sitting animation Hips.localY trong Armature space (đo thực tế)
+                        const float HIPS_SITTING_LOCAL_Y = 57.49f; // cm trong Armature
+                        const float ARMATURE_SCALE = 0.01f; // GLB cm→m
+                        float npcModelScale = npcModelTransform.lossyScale.y;
+                        
+                        // Thiết lập VR về gốc, NPCModel về original
+                        transform.localPosition = originalPos;
+                        if (npcModelTransform != null)
+                        {
+                            var mp2 = npcModelTransform.localPosition;
+                            npcModelTransform.localPosition = new Vector3(mp2.x, npcModelOriginalLocalY, mp2.z);
+                        }
+                        
+                        // Tính Hips worldY khi VR=(0,0,0) v\u00e0 NPCModel.localY = originalLocalY, d\u1ef1a tr\u00ean v\u1ecb trí gh\u1ebf thay v\u00ec v\u1ecb trí NPC (NPC c\u00f3 th\u1ec3 ch\u01b0a snap xu\u1ed1ng gh\u1ebf)
+                        float targetNpcWorldY = controller.TargetSeat.transform.position.y;
+                        float npcModelWorldY = targetNpcWorldY + npcModelOriginalLocalY;
+                        float hipsWorldYWhenSitting = npcModelWorldY + HIPS_SITTING_LOCAL_Y * ARMATURE_SCALE * npcModelScale;
+                        
+                        // Offset cần thêm vào VisualRoot
+                        sittingYOffset = seatSurfaceY - hipsWorldYWhenSitting;
+                        sittingOffsetCalculated = true;
+                    }
+                    
+                    // Restore NPCModel.localY gốc (không thêm offset vào model)
+                    if (npcModelTransform != null)
+                    {
+                        var mp = npcModelTransform.localPosition;
+                        npcModelTransform.localPosition = new Vector3(mp.x, npcModelOriginalLocalY, mp.z);
+                    }
+                    // Apply offset vào VisualRoot
+                    float targetY = originalPos.y + (sittingOffsetCalculated ? sittingYOffset : 0f);
+                    transform.localPosition = new Vector3(originalPos.x, targetY, originalPos.z);
                 }
                 else
                 {
-                    // Dừng animation khi idle/ngồi
                     animator.speed = 0f;
                     transform.localPosition = originalPos;
+                    // Restore NPCModel Y gốc
+                    if (npcModelTransform != null)
+                    {
+                        var mp = npcModelTransform.localPosition;
+                        npcModelTransform.localPosition = new Vector3(mp.x, npcModelOriginalLocalY, mp.z);
+                    }
+                    sittingOffsetCalculated = false;
+                    if (HasParameter(animator, "State"))
+                        animator.SetInteger("State", 0);
                 }
             }
             else
@@ -283,6 +421,14 @@ namespace GanhHangRong.NPC
                     AnimateIdle();
                 }
             }
+        }
+
+        private bool HasParameter(Animator anim, string paramName)
+        {
+            if (anim == null || anim.runtimeAnimatorController == null) return false;
+            foreach (var p in anim.parameters)
+                if (p.name == paramName) return true;
+            return false;
         }
 
         private void AnimateWalking()

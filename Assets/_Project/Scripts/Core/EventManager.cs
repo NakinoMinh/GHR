@@ -66,11 +66,11 @@ namespace GanhHangRong.Core
         // ĐỐI THOẠI
         public static event Action OnDialogueStarted;
         public static event Action OnDialogueEnded;
-        public static event Action<string, string> OnDialogueLine;
+        public static event Action<string, string, Sprite> OnDialogueLine;
 
         public static void TriggerDialogueStarted() => OnDialogueStarted?.Invoke();
         public static void TriggerDialogueEnded() => OnDialogueEnded?.Invoke();
-        public static void TriggerDialogueLine(string speaker, string text) => OnDialogueLine?.Invoke(speaker, text);
+        public static void TriggerDialogueLine(string speaker, string text, Sprite avatar = null) => OnDialogueLine?.Invoke(speaker, text, avatar);
 
         // CẢM XÚC
         public static event Action<EmotionalLevel> OnEmotionalLevelChanged;

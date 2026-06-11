@@ -25,6 +25,25 @@ namespace GanhHangRong.Narrative
                 linesQueue.Enqueue(line);
             }
 
+            StartDialogueInternal();
+        }
+
+        public void StartDialogue(string speaker, string text)
+        {
+            linesQueue.Clear();
+            linesQueue.Enqueue(new DialogueLine { speakerName = speaker, text = text });
+            StartDialogueInternal();
+        }
+
+        public void StartSingleDialogue(string speaker, string text, Sprite avatar = null)
+        {
+            linesQueue.Clear();
+            linesQueue.Enqueue(new DialogueLine { speakerName = speaker, text = text });
+            StartDialogueInternal();
+        }
+
+        private void StartDialogueInternal()
+        {
             isDialogueActive = true;
             EventManager.TriggerDialogueStarted();
             GameManager.Instance.SetGamePhase(GamePhase.Dialogue);
@@ -36,20 +55,24 @@ namespace GanhHangRong.Narrative
         {
             if (linesQueue.Count == 0)
             {
-                EndDialogue();
+                EndDialogueEarly();
                 return;
             }
 
             DialogueLine currentLine = linesQueue.Dequeue();
-            EventManager.TriggerDialogueLine(currentLine.speakerName, currentLine.text);
+            // Assuming DialogueLine doesn't have an avatar field currently, we pass null.
+            EventManager.TriggerDialogueLine(currentLine.speakerName, currentLine.text, null);
         }
 
-        private void EndDialogue()
+        public void EndDialogueEarly()
         {
+            if (!isDialogueActive) return;
             isDialogueActive = false;
             EventManager.TriggerDialogueEnded();
             GameManager.Instance.SetGamePhase(GamePhase.Playing);
         }
+
+        // Removed private EndDialogue as it's replaced by EndDialogueEarly
 
         private void Update()
         {
