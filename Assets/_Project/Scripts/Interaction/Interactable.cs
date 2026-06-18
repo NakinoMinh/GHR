@@ -56,9 +56,19 @@ namespace GanhHangRong.Interaction
             }
         }
 
+        public void InteractZ(Player.PlayerController player)
+        {
+            if (CanInteract)
+            {
+                lastInteractTime = Time.time;
+                OnInteractZ(player);
+            }
+        }
+
         protected virtual void OnInteract(Player.PlayerController player) { }
         protected virtual void OnInteractE(Player.PlayerController player) { }
         protected virtual void OnInteractQ(Player.PlayerController player) { }
         protected virtual void OnInteractR(Player.PlayerController player) { }
+        protected virtual void OnInteractZ(Player.PlayerController player) { }
     }
 }

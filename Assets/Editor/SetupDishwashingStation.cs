@@ -34,7 +34,7 @@ namespace GanhHangRong.Editor
             }
 
             // 3. Load FBX model bồn rửa chén
-            const string fbxPath = "Assets/cho_rua_chen/Meshy_AI_Dishwashing_Station_0611012056_texture.fbx";
+            const string fbxPath = "Assets/cho_rua_ly/Meshy_AI_Dishwashing_Station_0611012056_texture.fbx";
             var fbxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (fbxPrefab == null)
             {
@@ -71,8 +71,8 @@ namespace GanhHangRong.Editor
             stationPos.y = cartPos.y;
             stationGO.transform.position = stationPos;
 
-            // Xoay cùng hướng với xe đẩy
-            stationGO.transform.rotation = teaCartObj.transform.rotation;
+            // Chi xoay theo truc Y de bon rua dung huong voi xe, tranh lay theo goc import X cua xe.
+            stationGO.transform.rotation = Quaternion.Euler(0f, teaCartObj.transform.eulerAngles.y, 0f);
 
             // Scale nhỏ hơn xe đẩy cho phù hợp (bồn rửa thường nhỏ hơn xe)
             stationGO.transform.localScale = teaCartObj.transform.localScale * 0.6f;
@@ -91,22 +91,22 @@ namespace GanhHangRong.Editor
                 {
                     // Load texture từ thư mục FBX
                     Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                        "Assets/cho_rua_chen/Meshy_AI_Dishwashing_Station_0611012056_texture.png");
+                        "Assets/cho_rua_ly/Meshy_AI_Dishwashing_Station_0611012056_texture.png");
                     Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                        "Assets/cho_rua_chen/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png");
+                        "Assets/cho_rua_ly/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png");
 
                     // Fix normal map import type
                     if (normalTex != null)
                     {
                         var nImporter = AssetImporter.GetAtPath(
-                            "Assets/cho_rua_chen/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png")
+                            "Assets/cho_rua_ly/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png")
                             as TextureImporter;
                         if (nImporter != null && nImporter.textureType != TextureImporterType.NormalMap)
                         {
                             nImporter.textureType = TextureImporterType.NormalMap;
                             nImporter.SaveAndReimport();
                             normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                                "Assets/cho_rua_chen/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png");
+                                "Assets/cho_rua_ly/Meshy_AI_Dishwashing_Station_0611012056_texture_normal.png");
                         }
                     }
 

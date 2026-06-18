@@ -63,6 +63,7 @@ namespace GanhHangRong.Interaction
 
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
+        public static bool HasCupToWash => isHoldingCup || hasPreparedTea;
 
         private static int teaInCup = 0;
         public static int TeaInCup => teaInCup;
@@ -85,6 +86,7 @@ namespace GanhHangRong.Interaction
 
         // Mô hình ly trà đá đang cầm trên tay nhân vật
         private static GameObject heldTeaCupObj = null;
+        private static int returnedCleanCupVisualIndex = 0;
 
         public static void ResetBrewingState()
         {
@@ -92,12 +94,17 @@ namespace GanhHangRong.Interaction
             isWaterBoiled = false;
             bottleWater = 30f;
             kettleWater = maxKettleWater;
+            ResetCupState();
+            activeCoolDownCoroutine = null;
+        }
+
+        public static void ResetCupState()
+        {
             isHoldingCup = false;
             teaInCup = 0;
             waterInCup = 0f;
             iceInCup = 0f;
             hasPreparedTea = false;
-            activeCoolDownCoroutine = null;
             DetachTeaCup();
         }
 
@@ -592,6 +599,75 @@ namespace GanhHangRong.Interaction
             cupGO.name = "PlacedTeaCup";
 
             return cupGO;
+        }
+
+        public static GameObject ReturnCleanCupToCart()
+        {
+            TeaCart cart = Object.FindAnyObjectByType<TeaCart>();
+            Transform cartTransform = cart != null ? cart.transform : null;
+            Transform anchor = FindCleanCupReturnAnchor(cartTransform);
+
+            int slot = returnedCleanCupVisualIndex++ % 5;
+            Vector3 right = FlattenHorizontal(cartTransform != null ? cartTransform.right : Vector3.right, Vector3.right);
+            Vector3 forward = FlattenHorizontal(cartTransform != null ? cartTransform.forward : Vector3.forward, Vector3.forward);
+            Vector3 basePos = anchor != null
+                ? anchor.position
+                : (cartTransform != null ? cartTransform.position + Vector3.up * 0.85f : Vector3.up);
+
+            Vector3 worldPosition = basePos
+                + right * (0.12f * (slot % 3))
+                + forward * (0.10f * (slot / 3))
+                + Vector3.up * 0.03f;
+
+            string cupName = $"ReturnedCleanCup_{slot + 1}";
+            GameObject previousCup = GameObject.Find(cupName);
+            if (previousCup != null)
+            {
+                Destroy(previousCup);
+            }
+
+            GameObject cupGO = CreateFallbackEmptyCupModel();
+            cupGO.name = cupName;
+            cupGO.transform.position = worldPosition;
+            cupGO.transform.rotation = anchor != null ? anchor.rotation : Quaternion.identity;
+            cupGO.transform.localScale = Vector3.one * 0.12f;
+
+            if (cartTransform != null)
+            {
+                cupGO.transform.SetParent(cartTransform, true);
+            }
+
+            return cupGO;
+        }
+
+        private static Transform FindCleanCupReturnAnchor(Transform cartTransform)
+        {
+            if (cartTransform != null)
+            {
+                CartItem[] cartItems = cartTransform.GetComponentsInChildren<CartItem>(true);
+                foreach (CartItem item in cartItems)
+                {
+                    if (item != null && item.itemType == CartItemType.WaterCup)
+                    {
+                        return item.transform;
+                    }
+                }
+            }
+
+            GameObject cupObj = GameObject.Find("WaterCupProp_1");
+            return cupObj != null ? cupObj.transform : null;
+        }
+
+        private static Vector3 FlattenHorizontal(Vector3 direction, Vector3 fallback)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.001f)
+            {
+                direction = fallback;
+                direction.y = 0f;
+            }
+
+            return direction.normalized;
         }
 
         private static Transform FindRightHandBone(Transform root)
