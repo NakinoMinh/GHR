@@ -138,6 +138,8 @@ namespace GanhHangRong.NPC
                     }
                     animator.enabled = true;
                     animator.applyRootMotion = false;
+                    animator.updateMode = AnimatorUpdateMode.Normal;
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                     // Đặt tốc độ animation chậm lại để giống đi bộ (model gốc là Running)
                     animator.speed = 0.35f;
                 }
@@ -223,6 +225,9 @@ namespace GanhHangRong.NPC
         private Transform hipsBone;          // Xương Hips để theo dõi vị trí ngồi
         private Transform npcModelTransform; // NPCModel child transform
         private float npcModelOriginalLocalY = 0f; // LocalY gốc của NPCModel (khi đứng)
+        private Vector3 npcModelOriginalLocalPosition;
+        private Quaternion npcModelOriginalLocalRotation;
+        private Vector3 npcModelOriginalLocalScale = Vector3.one;
         private float sittingYOffset = 0f;  // Độ bù Y khi ngồi, được tính 1 lần
         private bool sittingOffsetCalculated = false;
         private int sittingFrameCount = 0;  // Đếm frame để chờ animation blend
@@ -253,12 +258,16 @@ namespace GanhHangRong.NPC
             hasAnimator = (animator != null && animator.runtimeAnimatorController != null);
             if (animator != null && !hasAnimator)
                 hasAnimator = true;
+            ConfigureAnimator();
             
             // Tìm Hips bone và NPCModel transform
             if (animator != null)
             {
                 npcModelTransform = animator.transform; // NPCModel
                 npcModelOriginalLocalY = npcModelTransform.localPosition.y; // Lưu Y gốc
+                npcModelOriginalLocalPosition = npcModelTransform.localPosition;
+                npcModelOriginalLocalRotation = npcModelTransform.localRotation;
+                npcModelOriginalLocalScale = npcModelTransform.localScale;
                 var allTransforms = animator.GetComponentsInChildren<Transform>();
                 foreach (var t in allTransforms)
                 {
@@ -295,11 +304,16 @@ namespace GanhHangRong.NPC
                 if (!hasAnimator) hasAnimator = true; // biped luôn có animation
             }
             
+            ConfigureAnimator();
+
             // Fallback tìm Hips
             if (hipsBone == null && animator != null)
             {
                 npcModelTransform = animator.transform;
                 npcModelOriginalLocalY = npcModelTransform.localPosition.y; // Lưu Y gốc
+                npcModelOriginalLocalPosition = npcModelTransform.localPosition;
+                npcModelOriginalLocalRotation = npcModelTransform.localRotation;
+                npcModelOriginalLocalScale = npcModelTransform.localScale;
                 var allTransforms = animator.GetComponentsInChildren<Transform>();
                 foreach (var t in allTransforms)
                     if (t.name == "Hips") { hipsBone = t; break; }
@@ -421,6 +435,32 @@ namespace GanhHangRong.NPC
                     AnimateIdle();
                 }
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (hasAnimator)
+            {
+                KeepNPCModelPinned();
+            }
+        }
+
+        private void ConfigureAnimator()
+        {
+            if (animator == null) return;
+
+            animator.applyRootMotion = false;
+            animator.updateMode = AnimatorUpdateMode.Normal;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        }
+
+        private void KeepNPCModelPinned()
+        {
+            if (npcModelTransform == null) return;
+
+            npcModelTransform.localPosition = npcModelOriginalLocalPosition;
+            npcModelTransform.localRotation = npcModelOriginalLocalRotation;
+            npcModelTransform.localScale = npcModelOriginalLocalScale;
         }
 
         private bool HasParameter(Animator anim, string paramName)
