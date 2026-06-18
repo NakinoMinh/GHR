@@ -148,6 +148,8 @@ namespace GanhHangRong.UI
 
         private void UpdateInventory()
         {
+            if (playerStats == null) return;
+
             if (teaCountText != null) teaCountText.text = $"TRÀ:\n{playerStats.TeaSupply}g";
             if (sugarCountText != null) sugarCountText.text = $"ĐƯỜNG:\n{playerStats.SugarSupply}g";
             if (cupCountText != null)

@@ -87,6 +87,11 @@ namespace GanhHangRong.Core
         public const int CUSTOMERS_THRESHOLD_BAD = 2;        // >= 2 khách = khó khăn
         public const float LIGHT_DIM_LONELY = 0.6f;          // hệ số ánh sáng khi cô đơn
         public const float LIGHT_DIM_DESPERATE = 0.35f;      // hệ số ánh sáng khi tuyệt vọng
+        public const int CHAPTER1_REQUIRED_DAYS = 3;
+        public const int CHAPTER1_TARGET_CUSTOMERS = 12;
+        public const int CHAPTER1_TARGET_MONEY = 85000;
+        public const string CHAPTER2_SCENE_NAME = "Chapter2";
+        public const string CHAPTER2_SCENE_PATH = "Assets/_Project/Scenes/Chapter2/Chapter2.unity";
 
         // ═══════════════════════════════════════════
         // DIALOGUE

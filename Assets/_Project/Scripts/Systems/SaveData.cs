@@ -14,9 +14,13 @@ namespace GanhHangRong.Systems
         public int sugarSupply;
         public int coffeeSupply;
         public int cupSupply;
+        public int totalCustomersServed;
+        public int totalMoneyEarned;
 
         // Progress
         public int currentDay;
+        public int currentChapter = 1;
+        public bool chapter1Completed;
         
         // Story flags có thể được thêm ở đây, vd: Dictionary<string, bool>
     }

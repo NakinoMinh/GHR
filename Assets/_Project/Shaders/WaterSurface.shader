@@ -31,8 +31,11 @@ Shader "GanhHangRong/WaterSurface"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
             {
@@ -46,6 +49,7 @@ Shader "GanhHangRong/WaterSurface"
                 float3 positionWS : TEXCOORD0;
                 float2 uv : TEXCOORD1;
                 float fogCoord : TEXCOORD2;
+                float4 shadowCoord : TEXCOORD3;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -72,6 +76,7 @@ Shader "GanhHangRong/WaterSurface"
                 output.positionWS = vertexInput.positionWS;
                 output.uv = input.uv;
                 output.fogCoord = ComputeFogFactor(output.positionCS.z);
+                output.shadowCoord = TransformWorldToShadowCoord(vertexInput.positionWS);
 
                 return output;
             }
@@ -86,8 +91,18 @@ Shader "GanhHangRong/WaterSurface"
                 half4 baseColor = lerp(_WaterColor, _DeepWaterColor, waveNoise * 0.5);
                 
                 // Fake foam at wave peaks
-                float foam = smoothstep(1.0 - _FoamThickness, 1.0, waveNoise);
+                float foam = smoothstep(1.0 - _FoamThickness, 1.0, waveNoise) * _FoamColor.a;
                 half4 finalColor = lerp(baseColor, _FoamColor, foam);
+
+                half3 normalWS = half3(0.0h, 1.0h, 0.0h);
+                Light mainLight = GetMainLight(input.shadowCoord);
+                half ndotl = saturate(dot(normalWS, mainLight.direction));
+                half shadow = lerp(0.45h, 1.0h, mainLight.shadowAttenuation);
+                half3 ambient = SampleSH(normalWS);
+                half3 lit = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadow;
+                half3 viewDir = normalize(GetWorldSpaceViewDir(input.positionWS));
+                half fresnel = pow(1.0h - saturate(dot(viewDir, normalWS)), 3.0h);
+                finalColor.rgb = finalColor.rgb * lit + fresnel * half3(0.08h, 0.12h, 0.14h);
                 
                 finalColor.rgb = MixFog(finalColor.rgb, input.fogCoord);
 

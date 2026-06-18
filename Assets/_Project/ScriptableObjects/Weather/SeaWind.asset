@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: SeaWind
   m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Weather.WeatherPreset
   weatherType: 3
-  ambientLightColor: {r: 0.7, g: 0.8, b: 0.9, a: 1}
-  ambientLightIntensity: 0.7
-  fogDensity: 0.005
-  fogColor: {r: 0.5, g: 0.6, b: 0.7, a: 1}
-  rainIntensity: 0.1
-  rainEmissionRate: 0
-  windStrength: 0.8
-  customerSpawnModifier: 0.8
+  ambientLightColor: {r: 0.78, g: 0.88, b: 0.92, a: 1}
+  ambientLightIntensity: 0.76
+  fogDensity: 0.009
+  fogColor: {r: 0.58, g: 0.76, b: 0.82, a: 1}
+  rainIntensity: 0.12
+  rainEmissionRate: 70
+  windStrength: 0.74
+  customerSpawnModifier: 0.88
   iceMeltModifier: 1

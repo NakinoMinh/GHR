@@ -76,11 +76,16 @@ namespace GanhHangRong.Systems
 
         public void EndDaySummary()
         {
+            hasShownSummary = false;
             GameManager.Instance.ResumeGame();
             if (dayNightCycle != null)
             {
                 dayNightCycle.SkipToHour(17f); // Nhảy đến chiều tối ngày hôm sau
-                GameManager.Instance.AdvanceDay();
+                int skippedCalendarDays = Mathf.Max(1, dayNightCycle.ConsumeCalendarDayOffset());
+                for (int i = 0; i < skippedCalendarDays; i++)
+                {
+                    GameManager.Instance.AdvanceDay();
+                }
                 
                 // Hồi phục hoàn toàn cho ngày mới
                 var playerStats = FindAnyObjectByType<PlayerStats>();

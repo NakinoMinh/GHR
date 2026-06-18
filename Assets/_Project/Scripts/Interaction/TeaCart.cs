@@ -77,6 +77,8 @@ namespace GanhHangRong.Interaction
                 cartForward = transform.up; // Trục Y cục bộ của xe đẩy tương đương với hướng dọc của xe trong thế giới thực
             }
             cartForward.y = 0f;
+            if (cartForward.sqrMagnitude < 0.001f)
+                cartForward = transform.forward;
             cartForward.Normalize();
 
             // Đứng cố định ở phía sau xe đẩy

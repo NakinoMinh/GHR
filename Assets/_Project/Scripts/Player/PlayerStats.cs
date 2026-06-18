@@ -33,8 +33,12 @@ namespace GanhHangRong.Player
         // Tracking cho hệ thống cảm xúc
         private int customersServedToday = 0;
         private int moneyEarnedToday = 0;
+        [SerializeField] private int totalCustomersServed = 0;
+        [SerializeField] private int totalMoneyEarned = 0;
         public int CustomersServedToday => customersServedToday;
         public int MoneyEarnedToday => moneyEarnedToday;
+        public int TotalCustomersServed => totalCustomersServed;
+        public int TotalMoneyEarned => totalMoneyEarned;
 
         private void OnEnable()
         {
@@ -50,7 +54,7 @@ namespace GanhHangRong.Player
 
         private void Update()
         {
-            if (!GameManager.Instance.IsPlaying) return;
+            if (!GameManager.HasInstance || !GameManager.Instance.IsPlaying) return;
 
             var controller = GetComponent<PlayerController>();
             if (controller != null && controller.CurrentState == PlayerState.Sitting)
@@ -79,6 +83,7 @@ namespace GanhHangRong.Player
         {
             money += amount;
             moneyEarnedToday += amount;
+            totalMoneyEarned += amount;
             EventManager.TriggerMoneyChanged(money);
             EventManager.TriggerMoneyEarned(amount);
         }
@@ -174,7 +179,24 @@ namespace GanhHangRong.Player
         public void RecordCustomerServed()
         {
             customersServedToday++;
+            totalCustomersServed++;
             ModifyStress(Constants.PLAYER_STRESS_RATE_SERVE); // Giảm stress khi phục vụ thành công
+        }
+
+        public void RestoreFromSave(int savedMoney, float savedFatigue, int savedTea, int savedSugar, int savedCoffee, int savedCups, int savedTotalCustomers, int savedTotalMoneyEarned)
+        {
+            money = Mathf.Max(0, savedMoney);
+            fatigue = Mathf.Clamp(savedFatigue, 0f, Constants.PLAYER_FATIGUE_MAX);
+            teaSupply = Mathf.Clamp(savedTea, 0, 1000);
+            sugarSupply = Mathf.Clamp(savedSugar, 0, 2000);
+            coffeeSupply = Mathf.Clamp(savedCoffee, 0, 1500);
+            cupSupply = Mathf.Max(0, savedCups);
+            totalCustomersServed = Mathf.Max(0, savedTotalCustomers);
+            totalMoneyEarned = Mathf.Max(0, savedTotalMoneyEarned);
+
+            EventManager.TriggerMoneyChanged(money);
+            EventManager.TriggerFatigueChanged(fatigue);
+            EventManager.TriggerIceLevelChanged(iceLevel);
         }
 
         private void ResetDailyStats()

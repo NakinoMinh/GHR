@@ -80,8 +80,24 @@ namespace GanhHangRong.NPC
             EventManager.OnDialogueEnded -= HandleDialogueEnded;
         }
 
+        private void OnDestroy()
+        {
+            if (targetSeat != null && targetSeat.IsOccupied)
+            {
+                targetSeat.FreeSeat();
+            }
+        }
+
         public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd)
         {
+            if (profile == null || seat == null || exit == null)
+            {
+                Debug.LogWarning("[NPCController] Missing profile, seat, or exit point. Cancelled NPC spawn.");
+                if (seat != null) seat.FreeSeat();
+                Destroy(gameObject);
+                return;
+            }
+
             this.profile = profile;
             this.targetSeat = seat;
             this.exitPoint = exit;
@@ -103,7 +119,8 @@ namespace GanhHangRong.NPC
 
         private void Update()
         {
-            if (GameManager.Instance.IsPaused) return;
+            if (!GameManager.HasInstance || GameManager.Instance.IsPaused) return;
+            if (profile == null || targetSeat == null || exitPoint == null) return;
 
             switch (currentState)
             {
