@@ -52,8 +52,13 @@ namespace GanhHangRong.UI
                 // Chờ ít nhất 1 frame sau khi bắt đầu thoại để tránh xử lý phím F của chính lệnh mở thoại
                 if (Time.frameCount > frameStarted + 1)
                 {
-                    if ((Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) || 
-                        (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) || 
+                    if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+                    {
+                        Narrative.DialogueManager.Instance.EndDialogueEarly();
+                        return;
+                    }
+
+                    if ((Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) ||
                         (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame))
                     {
                         OnNextPressed();

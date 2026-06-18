@@ -210,6 +210,16 @@ namespace GanhHangRong.Player
                         return;
                     }
                 }
+
+                // Nhấn Z để rửa/đổ bỏ ly đang cầm tại bồn rửa.
+                if (Keyboard.current != null && Keyboard.current.zKey.wasPressedThisFrame)
+                {
+                    if (nearestInteractable != null)
+                    {
+                        nearestInteractable.InteractZ(this);
+                        return;
+                    }
+                }
             }
 
             // Cập nhật trạng thái

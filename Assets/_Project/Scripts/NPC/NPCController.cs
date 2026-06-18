@@ -68,6 +68,17 @@ namespace GanhHangRong.NPC
             speechBubble.SetActive(false);
 
             interactable = gameObject.AddComponent<NPCInteractable>();
+
+            // Thêm Collider để PlayerController có thể Raycast/OverlapSphere detect được NPC
+            var col = gameObject.GetComponent<CapsuleCollider>();
+            if (col == null)
+            {
+                col = gameObject.AddComponent<CapsuleCollider>();
+                col.height = 1.8f;
+                col.radius = 0.4f;
+                col.center = new Vector3(0f, 0.9f, 0f);
+                col.isTrigger = true; // Trigger để không chặn vật lý
+            }
         }
 
         private void OnEnable()

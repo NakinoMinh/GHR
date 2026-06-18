@@ -22,14 +22,15 @@ namespace GanhHangRong.Interaction
         {
             if (isOccupied)
             {
-                canInteract = true;
                 if (CartItem.HasPreparedTea)
                 {
+                    canInteract = true;
                     promptText = "Nhấn F để đặt ly trà đá xuống bàn";
                 }
                 else
                 {
-                    promptText = "Nhấn F để hỏi chuyện khách";
+                    canInteract = false;
+                    promptText = string.Empty;
                 }
             }
             else
@@ -40,10 +41,23 @@ namespace GanhHangRong.Interaction
             }
         }
 
+        /// <summary>Đặt trước ghế khi NPC đang trên đường đi tới (chưa ngồi hẳn).</summary>
+        public void ReserveSeat()
+        {
+            isOccupied = true; // Coi như đã chiếm để không spawn thêm NPC khác vào ghế này
+        }
+
         public void OccupySeat()
         {
             isOccupied = true;
             canInteract = true; // Cho tương tác để phục vụ/đặt ly lên bàn
+        }
+
+        /// <summary>Gọi khi NPC thực sự ngồi xuống ghế.</summary>
+        public void OccupySeat(NPC.NPCController npc)
+        {
+            isOccupied = true;
+            canInteract = true;
         }
 
         public void FreeSeat()
@@ -62,7 +76,7 @@ namespace GanhHangRong.Interaction
 
         protected override void OnInteract(Player.PlayerController player)
         {
-            if (!isOccupied) return;
+            if (!isOccupied || !CartItem.HasPreparedTea) return;
 
             // Tìm NPC đang ngồi trên chiếc ghế này
             NPC.NPCController seatNPC = null;
@@ -76,59 +90,33 @@ namespace GanhHangRong.Interaction
                 }
             }
 
-            if (seatNPC != null)
+            if (seatNPC == null) return;
+
+            if (seatNPC.CurrentState != NPCState.Waiting)
             {
-                if (CartItem.HasPreparedTea)
-                {
-                    if (seatNPC.CurrentState != NPCState.Waiting)
-                    {
-                        EventManager.TriggerDialogueLine("Khách hàng", "Cảm ơn em, để lát nữa nhé.");
-                        return;
-                    }
-
-                    // 1. Kích hoạt trạng thái uống nước của khách
-                    seatNPC.ServeDrink();
-
-                    // 2. Đặt ly trà đá tĩnh lên bàn ảo phía trước khách
-                    Vector3 tablePos = transform.position + transform.forward * 0.5f + Vector3.up * 0.35f;
-                    placedCupObj = CartItem.CreateStaticTeaCupModel(tablePos);
-
-                    // 3. Bỏ ly trà trên tay Hoàng Hôn
-                    CartItem.DetachTeaCup();
-                    CartItem.HasPreparedTea = false;
-
-                    // 4. Trừ tài nguyên ly trà đá trong PlayerStats
-                    var stats = player.GetComponent<Player.PlayerStats>();
-                    if (stats != null)
-                    {
-                        stats.UseTeaSupplies();
-                    }
-
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Trà đá của quý khách đây ạ. Chúc quý khách ngon miệng!");
-                }
-                else
-                {
-                    if (seatNPC.CurrentState == NPCState.Waiting)
-                    {
-                        string[] complaints = {
-                            "Trà đá của tôi đâu em ơi, khát quá rồi!",
-                            "Cho anh xin ly trà đá đi em trai!",
-                            "Nước nôi lâu quá em ơi!",
-                            "Pha giùm anh ly trà đá nhiều đá nhé!"
-                        };
-                        string complaint = complaints[Random.Range(0, complaints.Length)];
-                        EventManager.TriggerDialogueLine("Khách hàng", complaint);
-                    }
-                    else if (seatNPC.CurrentState == NPCState.Drinking)
-                    {
-                        EventManager.TriggerDialogueLine("Khách hàng", "Trà đá mát lạnh, ngon quá!");
-                    }
-                    else
-                    {
-                        EventManager.TriggerDialogueLine("Khách hàng", "Cảm ơn em nhé.");
-                    }
-                }
+                EventManager.TriggerDialogueLine("Khách hàng", "Cảm ơn em, để lát nữa nhé.");
+                return;
             }
+
+            // 1. Kích hoạt trạng thái uống nước của khách
+            seatNPC.ServeDrink();
+
+            // 2. Đặt ly trà đá tĩnh lên bàn ảo phía trước khách
+            Vector3 tablePos = transform.position + transform.forward * 0.5f + Vector3.up * 0.35f;
+            placedCupObj = CartItem.CreateStaticTeaCupModel(tablePos);
+
+            // 3. Bỏ ly trà trên tay Hoàng Hôn
+            CartItem.DetachTeaCup();
+            CartItem.HasPreparedTea = false;
+
+            // 4. Trừ tài nguyên ly trà đá trong PlayerStats
+            var stats = player.GetComponent<Player.PlayerStats>();
+            if (stats != null)
+            {
+                stats.UseTeaSupplies();
+            }
+
+            EventManager.TriggerDialogueLine("Hoàng Hôn", "Trà đá của quý khách đây ạ. Chúc quý khách ngon miệng!");
         }
     }
 }
