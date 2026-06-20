@@ -98,11 +98,12 @@ namespace GanhHangRong.Player
             if (has3DAnimator)
             {
                 // === 3D ANIMATION MODE ===
-                int targetState = (int)currentState;
+                PlayerState animatorState = currentState == PlayerState.Interacting ? PlayerState.Idle : currentState;
+                int targetState = (int)animatorState;
                 
                 // Smooth speed parameter (cho blend mượt)
                 float targetSpeed = 0f;
-                switch (currentState)
+                switch (animatorState)
                 {
                     case PlayerState.Idle: targetSpeed = 0f; break;
                     case PlayerState.Walking: targetSpeed = 0.5f; break;
@@ -147,7 +148,6 @@ namespace GanhHangRong.Player
                     }
                 }
 
-                // Căn chỉnh vị trí mô hình 3D khi ngồi
                 if (currentState == PlayerState.Sitting)
                 {
                     float breathe = Mathf.Sin(animTimer * 1f) * 0.01f;
@@ -244,8 +244,10 @@ namespace GanhHangRong.Player
 
         private void LateUpdate()
         {
+            bool isHoldingCup = Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea;
+
             // Nếu đang cầm ly pha chế hoặc đã có ly trà đá thành phẩm
-            if (Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea)
+            if (isHoldingCup)
             {
                 // Dùng procedural bone rotation khi toggle bật
                 if (useProceduralHold)

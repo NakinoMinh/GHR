@@ -38,6 +38,8 @@ namespace GanhHangRong.NPC
 
         public NPCState CurrentState => currentState;
         public CustomerSeat TargetSeat => targetSeat;
+        public int OrderedDrinkId => orderedDrink;
+        public string OrderedDrinkName => GetDrinkName(orderedDrink);
 
         private void Awake()
         {
@@ -176,6 +178,7 @@ namespace GanhHangRong.NPC
                     else if (waitTimer >= maxWaitTime)
                     {
                         ChangeState(NPCState.LeavingSad);
+                        EventManager.TriggerCustomerOrderCleared();
                         EventManager.TriggerCustomerLeftSad(profile.npcType);
                         if (targetSeat != null) targetSeat.FreeSeat();
                     }
@@ -254,12 +257,13 @@ namespace GanhHangRong.NPC
             if (currentState == NPCState.Waiting && !isServed)
             {
                 isServed = true;
+                EventManager.TriggerCustomerOrderCleared();
             }
         }
 
         private void PayForDrink()
         {
-            int basePrice = orderedDrink == 1 ? Constants.COFFEE_SELL_PRICE : Constants.TRA_DA_SELL_PRICE;
+            int basePrice = ChapterOrderCatalog.GetOrderPrice(orderedDrink);
             int total = basePrice;
             
             // Tính tip
@@ -286,10 +290,15 @@ namespace GanhHangRong.NPC
             var cam = FindAnyObjectByType<Player.CinematicCamera>();
             if (cam != null) cam.FocusOnNPC(transform, player.transform);
 
-            // Random món
-            orderedDrink = Random.value > 0.5f ? 1 : 0;
-            string drinkName = orderedDrink == 1 ? "Cà Phê đá" : "Trà Đá";
+            // Random món theo chapter hiện tại.
+            int chapter = GameManager.HasInstance ? GameManager.Instance.CurrentChapter : 1;
+            orderedDrink = ChapterOrderCatalog.GetRandomOrderId(chapter);
+            string drinkName = GetDrinkName(orderedDrink);
             string text = $"Cho tui một ly {drinkName} nha!";
+            if (ChapterOrderCatalog.IsChapter2Order(orderedDrink))
+            {
+                text = $"Cho tui một phần {drinkName} nha!";
+            }
 
             // Kích hoạt thoại
             Narrative.DialogueManager.Instance.StartSingleDialogue(profile.npcType.ToString(), text);
@@ -308,9 +317,15 @@ namespace GanhHangRong.NPC
                 // Chuyển state
                 EventManager.TriggerCustomerArrived(profile.npcType);
                 ChangeState(NPCState.Waiting);
-                string drinkName = orderedDrink == 1 ? "Cà Phê!" : "Trà Đá!";
+                string drinkName = GetDrinkName(orderedDrink);
+                EventManager.TriggerCustomerOrderPlaced(orderedDrink, drinkName);
                 ShowSpeechBubble(drinkName);
             }
+        }
+
+        private static string GetDrinkName(int drinkId)
+        {
+            return ChapterOrderCatalog.GetOrderName(drinkId);
         }
 
         private void ShowSpeechBubble(string text, Color? textColor = null)

@@ -5,6 +5,11 @@ namespace GanhHangRong.Audio
 {
     public class AudioManager : Singleton<AudioManager>
     {
+        private const string MasterVolumePrefKey = "GHR_MasterVolume";
+        private const string MusicVolumePrefKey = "GHR_MusicVolume";
+        private const string SfxVolumePrefKey = "GHR_SfxVolume";
+        private const string AmbientVolumePrefKey = "GHR_AmbientVolume";
+
         [Header("Sources")]
         [SerializeField] private AudioSource musicSource;
         [SerializeField] private AudioSource sfxSource;
@@ -16,19 +21,24 @@ namespace GanhHangRong.Audio
         [Range(0f, 1f)] public float sfxVolume = Constants.SFX_BASE_VOLUME;
         [Range(0f, 1f)] public float ambientVolume = Constants.AMBIENT_BASE_VOLUME;
 
+        public float MusicVolume => musicVolume;
+
         protected override void OnSingletonAwake()
         {
+            EnsureAudioSources();
+            LoadVolumeSettings();
             UpdateVolumes();
         }
 
         public void PlayMusic(AudioClip clip, bool loop = true)
         {
+            EnsureAudioSources();
             if (clip == null || musicSource == null) return;
-            
             if (musicSource.isPlaying && musicSource.clip == clip) return;
 
             musicSource.clip = clip;
             musicSource.loop = loop;
+            musicSource.volume = musicVolume * masterVolume;
             musicSource.Play();
         }
 
@@ -39,48 +49,119 @@ namespace GanhHangRong.Audio
 
         public void PlaySFX(AudioClip clip)
         {
+            EnsureAudioSources();
             if (clip == null || sfxSource == null) return;
             sfxSource.PlayOneShot(clip, sfxVolume * masterVolume);
         }
 
         public void UpdateVolumes()
         {
+            EnsureAudioSources();
             if (musicSource != null) musicSource.volume = musicVolume * masterVolume;
             if (sfxSource != null) sfxSource.volume = sfxVolume * masterVolume;
             if (ambientSource != null) ambientSource.volume = ambientVolume * masterVolume;
         }
 
-        // Crossfade music đơn giản
-        public void CrossfadeMusic(AudioClip newClip, float duration = Constants.AUDIO_CROSSFADE_DURATION)
+        public void SetMasterVolume(float value, bool save = true)
         {
-            StartCoroutine(CrossfadeRoutine(newClip, duration));
+            masterVolume = Mathf.Clamp01(value);
+            UpdateVolumes();
+            if (save) PlayerPrefs.SetFloat(MasterVolumePrefKey, masterVolume);
         }
 
-        private System.Collections.IEnumerator CrossfadeRoutine(AudioClip newClip, float duration)
+        public void SetMusicVolume(float value, bool save = true)
+        {
+            musicVolume = Mathf.Clamp01(value);
+            UpdateVolumes();
+            if (save) PlayerPrefs.SetFloat(MusicVolumePrefKey, musicVolume);
+        }
+
+        public void SetSfxVolume(float value, bool save = true)
+        {
+            sfxVolume = Mathf.Clamp01(value);
+            UpdateVolumes();
+            if (save) PlayerPrefs.SetFloat(SfxVolumePrefKey, sfxVolume);
+        }
+
+        public void SetAmbientVolume(float value, bool save = true)
+        {
+            ambientVolume = Mathf.Clamp01(value);
+            UpdateVolumes();
+            if (save) PlayerPrefs.SetFloat(AmbientVolumePrefKey, ambientVolume);
+        }
+
+        public void CrossfadeMusic(AudioClip newClip, float duration = Constants.AUDIO_CROSSFADE_DURATION, bool loop = true)
+        {
+            EnsureAudioSources();
+            if (newClip == null || musicSource == null) return;
+            StartCoroutine(CrossfadeRoutine(newClip, duration, loop));
+        }
+
+        private System.Collections.IEnumerator CrossfadeRoutine(AudioClip newClip, float duration, bool loop)
         {
             if (musicSource == null) yield break;
+            if (musicSource.isPlaying && musicSource.clip == newClip) yield break;
 
             float startVol = musicSource.volume;
-            
-            // Fade out
-            for (float t = 0; t < duration; t += Time.deltaTime)
+            duration = Mathf.Max(0.01f, duration);
+
+            if (musicSource.isPlaying)
             {
-                musicSource.volume = Mathf.Lerp(startVol, 0f, t / duration);
-                yield return null;
+                for (float t = 0; t < duration; t += Time.deltaTime)
+                {
+                    musicSource.volume = Mathf.Lerp(startVol, 0f, t / duration);
+                    yield return null;
+                }
+
+                musicSource.Stop();
             }
 
-            musicSource.Stop();
             musicSource.clip = newClip;
+            musicSource.loop = loop;
+            musicSource.volume = 0f;
             musicSource.Play();
 
-            // Fade in
             float targetVol = musicVolume * masterVolume;
             for (float t = 0; t < duration; t += Time.deltaTime)
             {
                 musicSource.volume = Mathf.Lerp(0f, targetVol, t / duration);
                 yield return null;
             }
+
             musicSource.volume = targetVol;
+        }
+
+        private void LoadVolumeSettings()
+        {
+            masterVolume = PlayerPrefs.GetFloat(MasterVolumePrefKey, masterVolume);
+            musicVolume = PlayerPrefs.GetFloat(MusicVolumePrefKey, musicVolume);
+            sfxVolume = PlayerPrefs.GetFloat(SfxVolumePrefKey, sfxVolume);
+            ambientVolume = PlayerPrefs.GetFloat(AmbientVolumePrefKey, ambientVolume);
+        }
+
+        private void EnsureAudioSources()
+        {
+            if (musicSource == null) musicSource = CreateSource("MusicSource", true);
+            if (sfxSource == null) sfxSource = CreateSource("SfxSource", false);
+            if (ambientSource == null) ambientSource = CreateSource("AmbientSource", true);
+        }
+
+        private AudioSource CreateSource(string sourceName, bool loop)
+        {
+            Transform existing = transform.Find(sourceName);
+            AudioSource source = existing != null ? existing.GetComponent<AudioSource>() : null;
+
+            if (source == null)
+            {
+                GameObject sourceObject = existing != null ? existing.gameObject : new GameObject(sourceName);
+                sourceObject.transform.SetParent(transform, false);
+                source = sourceObject.AddComponent<AudioSource>();
+            }
+
+            source.playOnAwake = false;
+            source.loop = loop;
+            source.spatialBlend = 0f;
+            return source;
         }
     }
 }

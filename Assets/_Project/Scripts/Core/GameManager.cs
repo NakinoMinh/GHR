@@ -93,6 +93,15 @@ namespace GanhHangRong.Core
             SetGamePhase(GamePhase.Playing);
         }
 
+        public void SetCurrentChapter(int chapter, bool markPreviousComplete = false)
+        {
+            currentChapter = Mathf.Clamp(chapter, 1, 4);
+            if (markPreviousComplete || currentChapter >= 2)
+            {
+                chapter1Completed = true;
+            }
+        }
+
         public void RestoreProgress(int savedDay, int savedChapter, bool savedChapter1Completed)
         {
             currentDay = Mathf.Max(1, savedDay);

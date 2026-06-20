@@ -60,6 +60,7 @@ namespace GanhHangRong.Editor
             // ==========================================
             GameObject camObj = new GameObject("Main Camera");
             Camera cam = camObj.AddComponent<Camera>();
+            camObj.AddComponent<AudioListener>();
             camObj.tag = "MainCamera";
             cam.orthographic = false;
             cam.fieldOfView = 50f; // Góc nhìn rộng hơn để thấy rõ toàn cảnh thành phố
@@ -328,8 +329,8 @@ namespace GanhHangRong.Editor
                 }
 
                 // Mô hình FBX của bạn có kích thước Mesh rất nhỏ (extents 0.01 -> size 0.02)
-                // Chúng ta sẽ scale tự động để xe cao khoảng 1.6m
-                float targetHeight = 1.6f;
+                // Chúng ta sẽ scale tự động để xe cao khoảng 2.35m
+                float targetHeight = 2.35f;
                 float unscaledHeight = CalculateModelHeight(cartObj, Quaternion.Euler(-90f, 180f, 0f), out float bottomOffsetAtScale1);
                 float scaleFactor = targetHeight / unscaledHeight;
 
@@ -778,8 +779,8 @@ namespace GanhHangRong.Editor
                 // --- Add First Person Camera Point ---
                 GameObject camPointObj = new GameObject("FirstPersonCameraPoint");
                 camPointObj.transform.SetParent(cartObj.transform);
-                camPointObj.transform.position = new Vector3(4.0f, sidewalkTopY + 1.55f, 0.9f);
-                camPointObj.transform.rotation = Quaternion.Euler(30f, 180f, 0f);
+                camPointObj.transform.position = new Vector3(4.0f, sidewalkTopY + 1.18f, 1.65f);
+                camPointObj.transform.rotation = Quaternion.Euler(18f, 180f, 0f);
                 
                 var camField = typeof(TeaCart).GetField("cameraViewPoint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (camField != null) camField.SetValue(teaCartComp, camPointObj.transform);
@@ -790,7 +791,7 @@ namespace GanhHangRong.Editor
                 cartObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 cartObj.name = "TeaCart";
                 cartObj.transform.position = new Vector3(4f, 1f, 0f);
-                cartObj.transform.localScale = new Vector3(2f, 2f, 1f);
+                cartObj.transform.localScale = new Vector3(2.55f, 2.55f, 1.28f);
                 cartObj.GetComponent<MeshRenderer>().sharedMaterial = matCart;
                 var cartCollider = cartObj.GetComponent<BoxCollider>();
                 if (cartCollider != null) cartCollider.isTrigger = true;
@@ -842,7 +843,8 @@ namespace GanhHangRong.Editor
             GameObject playerObj = new GameObject("Player_HoangHon");
             playerObj.tag = "Player";
             playerObj.layer = LayerMask.NameToLayer("Default");
-            playerObj.transform.position = new Vector3(0f, 1.5f, 0f); // Đặt trên vỉa hè
+            playerObj.transform.position = new Vector3(4f, 1.5f, 1.35f); // Spawn ngay cạnh xe bán hàng, phía tương tác
+            playerObj.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
             
             // Trả lại đường dẫn model cũ của User
             string modelPath = "Assets/_Project/Art/Models/Player/Meshy_AI_Ripped_Jeans_Portrait_biped/Meshy_AI_Ripped_Jeans_Portrait_biped_Animation_Walking_withSkin.glb";
@@ -987,6 +989,12 @@ namespace GanhHangRong.Editor
             managersObj.AddComponent<GanhHangRong.Systems.TimeOfDayLighting>();
             managersObj.AddComponent<Narrative.DialogueManager>();
             managersObj.AddComponent<AudioManager>();
+            var sceneMusicPlayer = managersObj.AddComponent<SceneMusicPlayer>();
+            var serializedMusic = new SerializedObject(sceneMusicPlayer);
+            serializedMusic.FindProperty("musicResourcePath").stringValue = "Music/Chapter1_ChuyenTauDem";
+            serializedMusic.FindProperty("loop").boolValue = true;
+            serializedMusic.FindProperty("fadeDuration").floatValue = 1.5f;
+            serializedMusic.ApplyModifiedPropertiesWithoutUndo();
             managersObj.AddComponent<GanhHangRong.Systems.EmotionalFailureSystem>();
             managersObj.AddComponent<GanhHangRong.Systems.GameplayLoop>();
             var npcVisualFactory = managersObj.AddComponent<NPCVisualFactory>();
@@ -995,9 +1003,9 @@ namespace GanhHangRong.Editor
             
             Material npcMat = CreateGrabRiderMaterial(); 
             
-            AddNPCModelData(serializedFactory, 0, "Assets/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_withSkin.glb", "NPCGrabController", npcMat);
-            AddNPCModelData(serializedFactory, 1, "Assets/Meshy_AI_Maroon_Tunic_Portrait_biped/Meshy_AI_Maroon_Tunic_Portrait_biped_Animation_Walking_withSkin.glb", "NPCMaroonController", npcMat);
-            AddNPCModelData(serializedFactory, 2, "Assets/Meshy_AI_T_Pose_in_the_Studio_biped/Meshy_AI_T_Pose_in_the_Studio_biped_Animation_Walking_withSkin.glb", "NPCTPoseController", npcMat);
+            AddNPCModelData(serializedFactory, 0, "Assets/_Project/Art/Characters/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_withSkin.glb", "NPCGrabController", npcMat);
+            AddNPCModelData(serializedFactory, 1, "Assets/_Project/Art/Characters/Meshy_AI_Maroon_Tunic_Portrait_biped/Meshy_AI_Maroon_Tunic_Portrait_biped_Animation_Walking_withSkin.glb", "NPCMaroonController", npcMat);
+            AddNPCModelData(serializedFactory, 2, "Assets/_Project/Art/Characters/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_Woman_withSkin.glb", "NPCGrabController", npcMat);
             
             serializedFactory.ApplyModifiedPropertiesWithoutUndo();
 
@@ -1427,7 +1435,7 @@ namespace GanhHangRong.Editor
             }
 
             // Chiều cao bàn nước tiêu chuẩn (khoảng 0.65m)
-            float targetHeight = 0.65f;
+            float targetHeight = 0.78f;
             float unscaledHeight = CalculateModelHeight(tableObj, Quaternion.Euler(-90f, 0f, 0f), out float bottomOffsetAtScale1);
             float scaleFactor = targetHeight / unscaledHeight;
 
@@ -1536,7 +1544,7 @@ namespace GanhHangRong.Editor
             }
 
             // Chiều cao ghế nhựa đỏ tiêu chuẩn (khoảng 0.35m)
-            float targetHeight = 0.35f;
+            float targetHeight = 0.48f;
             float unscaledHeight = CalculateModelHeight(chairObj, Quaternion.Euler(-90f, rotationY, 0f), out float bottomOffsetAtScale1);
             float scaleFactor = targetHeight / unscaledHeight;
 
@@ -1551,9 +1559,9 @@ namespace GanhHangRong.Editor
             // Không dùng mesh bounds vì sau khi scale bounds.center bị lệch sang local space
             var boxCol = chairObj.AddComponent<BoxCollider>();
             boxCol.isTrigger = true;
-            boxCol.center = new Vector3(0f, 0.2f / chairObj.transform.localScale.y, 0f); // ~0.2m trên mặt đất
+            boxCol.center = new Vector3(0f, 0.24f / chairObj.transform.localScale.y, 0f); // ~0.24m trên mặt đất
             boxCol.size = new Vector3(0.6f / chairObj.transform.localScale.x,
-                                     0.4f / chairObj.transform.localScale.y,
+                                     0.48f / chairObj.transform.localScale.y,
                                      0.6f / chairObj.transform.localScale.z);
 
             // Thêm script để khách hoặc người chơi ngồi

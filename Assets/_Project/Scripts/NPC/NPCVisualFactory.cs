@@ -37,11 +37,7 @@ namespace GanhHangRong.NPC
             visualRoot.transform.SetParent(parent);
             visualRoot.transform.localPosition = Vector3.zero;
 
-            NPCModelData selectedModelData = null;
-            if (npcModels != null && npcModels.Count > 0)
-            {
-                selectedModelData = npcModels[UnityEngine.Random.Range(0, npcModels.Count)];
-            }
+            NPCModelData selectedModelData = SelectNPCModelData();
 
             if (selectedModelData != null && selectedModelData.prefab != null)
             {
@@ -205,6 +201,40 @@ namespace GanhHangRong.NPC
             }
             return visualRoot;
         }
+
+        private NPCModelData SelectNPCModelData()
+        {
+            if (npcModels == null || npcModels.Count == 0) return null;
+
+            int startIndex = UnityEngine.Random.Range(0, npcModels.Count);
+            for (int i = 0; i < npcModels.Count; i++)
+            {
+                NPCModelData candidate = npcModels[(startIndex + i) % npcModels.Count];
+                if (candidate != null && candidate.prefab != null && !LooksLikeTPoseModel(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool LooksLikeTPoseModel(NPCModelData modelData)
+        {
+            if (modelData == null) return false;
+
+            return ContainsTPoseName(modelData.prefab != null ? modelData.prefab.name : null) ||
+                   ContainsTPoseName(modelData.animatorController != null ? modelData.animatorController.name : null);
+        }
+
+        private static bool ContainsTPoseName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+
+            return name.IndexOf("T_Pose", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("T-Pose", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("TPose", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
     }
 
     /// <summary>
@@ -231,6 +261,9 @@ namespace GanhHangRong.NPC
         private float sittingYOffset = 0f;  // Độ bù Y khi ngồi, được tính 1 lần
         private bool sittingOffsetCalculated = false;
         private int sittingFrameCount = 0;  // Đếm frame để chờ animation blend
+        private const float SeatedHipAboveSeat = 0.18f;
+        private const float SeatedFeetFloorClearance = 0.02f;
+        private const float SittingOffsetClamp = 0.55f;
 
         // Walking animation parameters (chỉ dùng cho model static)
         private const float WALK_CYCLE_SPEED = 8f;
@@ -343,8 +376,7 @@ namespace GanhHangRong.NPC
                     // Restore NPCModel Y gốc khi đi bộ
                     if (npcModelTransform != null)
                     {
-                        var mp = npcModelTransform.localPosition;
-                        npcModelTransform.localPosition = new Vector3(mp.x, npcModelOriginalLocalY, mp.z);
+                        KeepNPCModelPinned();
                     }
                     if (HasParameter(animator, "State"))
                         animator.SetInteger("State", 0);
@@ -358,47 +390,43 @@ namespace GanhHangRong.NPC
                     if (HasParameter(animator, "State"))
                         animator.SetInteger("State", 1);
                     
-                    // Tính VisualRoot Y offset để NPC ngồi đúng trên ghế.
-                    // Hips ở animation Sitting Idle có localY ≈ 57.49cm (trong Armature space).
-                    // Armature scale = 0.01 (GLB cm→m), NPCModel scale = npcModelTransform.lossyScale.y
-                    // => HipsWorldY = NPCModel.worldY + 57.49 * 0.01 * npcModelScale
-                    // Muốn HipsWorldY = seatSurfaceY
-                    // => offset = seatSurfaceY - HipsWorldY_khi_VR=0
+                    // Seat the hips slightly above the chair surface, and keep feet from dipping below the floor.
                     if (!sittingOffsetCalculated && controller.TargetSeat != null && npcModelTransform != null)
                     {
-                        var seatRenderer = controller.TargetSeat.GetComponentInChildren<MeshRenderer>();
-                        float seatSurfaceY = seatRenderer != null
-                            ? seatRenderer.bounds.max.y
-                            : controller.TargetSeat.transform.position.y + 0.18f;
-                        
-                        // Sitting animation Hips.localY trong Armature space (đo thực tế)
-                        const float HIPS_SITTING_LOCAL_Y = 57.49f; // cm trong Armature
-                        const float ARMATURE_SCALE = 0.01f; // GLB cm→m
-                        float npcModelScale = npcModelTransform.lossyScale.y;
+                        transform.localPosition = originalPos;
+                        KeepNPCModelPinned();
+                        sittingFrameCount++;
                         
                         // Thiết lập VR về gốc, NPCModel về original
                         transform.localPosition = originalPos;
                         if (npcModelTransform != null)
                         {
-                            var mp2 = npcModelTransform.localPosition;
-                            npcModelTransform.localPosition = new Vector3(mp2.x, npcModelOriginalLocalY, mp2.z);
+                            KeepNPCModelPinned();
                         }
                         
                         // Tính Hips worldY khi VR=(0,0,0) v\u00e0 NPCModel.localY = originalLocalY, d\u1ef1a tr\u00ean v\u1ecb trí gh\u1ebf thay v\u00ec v\u1ecb trí NPC (NPC c\u00f3 th\u1ec3 ch\u01b0a snap xu\u1ed1ng gh\u1ebf)
-                        float targetNpcWorldY = controller.TargetSeat.transform.position.y;
-                        float npcModelWorldY = targetNpcWorldY + npcModelOriginalLocalY;
-                        float hipsWorldYWhenSitting = npcModelWorldY + HIPS_SITTING_LOCAL_Y * ARMATURE_SCALE * npcModelScale;
-                        
-                        // Offset cần thêm vào VisualRoot
-                        sittingYOffset = seatSurfaceY - hipsWorldYWhenSitting;
-                        sittingOffsetCalculated = true;
+                        if (sittingFrameCount >= 2)
+                        {
+                            float seatSurfaceY = controller.TargetSeat.GetSeatSurfaceY();
+                            float hipsWorldY = GetCurrentHipWorldY();
+                            float hipOffset = (seatSurfaceY + SeatedHipAboveSeat) - hipsWorldY;
+
+                            float bottomOffset = 0f;
+                            if (TryGetModelBounds(out Bounds modelBounds))
+                            {
+                                float floorY = controller.TargetSeat.GetSeatBaseY() + SeatedFeetFloorClearance;
+                                bottomOffset = floorY - modelBounds.min.y;
+                            }
+
+                            sittingYOffset = Mathf.Clamp(Mathf.Max(hipOffset, bottomOffset), -SittingOffsetClamp, SittingOffsetClamp);
+                            sittingOffsetCalculated = true;
+                        }
                     }
                     
                     // Restore NPCModel.localY gốc (không thêm offset vào model)
                     if (npcModelTransform != null)
                     {
-                        var mp = npcModelTransform.localPosition;
-                        npcModelTransform.localPosition = new Vector3(mp.x, npcModelOriginalLocalY, mp.z);
+                        KeepNPCModelPinned();
                     }
                     // Apply offset vào VisualRoot
                     float targetY = originalPos.y + (sittingOffsetCalculated ? sittingYOffset : 0f);
@@ -463,6 +491,38 @@ namespace GanhHangRong.NPC
             npcModelTransform.localScale = npcModelOriginalLocalScale;
         }
 
+        private bool TryGetModelBounds(out Bounds bounds)
+        {
+            bounds = default;
+            if (npcModelTransform == null) return false;
+
+            Renderer[] renderers = npcModelTransform.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return false;
+
+            bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return true;
+        }
+
+        private float GetCurrentHipWorldY()
+        {
+            if (hipsBone != null)
+            {
+                return hipsBone.position.y;
+            }
+
+            if (TryGetModelBounds(out Bounds bounds))
+            {
+                return bounds.min.y + bounds.size.y * 0.52f;
+            }
+
+            return transform.position.y;
+        }
+
         private bool HasParameter(Animator anim, string paramName)
         {
             if (anim == null || anim.runtimeAnimatorController == null) return false;
@@ -486,7 +546,7 @@ namespace GanhHangRong.NPC
         private void AnimateSitting()
         {
             float breathe = Mathf.Sin(animTimer * 2f) * 0.015f;
-            transform.localPosition = originalPos + new Vector3(0, -0.35f + breathe, 0);
+            transform.localPosition = originalPos + new Vector3(0, breathe, 0);
             transform.localRotation = originalRot;
         }
 

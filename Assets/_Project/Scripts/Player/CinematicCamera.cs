@@ -67,6 +67,7 @@ namespace GanhHangRong.Player
 
         // Raycast cho tương tác vật phẩm trên xe đẩy
         private Interaction.CartItem currentHoveredItem;
+        private Interaction.Chapter2FoodItem currentHoveredFoodItem;
 
         // NPC Focus state
         private bool isFocusingNPC = false;
@@ -196,6 +197,11 @@ namespace GanhHangRong.Player
                     currentHoveredItem.SetHighlighted(false);
                     currentHoveredItem = null;
                 }
+                if (currentHoveredFoodItem != null)
+                {
+                    currentHoveredFoodItem.SetHighlighted(false);
+                    currentHoveredFoodItem = null;
+                }
                 return;
             }
 
@@ -212,7 +218,7 @@ namespace GanhHangRong.Player
             }
 
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 15f))
+            if (Physics.Raycast(ray, out hit, 15f, ~0, QueryTriggerInteraction.Ignore))
             {
                 var cartItem = hit.collider.GetComponent<Interaction.CartItem>();
                 if (cartItem == null)
@@ -220,8 +226,20 @@ namespace GanhHangRong.Player
                     cartItem = hit.collider.GetComponentInParent<Interaction.CartItem>();
                 }
 
+                var foodItem = hit.collider.GetComponent<Interaction.Chapter2FoodItem>();
+                if (foodItem == null)
+                {
+                    foodItem = hit.collider.GetComponentInParent<Interaction.Chapter2FoodItem>();
+                }
+
                 if (cartItem != null)
                 {
+                    if (currentHoveredFoodItem != null)
+                    {
+                        currentHoveredFoodItem.SetHighlighted(false);
+                        currentHoveredFoodItem = null;
+                    }
+
                     // Highlight item mới
                     if (currentHoveredItem != cartItem)
                     {
@@ -280,6 +298,33 @@ namespace GanhHangRong.Player
                         }
                     }
                 }
+                else if (foodItem != null)
+                {
+                    if (currentHoveredItem != null)
+                    {
+                        currentHoveredItem.SetHighlighted(false);
+                        currentHoveredItem = null;
+                    }
+
+                    if (currentHoveredFoodItem != foodItem)
+                    {
+                        if (currentHoveredFoodItem != null)
+                            currentHoveredFoodItem.SetHighlighted(false);
+
+                        currentHoveredFoodItem = foodItem;
+                        currentHoveredFoodItem.SetHighlighted(true);
+                        EventManager.TriggerInteractionPromptShow(foodItem.ItemName);
+                    }
+
+                    if (Mouse.current.leftButton.wasPressedThisFrame)
+                    {
+                        var player = FindAnyObjectByType<PlayerController>();
+                        if (player != null)
+                        {
+                            foodItem.OnItemClicked(player);
+                        }
+                    }
+                }
                 else
                 {
                     // Không hover vật phẩm nào
@@ -295,6 +340,17 @@ namespace GanhHangRong.Player
                         else
                             EventManager.TriggerInteractionPromptHide();
                     }
+                    if (currentHoveredFoodItem != null)
+                    {
+                        currentHoveredFoodItem.SetHighlighted(false);
+                        currentHoveredFoodItem = null;
+
+                        var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                        if (cart != null)
+                            EventManager.TriggerInteractionPromptShow(cart.PromptText);
+                        else
+                            EventManager.TriggerInteractionPromptHide();
+                    }
                 }
             }
             else
@@ -303,6 +359,17 @@ namespace GanhHangRong.Player
                 {
                     currentHoveredItem.SetHighlighted(false);
                     currentHoveredItem = null;
+
+                    var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                    if (cart != null)
+                        EventManager.TriggerInteractionPromptShow(cart.PromptText);
+                    else
+                        EventManager.TriggerInteractionPromptHide();
+                }
+                if (currentHoveredFoodItem != null)
+                {
+                    currentHoveredFoodItem.SetHighlighted(false);
+                    currentHoveredFoodItem = null;
 
                     var cart = FindAnyObjectByType<Interaction.TeaCart>();
                     if (cart != null)
@@ -357,6 +424,11 @@ namespace GanhHangRong.Player
                 currentHoveredItem.SetHighlighted(false);
                 currentHoveredItem = null;
             }
+            if (currentHoveredFoodItem != null)
+            {
+                currentHoveredFoodItem.SetHighlighted(false);
+                currentHoveredFoodItem = null;
+            }
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -367,7 +439,7 @@ namespace GanhHangRong.Player
             if (cartFPCenter == null) return;
 
             // Nếu đây là điểm camera góc nhìn thứ nhất (được gán từ Scene), lấy trực tiếp vị trí/góc quay đã thiết kế
-            if (cartFPCenter.name == "FirstPersonCameraPoint")
+            if (IsDesignedCartViewPoint(cartFPCenter))
             {
                 cartFPTargetPos = cartFPCenter.position;
                 cartFPTargetRot = cartFPCenter.rotation;
@@ -398,7 +470,7 @@ namespace GanhHangRong.Player
 
                     // Tính yaw ngang thực tế của xe đẩy từ hướng forward dọc xe
                     Vector3 cartForward;
-                    if (cartFPCenter.name == "FirstPersonCameraPoint")
+                    if (IsDesignedCartViewPoint(cartFPCenter))
                     {
                         cartForward = cartFPCenter.parent != null 
                             ? (cartFPCenter.parent.position - cartFPCenter.position)
@@ -430,6 +502,12 @@ namespace GanhHangRong.Player
 
             // Raycast để highlight / click vật phẩm trên mặt bàn
             UpdateCartItemRaycast();
+        }
+
+        private static bool IsDesignedCartViewPoint(Transform viewPoint)
+        {
+            if (viewPoint == null) return false;
+            return viewPoint.name == "FirstPersonCameraPoint" || viewPoint.name == "RuntimeCartCameraPoint";
         }
 
         // ═══════════════════════════════════════════
@@ -466,6 +544,11 @@ namespace GanhHangRong.Player
             {
                 currentHoveredItem.SetHighlighted(false);
                 currentHoveredItem = null;
+            }
+            if (currentHoveredFoodItem != null)
+            {
+                currentHoveredFoodItem.SetHighlighted(false);
+                currentHoveredFoodItem = null;
             }
 
             Cursor.lockState = CursorLockMode.Locked;

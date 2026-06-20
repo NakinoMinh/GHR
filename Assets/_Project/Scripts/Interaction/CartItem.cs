@@ -46,6 +46,7 @@ namespace GanhHangRong.Interaction
         private Color[] originalColors;
         private Material[] originalMaterials;
         private float hoverTimer = 0f;
+        private Coroutine resourceFeedbackRoutine;
         
         private static bool isBoilingWater = false;
         public static bool IsBoilingWater => isBoilingWater;
@@ -68,6 +69,9 @@ namespace GanhHangRong.Interaction
         private static int teaInCup = 0;
         public static int TeaInCup => teaInCup;
 
+        private static int coffeeInCup = 0;
+        public static int CoffeeInCup => coffeeInCup;
+
         private static float waterInCup = 0f;
         public static float WaterInCup => waterInCup;
 
@@ -75,10 +79,17 @@ namespace GanhHangRong.Interaction
         public static float IceInCup => iceInCup;
 
         private static bool hasPreparedTea = false;
+        private static int preparedDrinkId = -1;
+        public static int PreparedDrinkId => preparedDrinkId;
+        public static string PreparedDrinkName => GetDrinkName(preparedDrinkId);
         public static bool HasPreparedTea
         {
             get => hasPreparedTea;
-            set => hasPreparedTea = value;
+            set
+            {
+                hasPreparedTea = value;
+                if (!value) preparedDrinkId = -1;
+            }
         }
 
         private static Coroutine activeCoolDownCoroutine = null;
@@ -102,10 +113,19 @@ namespace GanhHangRong.Interaction
         {
             isHoldingCup = false;
             teaInCup = 0;
+            coffeeInCup = 0;
             waterInCup = 0f;
             iceInCup = 0f;
             hasPreparedTea = false;
+            preparedDrinkId = -1;
             DetachTeaCup();
+        }
+
+        public static void PrepareReadyOrder(int orderId)
+        {
+            ResetCupState();
+            hasPreparedTea = true;
+            preparedDrinkId = orderId;
         }
 
         public static void ConsumeWater(float amount)
@@ -126,6 +146,29 @@ namespace GanhHangRong.Interaction
         public string ItemName => itemName;
         public string ItemDescription => itemDescription;
         public bool IsHighlighted => isHighlighted;
+
+        private void ShowResourceDelta(string text)
+        {
+            if (resourceFeedbackRoutine != null)
+            {
+                StopCoroutine(resourceFeedbackRoutine);
+            }
+
+            resourceFeedbackRoutine = StartCoroutine(ResourceFeedbackRoutine(text));
+        }
+
+        private System.Collections.IEnumerator ResourceFeedbackRoutine(string text)
+        {
+            EventManager.TriggerInteractionPromptShow(text);
+            yield return new WaitForSeconds(1.0f);
+
+            if (isHighlighted)
+            {
+                EventManager.TriggerInteractionPromptShow(itemName);
+            }
+
+            resourceFeedbackRoutine = null;
+        }
 
         private void Awake()
         {
@@ -291,7 +334,8 @@ namespace GanhHangRong.Interaction
                 // Rót 0.2L nước sôi vào ly
                 ConsumeWater(0.2f);
                 waterInCup += 0.2f;
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã rót 200ml nước sôi vào ly. (Nước trong ly: {Mathf.RoundToInt(waterInCup * 1000f)}ml / 200ml)");
+                ShowResourceDelta($"-200ml nước ấm (ấm còn {kettleWater:F1}L)");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã rót 200ml nước sôi vào ly. (-200ml nước ấm, còn {kettleWater:F1}L trong ấm)");
 
                 CheckBrewingCompletion(player);
                 return;
@@ -335,6 +379,12 @@ namespace GanhHangRong.Interaction
                 return;
             }
 
+            if (coffeeInCup > 0)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này đang pha cà phê rồi, không trộn thêm trà vào được.");
+                return;
+            }
+
             if (stats.TeaSupply < 50)
             {
                 EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ trà khô trong hộp trà (cần ít nhất 50g)!");
@@ -344,7 +394,8 @@ namespace GanhHangRong.Interaction
             // Lấy 50g trà bỏ vào ly
             stats.ConsumeTea(50);
             teaInCup += 50;
-            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 50g trà vào ly. (Trà trong ly: {teaInCup}g / 50g)");
+            ShowResourceDelta($"-50g trà (còn {stats.TeaSupply}g)");
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 50g trà vào ly. (-50g trà, còn {stats.TeaSupply}g)");
 
             CheckBrewingCompletion(player);
         }
@@ -382,6 +433,35 @@ namespace GanhHangRong.Interaction
         private void OnCoffeeInteract(Player.PlayerController player)
         {
             var stats = player.GetComponent<Player.PlayerStats>();
+            if (stats == null) return;
+
+            if (isHoldingCup)
+            {
+                if (teaInCup > 0)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này đang pha trà rồi, không trộn thêm cà phê vào được.");
+                    return;
+                }
+
+                if (coffeeInCup >= 30)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly đã có đủ 30g cà phê rồi.");
+                    return;
+                }
+
+                if (stats.CoffeeSupply < 30)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ bột cà phê trong hũ (cần ít nhất 30g)!");
+                    return;
+                }
+
+                stats.ConsumeCoffee(30);
+                coffeeInCup += 30;
+                ShowResourceDelta($"-30g cà phê (còn {stats.CoffeeSupply}g)");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 30g cà phê vào ly. (-30g cà phê, còn {stats.CoffeeSupply}g)");
+                CheckBrewingCompletion(player);
+                return;
+            }
             if (stats != null)
             {
                 stats.AddCoffee(150); // Thêm 150g cà phê
@@ -412,7 +492,8 @@ namespace GanhHangRong.Interaction
                 // Lấy 5% đá cho vào ly
                 stats.ModifyIceLevel(-5f);
                 iceInCup += 5f;
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 5% đá vào ly. (Đá trong ly: {iceInCup}% / 5%)");
+                ShowResourceDelta($"-5% đá (còn {Mathf.RoundToInt(stats.IceLevel)}%)");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 5% đá vào ly. (-5% đá, còn {Mathf.RoundToInt(stats.IceLevel)}%)");
 
                 CheckBrewingCompletion(player);
                 return;
@@ -430,15 +511,20 @@ namespace GanhHangRong.Interaction
 
         private void CheckBrewingCompletion(Player.PlayerController player)
         {
-            if (isHoldingCup && teaInCup >= 50 && waterInCup >= 0.2f && iceInCup >= 5f)
+            bool teaReady = teaInCup >= 50 && coffeeInCup == 0;
+            bool coffeeReady = coffeeInCup >= 30 && teaInCup == 0;
+            if (isHoldingCup && (teaReady || coffeeReady) && waterInCup >= 0.2f && iceInCup >= 5f)
             {
                 isHoldingCup = false;
                 hasPreparedTea = true;
+                preparedDrinkId = coffeeReady ? 1 : 0;
+                string drinkName = GetDrinkName(preparedDrinkId);
                 teaInCup = 0;
+                coffeeInCup = 0;
                 waterInCup = 0f;
                 iceInCup = 0f;
 
-                EventManager.TriggerDialogueLine("Hoàng Hôn", "★ Hoàn thành 1 ly nước trà đá mát lạnh! Hoàng Hôn cầm ly trà trên tay. Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Hoàn thành 1 ly {drinkName}! Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
 
                 // Gắn mô hình ly trà đá lên tay phải nhân vật
                 AttachTeaCupToPlayer(player);
@@ -570,6 +656,11 @@ namespace GanhHangRong.Interaction
             }
         }
 
+        private static string GetDrinkName(int drinkId)
+        {
+            return ChapterOrderCatalog.GetOrderName(drinkId);
+        }
+
         public static GameObject CreateStaticTeaCupModel(Vector3 worldPosition)
         {
             if (activeInstance != null && activeInstance.teaCupHeldPrefab == null)
@@ -599,6 +690,21 @@ namespace GanhHangRong.Interaction
             cupGO.name = "PlacedTeaCup";
 
             return cupGO;
+        }
+
+        public static GameObject CreateStaticPreparedOrderModel(int orderId, Vector3 worldPosition)
+        {
+            if (!ChapterOrderCatalog.IsChapter2Order(orderId))
+            {
+                return CreateStaticTeaCupModel(worldPosition);
+            }
+
+            GameObject food = CreateFallbackFoodModel(orderId);
+            food.transform.position = worldPosition;
+            food.transform.rotation = Quaternion.identity;
+            food.transform.localScale = Vector3.one * 0.42f;
+            food.name = "Placed_" + ChapterOrderCatalog.GetOrderName(orderId);
+            return food;
         }
 
         public static GameObject ReturnCleanCupToCart()
@@ -826,6 +932,81 @@ namespace GanhHangRong.Interaction
             return cup;
         }
 
+        private static GameObject CreateFallbackFoodModel(int orderId)
+        {
+            GameObject root = new GameObject("FallbackFood");
+
+            GameObject plate = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            plate.transform.SetParent(root.transform, false);
+            plate.transform.localPosition = Vector3.zero;
+            plate.transform.localScale = new Vector3(1.2f, 0.06f, 1.2f);
+            Object.Destroy(plate.GetComponent<Collider>());
+            SetRendererColor(plate, new Color(0.92f, 0.88f, 0.76f, 1f));
+
+            if (orderId == ChapterOrderCatalog.BanhMiMuoiOt)
+            {
+                GameObject bread = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                bread.transform.SetParent(root.transform, false);
+                bread.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+                bread.transform.localScale = new Vector3(1.25f, 0.18f, 0.38f);
+                bread.transform.localRotation = Quaternion.Euler(0f, 12f, 0f);
+                Object.Destroy(bread.GetComponent<Collider>());
+                SetRendererColor(bread, new Color(0.96f, 0.61f, 0.22f, 1f));
+
+                AddTopping(root.transform, new Vector3(-0.2f, 0.25f, 0.02f), new Color(0.8f, 0.1f, 0.05f, 1f));
+                AddTopping(root.transform, new Vector3(0.22f, 0.25f, -0.04f), new Color(0.2f, 0.75f, 0.22f, 1f));
+            }
+            else if (orderId == ChapterOrderCatalog.BanhTrangNuong)
+            {
+                GameObject ricePaper = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                ricePaper.transform.SetParent(root.transform, false);
+                ricePaper.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+                ricePaper.transform.localScale = new Vector3(1.0f, 0.035f, 1.0f);
+                Object.Destroy(ricePaper.GetComponent<Collider>());
+                SetRendererColor(ricePaper, new Color(0.98f, 0.74f, 0.28f, 1f));
+
+                AddTopping(root.transform, new Vector3(-0.16f, 0.18f, 0.12f), new Color(0.95f, 0.94f, 0.65f, 1f));
+                AddTopping(root.transform, new Vector3(0.15f, 0.18f, -0.08f), new Color(0.78f, 0.08f, 0.04f, 1f));
+                AddTopping(root.transform, new Vector3(0.02f, 0.19f, 0.02f), new Color(0.15f, 0.65f, 0.18f, 1f));
+            }
+            else
+            {
+                GameObject skewer = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                skewer.transform.SetParent(root.transform, false);
+                skewer.transform.localPosition = new Vector3(0f, 0.18f, 0f);
+                skewer.transform.localScale = new Vector3(1.25f, 0.035f, 0.035f);
+                skewer.transform.localRotation = Quaternion.Euler(0f, 22f, 0f);
+                Object.Destroy(skewer.GetComponent<Collider>());
+                SetRendererColor(skewer, new Color(0.38f, 0.18f, 0.08f, 1f));
+
+                AddTopping(root.transform, new Vector3(-0.32f, 0.23f, -0.05f), new Color(1f, 0.46f, 0.24f, 1f));
+                AddTopping(root.transform, new Vector3(0f, 0.23f, 0f), new Color(0.96f, 0.82f, 0.48f, 1f));
+                AddTopping(root.transform, new Vector3(0.32f, 0.23f, 0.05f), new Color(1f, 0.34f, 0.2f, 1f));
+            }
+
+            return root;
+        }
+
+        private static void AddTopping(Transform parent, Vector3 localPosition, Color color)
+        {
+            GameObject topping = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            topping.transform.SetParent(parent, false);
+            topping.transform.localPosition = localPosition;
+            topping.transform.localScale = Vector3.one * 0.14f;
+            Object.Destroy(topping.GetComponent<Collider>());
+            SetRendererColor(topping, color);
+        }
+
+        private static void SetRendererColor(GameObject obj, Color color)
+        {
+            Renderer renderer = obj.GetComponent<Renderer>();
+            if (renderer == null) return;
+
+            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            material.color = color;
+            renderer.material = material;
+        }
+
         private System.Collections.IEnumerator CoolDownRoutine()
         {
             yield return new WaitForSeconds(5f);
@@ -873,6 +1054,7 @@ namespace GanhHangRong.Interaction
                 }
                 bottleWater -= refillAmount;
                 kettleWater += refillAmount;
+                ShowResourceDelta($"-{refillAmount:F1}L nước bình (còn {bottleWater:F1}L)");
 
                 // Hứng nước trong 2 giây
                 float elapsedWater = 0f;
@@ -1020,10 +1202,12 @@ namespace GanhHangRong.Interaction
             stats.TakeOneCup();
             isHoldingCup = true;
             teaInCup = 0;
+            coffeeInCup = 0;
             waterInCup = 0f;
             iceInCup = 0f;
 
-            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã lấy 1 ly sạch đặt lên tay. Hãy tích vào bình trà để lấy 50g trà!");
+            ShowResourceDelta($"-1 cốc (còn {stats.CupSupply})");
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã lấy 1 ly sạch đặt lên tay. (-1 cốc, còn {stats.CupSupply})");
             Debug.Log("[CartItem] Tương tác ly nước -> Cầm ly pha chế");
 
             // Gắn mô hình ly trống lên tay Hoàng Hôn

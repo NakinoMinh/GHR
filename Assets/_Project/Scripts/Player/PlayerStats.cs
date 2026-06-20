@@ -164,6 +164,11 @@ namespace GanhHangRong.Player
             teaSupply = Mathf.Max(0, teaSupply - amount);
         }
 
+        public void ConsumeCoffee(int amount)
+        {
+            coffeeSupply = Mathf.Max(0, coffeeSupply - amount);
+        }
+
         public void AddSupplies(int tea, int sugar, int cups)
         {
             teaSupply = Mathf.Min(1000, teaSupply + tea);

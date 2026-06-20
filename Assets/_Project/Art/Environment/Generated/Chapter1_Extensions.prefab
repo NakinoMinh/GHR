@@ -1105,6 +1105,12 @@ MonoBehaviour:
     cooldown: 32
     passengerDespawnSeconds: 10
   passengerPrefab: {fileID: 2242046688257016275}
+  portNpcModelPrefabs:
+  - {fileID: 8771091787928289351, guid: 9e713fcf82f9b604285f958f9a478428, type: 3}
+  - {fileID: 8771091787928289351, guid: 464d00ce4359f114a814874f10a4c46c, type: 3}
+  - {fileID: 8771091787928289351, guid: 606245a272a4f9e44a168a28fe4907db, type: 3}
+  yellowTaxiMaterial: {fileID: 2100000, guid: 9d9ee53ed8d28de4fb873f8099c90896, type: 2}
+  greenTaxiMaterial: {fileID: 2100000, guid: fdf36b2b68423274b8da153360c5747b, type: 2}
   maxActiveTaxis: 2
 --- !u!1 &575120509920881088
 GameObject:
