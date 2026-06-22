@@ -16,6 +16,8 @@ namespace GanhHangRong.NPC
         [SerializeField] private float walkSpeed = 2f;
         [SerializeField] private float stopDistance = 0.1f;
         [SerializeField] private float rotationSpeed = 10f;
+        [SerializeField] private float seatApproachDistance = 0.95f;
+        [SerializeField] private float seatEntryDistance = 0.18f;
 
         private NPCProfile profile;
         private NPCState currentState = NPCState.Spawning;
@@ -138,7 +140,11 @@ namespace GanhHangRong.NPC
             switch (currentState)
             {
                 case NPCState.WalkingIn:
-                    MoveTowards(targetSeat.transform.position, NPCState.SittingDown);
+                    MoveTowards(GetSeatApproachPosition(), NPCState.Approaching);
+                    break;
+
+                case NPCState.Approaching:
+                    MoveTowards(GetSeatEntryPosition(), NPCState.SittingDown);
                     break;
                     
                 case NPCState.SittingDown:
@@ -202,15 +208,19 @@ namespace GanhHangRong.NPC
                 case NPCState.LeavingHappy:
                     ShowSpeechBubble("Ngon!", Color.blue);
                     transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
-                    ChangeState(NPCState.WalkingOut);
+                    ChangeState(NPCState.LeavingSeat);
                     break;
                     
                 case NPCState.LeavingSad:
                     ShowSpeechBubble("Tệ quá!", Color.red);
                     transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
-                    ChangeState(NPCState.WalkingOut);
+                    ChangeState(NPCState.LeavingSeat);
                     break;
                     
+                case NPCState.LeavingSeat:
+                    MoveTowards(GetSeatApproachPosition(), NPCState.WalkingOut);
+                    break;
+
                 case NPCState.WalkingOut:
                     MoveTowards(exitPoint.position, NPCState.Spawning /* Destroy */);
                     if (Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(exitPoint.position.x, 0, exitPoint.position.z)) <= stopDistance)
@@ -245,6 +255,33 @@ namespace GanhHangRong.NPC
                 if (nextState != NPCState.Spawning) // Mượn Spawning làm cờ Destroy
                     ChangeState(nextState);
             }
+        }
+
+        private Vector3 GetSeatApproachPosition()
+        {
+            if (targetSeat == null) return transform.position;
+
+            Vector3 seatForward = GetSeatYawForward(targetSeat.transform);
+            Vector3 approach = targetSeat.transform.position - seatForward * seatApproachDistance;
+            return new Vector3(approach.x, transform.position.y, approach.z);
+        }
+
+        private Vector3 GetSeatEntryPosition()
+        {
+            if (targetSeat == null) return transform.position;
+
+            Vector3 seatForward = GetSeatYawForward(targetSeat.transform);
+            Vector3 entry = targetSeat.transform.position - seatForward * seatEntryDistance;
+            return new Vector3(entry.x, transform.position.y, entry.z);
+        }
+
+        private static Vector3 GetSeatYawForward(Transform seatTransform)
+        {
+            if (seatTransform == null) return Vector3.forward;
+
+            Vector3 forward = Quaternion.Euler(0f, seatTransform.eulerAngles.y, 0f) * Vector3.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
         }
 
         private void ChangeState(NPCState newState)

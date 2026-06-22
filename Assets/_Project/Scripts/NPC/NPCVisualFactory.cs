@@ -358,7 +358,10 @@ namespace GanhHangRong.NPC
             if (controller == null) return;
             animTimer += Time.deltaTime;
 
-            bool isWalking = (controller.CurrentState == NPCState.WalkingIn || controller.CurrentState == NPCState.WalkingOut);
+            bool isWalking = (controller.CurrentState == NPCState.WalkingIn ||
+                              controller.CurrentState == NPCState.Approaching ||
+                              controller.CurrentState == NPCState.LeavingSeat ||
+                              controller.CurrentState == NPCState.WalkingOut);
             bool isSitting = (controller.CurrentState == NPCState.SittingDown ||
                               controller.CurrentState == NPCState.Ordering ||
                               controller.CurrentState == NPCState.Waiting ||

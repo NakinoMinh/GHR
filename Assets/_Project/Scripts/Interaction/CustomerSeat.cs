@@ -18,8 +18,8 @@ namespace GanhHangRong.Interaction
         private GameObject placedCupObj;
         public GameObject PlacedCupObj { get => placedCupObj; set => placedCupObj = value; }
 
-        private const float TargetChairHeight = 0.48f;
-        private const float TargetTableHeight = 0.78f;
+        private const float TargetChairHeight = 0.43f;
+        private const float TargetTableHeight = 0.70f;
         private const float FallbackSeatSurfaceHeight = 0.44f;
 
         private void Awake()

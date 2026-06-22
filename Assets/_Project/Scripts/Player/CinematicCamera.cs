@@ -218,7 +218,7 @@ namespace GanhHangRong.Player
             }
 
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 15f, ~0, QueryTriggerInteraction.Ignore))
+            if (TryGetCartItemHit(ray, out hit))
             {
                 var cartItem = hit.collider.GetComponent<Interaction.CartItem>();
                 if (cartItem == null)
@@ -388,6 +388,33 @@ namespace GanhHangRong.Player
         /// Bật chế độ góc nhìn thứ 1 từ mặt bàn xe đẩy.
         /// Camera đứng phía sau mặt bàn, nhìn thẳng theo hướng xe.
         /// </summary>
+        private static bool TryGetCartItemHit(Ray ray, out RaycastHit bestHit)
+        {
+            bestHit = default;
+            bool found = false;
+            float bestDistance = float.MaxValue;
+
+            RaycastHit[] hits = Physics.RaycastAll(ray, 15f, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Collider hitCollider = hits[i].collider;
+                if (hitCollider == null) continue;
+
+                bool isCartItem = hitCollider.GetComponent<Interaction.CartItem>() != null ||
+                                  hitCollider.GetComponentInParent<Interaction.CartItem>() != null ||
+                                  hitCollider.GetComponent<Interaction.Chapter2FoodItem>() != null ||
+                                  hitCollider.GetComponentInParent<Interaction.Chapter2FoodItem>() != null;
+
+                if (!isCartItem || hits[i].distance >= bestDistance) continue;
+
+                bestHit = hits[i];
+                bestDistance = hits[i].distance;
+                found = true;
+            }
+
+            return found;
+        }
+
         public void EnableCartFirstPerson(Transform cartCenter)
         {
             isCartFirstPersonMode = true;
