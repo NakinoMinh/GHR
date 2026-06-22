@@ -61,6 +61,8 @@ namespace GanhHangRong.Interaction
 
         private const float maxKettleWater = 1.2f;
         private const float minKettleWaterToRefill = 0.2f;
+        private const float boilDurationSeconds = 10f;
+        private const float boiledWaterCoolDownGameMinutes = 30f;
 
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
@@ -170,7 +172,7 @@ namespace GanhHangRong.Interaction
             resourceFeedbackRoutine = null;
         }
 
-        private void Awake()
+private void Awake()
         {
             if (activeInstance == null)
             {
@@ -185,7 +187,6 @@ namespace GanhHangRong.Interaction
             originalPosition = transform.localPosition;
             renderers = GetComponentsInChildren<Renderer>();
 
-            // Lưu màu gốc
             originalColors = new Color[renderers.Length];
             originalMaterials = new Material[renderers.Length];
             for (int i = 0; i < renderers.Length; i++)
@@ -197,19 +198,34 @@ namespace GanhHangRong.Interaction
                 }
             }
 
-            // Đảm bảo có collider để raycast detect
-            if (GetComponent<Collider>() == null)
-            {
-                var col = gameObject.AddComponent<BoxCollider>();
-                // Tự động fit collider vào mesh bounds
-                var meshFilter = GetComponentInChildren<MeshFilter>();
-                if (meshFilter != null && meshFilter.sharedMesh != null)
-                {
-                    col.center = meshFilter.sharedMesh.bounds.center;
-                    col.size = meshFilter.sharedMesh.bounds.size;
-                }
-            }
+            EnsureInteractionCollider();
         }
+
+private void EnsureInteractionCollider()
+        {
+            BoxCollider box = GetComponent<BoxCollider>();
+            if (box == null)
+            {
+                box = gameObject.AddComponent<BoxCollider>();
+            }
+
+            if (renderers == null || renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            Vector3 paddedSize = bounds.size + new Vector3(0.08f, 0.08f, 0.08f);
+            box.center = transform.InverseTransformPoint(bounds.center + Vector3.up * 0.02f);
+            Vector3 localSize = transform.InverseTransformVector(paddedSize);
+            box.size = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z));
+        }
+
 
         private void Update()
         {
@@ -555,11 +571,11 @@ namespace GanhHangRong.Interaction
                 cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
 
                 // Khắc phục vị trí theo tỉ lệ xương
-                float posX = 0f;
-                float posY = 0.08f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = 0.03f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+                float posX = 0.015f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+                float posY = 0.045f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+                float posZ = 0.015f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
                 cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                cupGO.transform.localRotation = Quaternion.Euler(84f, -8f, 12f);
                 
                 Debug.Log($"[CartItem] Gắn ly rỗng vào xương {attachPoint.name}. Bone scale: {parentScale}, Local scale set: {cupGO.transform.localScale}");
             }
@@ -573,6 +589,7 @@ namespace GanhHangRong.Interaction
             }
 
             cupGO.name = "HeldEmptyCup";
+            ApplyHeldCupMaterials(cupGO, false);
             heldTeaCupObj = cupGO;
         }
 
@@ -624,11 +641,11 @@ namespace GanhHangRong.Interaction
                 cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
 
                 // Khắc phục vị trí theo tỉ lệ xương
-                float posX = 0f;
-                float posY = 0.08f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = 0.03f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+                float posX = 0.015f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+                float posY = 0.045f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+                float posZ = 0.015f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
                 cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                cupGO.transform.localRotation = Quaternion.Euler(84f, -8f, 12f);
 
                 Debug.Log($"[CartItem] Gắn ly trà đá vào xương {attachPoint.name}. Bone scale: {parentScale}, Local scale set: {cupGO.transform.localScale}");
             }
@@ -642,6 +659,7 @@ namespace GanhHangRong.Interaction
             }
 
             cupGO.name = "HeldTeaCup";
+            ApplyHeldCupMaterials(cupGO, true);
             heldTeaCupObj = cupGO;
         }
 
@@ -688,6 +706,7 @@ namespace GanhHangRong.Interaction
             cupGO.transform.rotation = Quaternion.identity;
             cupGO.transform.localScale = Vector3.one * 0.12f;
             cupGO.name = "PlacedTeaCup";
+            ApplyHeldCupMaterials(cupGO, true);
 
             return cupGO;
         }
@@ -734,6 +753,7 @@ namespace GanhHangRong.Interaction
 
             GameObject cupGO = CreateFallbackEmptyCupModel();
             cupGO.name = cupName;
+            ApplyHeldCupMaterials(cupGO, false);
             cupGO.transform.position = worldPosition;
             cupGO.transform.rotation = anchor != null ? anchor.rotation : Quaternion.identity;
             cupGO.transform.localScale = Vector3.one * 0.12f;
@@ -807,6 +827,45 @@ namespace GanhHangRong.Interaction
             return null;
         }
 
+        private static void ApplyHeldCupMaterials(GameObject cup, bool filled)
+        {
+            if (cup == null) return;
+
+            Color cupColor = filled
+                ? new Color(0.82f, 0.42f, 0.12f, 0.88f)
+                : new Color(0.86f, 0.95f, 1f, 0.42f);
+            Material cupMaterial = CreateCupMaterial(filled ? "HeldTeaCup_Amber" : "HeldEmptyCup_Glass", cupColor, true, filled ? 3001 : 3000);
+
+            var renderers = cup.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers)
+            {
+                renderer.sharedMaterial = cupMaterial;
+            }
+        }
+
+        private static Material CreateCupMaterial(string name, Color color, bool transparent, int renderQueue)
+        {
+            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            material.name = name;
+            material.color = color;
+
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+
+            if (transparent)
+            {
+                if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+                if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetInt("_ZWrite", 0);
+                material.EnableKeyword("_ALPHABLEND_ON");
+                material.renderQueue = renderQueue;
+            }
+
+            return material;
+        }
+
         private static GameObject CreateFallbackEmptyCupModel()
         {
             GameObject cup = new GameObject("FallbackEmptyCup");
@@ -821,7 +880,7 @@ namespace GanhHangRong.Interaction
             var rend = body.GetComponent<Renderer>();
             if (rend != null)
             {
-                Material mat = new Material(Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit"));
+                Material mat = CreateCupMaterial("FallbackEmptyCup_Glass", new Color(0.9f, 0.95f, 1f, 0.25f), true, 3000);
                 if (mat != null)
                 {
                     mat.color = new Color(0.9f, 0.95f, 1f, 0.25f); // Thủy tinh trắng trong suốt
@@ -852,7 +911,7 @@ namespace GanhHangRong.Interaction
             var rend = body.GetComponent<Renderer>();
             if (rend != null)
             {
-                Material mat = new Material(Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit"));
+                Material mat = CreateCupMaterial("FallbackTeaCup_Glass", new Color(0.9f, 0.95f, 1f, 0.25f), true, 3000);
                 if (mat != null)
                 {
                     mat.color = new Color(0.9f, 0.95f, 1f, 0.25f); // Thủy tinh trắng trong suốt
@@ -876,7 +935,7 @@ namespace GanhHangRong.Interaction
             var liquidRend = teaLiquid.GetComponent<Renderer>();
             if (liquidRend != null)
             {
-                Material mat = new Material(Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit"));
+                Material mat = CreateCupMaterial("FallbackTeaCup_Liquid", new Color(0.75f, 0.42f, 0.12f, 0.85f), true, 3001);
                 if (mat != null)
                 {
                     mat.color = new Color(0.75f, 0.42f, 0.12f, 0.85f); // Màu trà đá hổ phách
@@ -914,7 +973,7 @@ namespace GanhHangRong.Interaction
                 var iceRend = iceCube.GetComponent<Renderer>();
                 if (iceRend != null)
                 {
-                    Material mat = new Material(Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit"));
+                    Material mat = CreateCupMaterial("FallbackTeaCup_Ice", new Color(0.92f, 0.96f, 1f, 0.65f), true, 3002);
                     if (mat != null)
                     {
                         mat.color = new Color(0.92f, 0.96f, 1f, 0.65f); // Đá viên mờ đục trong suốt
@@ -1009,7 +1068,8 @@ namespace GanhHangRong.Interaction
 
         private System.Collections.IEnumerator CoolDownRoutine()
         {
-            yield return new WaitForSeconds(5f);
+            float coolDownSeconds = boiledWaterCoolDownGameMinutes / Constants.GAME_MINUTES_PER_REAL_SECOND;
+            yield return new WaitForSeconds(coolDownSeconds);
             isWaterBoiled = false;
             EventManager.TriggerDialogueLine("Hoàng Hôn", "Nước trong ấm đã nguội rồi, cần đun sôi lại để pha trà.");
             activeCoolDownCoroutine = null;
@@ -1072,7 +1132,7 @@ namespace GanhHangRong.Interaction
 
             // 2. Đặt ấm nước lên bếp ga đun sôi
             EventManager.TriggerDialogueLine("Hoàng Hôn", "Đặt ấm lên bếp ga Namilux và bật lửa đun sôi...");
-            Vector3 stovePos = stove.transform.position + Vector3.up * 0.08f; // Đặt khớp nắp bếp ga
+            Vector3 stovePos = GetKettleBoilPosition(kettle, stove); // Sit the kettle on top of the burner instead of inside it.
             Quaternion stoveRot = Quaternion.identity; // Phẳng ngang
             yield return StartCoroutine(SmoothMove(kettleT, stovePos, stoveRot, 1.5f));
 
@@ -1105,6 +1165,38 @@ namespace GanhHangRong.Interaction
 
             // Bắt đầu đếm ngược 5 giây nguội
             activeCoolDownCoroutine = StartCoroutine(CoolDownRoutine());
+        }
+
+        private static Vector3 GetKettleBoilPosition(GameObject kettle, GameObject stove)
+        {
+            if (!TryGetRendererBounds(stove, out Bounds stoveBounds) ||
+                !TryGetRendererBounds(kettle, out Bounds kettleBounds))
+            {
+                return stove.transform.position + Vector3.up * 0.24f;
+            }
+
+            float kettlePivotToBottom = kettle.transform.position.y - kettleBounds.min.y;
+            return new Vector3(
+                stoveBounds.center.x,
+                stoveBounds.max.y + kettlePivotToBottom + 0.025f,
+                stoveBounds.center.z);
+        }
+
+        private static bool TryGetRendererBounds(GameObject obj, out Bounds bounds)
+        {
+            bounds = default;
+            if (obj == null) return false;
+
+            Renderer[] objectRenderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (objectRenderers.Length == 0) return false;
+
+            bounds = objectRenderers[0].bounds;
+            for (int i = 1; i < objectRenderers.Length; i++)
+            {
+                bounds.Encapsulate(objectRenderers[i].bounds);
+            }
+
+            return true;
         }
 
         private System.Collections.IEnumerator SmoothMove(Transform target, Vector3 destPos, Quaternion destRot, float duration)

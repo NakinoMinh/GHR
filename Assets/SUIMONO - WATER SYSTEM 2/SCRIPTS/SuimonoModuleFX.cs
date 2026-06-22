@@ -314,8 +314,9 @@ namespace Suimono.Core
 
 
 		void OnApplicationQuit(){
-			for (fx=0; fx < (effectsSystems.Length); fx++){
-				Destroy(fxObjects[fx]);
+			if (effectsSystems == null || fxObjects == null) return;
+			for (fx=0; fx < effectsSystems.Length && fx < fxObjects.Length; fx++){
+				if (fxObjects[fx] != null) Destroy(fxObjects[fx]);
 			}
 		}
 

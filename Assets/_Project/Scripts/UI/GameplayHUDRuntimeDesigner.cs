@@ -47,11 +47,29 @@ namespace GanhHangRong.UI
 
         private void Start()
         {
+            TuneCanvasForCrispText();
             HideLegacyTopRightWidgets();
             BuildTopRightHud();
             BuildRecipePanel();
             InitializeValues();
             UpdateRecipeVisibility();
+        }
+
+        private void TuneCanvasForCrispText()
+        {
+            Canvas canvas = GetComponent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.pixelPerfect = true;
+            }
+
+            CanvasScaler scaler = GetComponent<CanvasScaler>();
+            if (scaler != null)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1280f, 720f);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
         }
 
         private void HideLegacyTopRightWidgets()
@@ -95,21 +113,21 @@ namespace GanhHangRong.UI
             accentImage.color = new Color(0.95f, 0.55f, 0.18f, 0.95f);
             accentImage.raycastTarget = false;
 
-            runtimeClockText = CreateText("Clock", dock, 34, FontStyles.Bold, TextAlignmentOptions.TopRight);
+            runtimeClockText = CreateText("Clock", dock, 38, FontStyles.Bold, TextAlignmentOptions.TopRight);
             runtimeClockText.rectTransform.anchorMin = new Vector2(0f, 0.45f);
             runtimeClockText.rectTransform.anchorMax = new Vector2(1f, 1f);
             runtimeClockText.rectTransform.offsetMin = new Vector2(18f, 0f);
             runtimeClockText.rectTransform.offsetMax = new Vector2(-18f, -14f);
             runtimeClockText.color = new Color(1f, 0.91f, 0.72f, 1f);
 
-            runtimeDayText = CreateText("Day", dock, 16, FontStyles.Bold, TextAlignmentOptions.BottomLeft);
+            runtimeDayText = CreateText("Day", dock, 19, FontStyles.Bold, TextAlignmentOptions.BottomLeft);
             runtimeDayText.rectTransform.anchorMin = new Vector2(0f, 0.1f);
             runtimeDayText.rectTransform.anchorMax = new Vector2(0.55f, 0.45f);
             runtimeDayText.rectTransform.offsetMin = new Vector2(18f, 10f);
             runtimeDayText.rectTransform.offsetMax = new Vector2(0f, 0f);
             runtimeDayText.color = new Color(0.88f, 0.98f, 0.95f, 1f);
 
-            runtimePeriodText = CreateText("Period", dock, 14, FontStyles.Normal, TextAlignmentOptions.BottomRight);
+            runtimePeriodText = CreateText("Period", dock, 18, FontStyles.Bold, TextAlignmentOptions.BottomRight);
             runtimePeriodText.rectTransform.anchorMin = new Vector2(0.45f, 0.1f);
             runtimePeriodText.rectTransform.anchorMax = new Vector2(1f, 0.45f);
             runtimePeriodText.rectTransform.offsetMin = Vector2.zero;
@@ -126,7 +144,7 @@ namespace GanhHangRong.UI
             moneyBg.color = new Color(0.45f, 0.2f, 0.08f, 0.92f);
             moneyBg.raycastTarget = false;
 
-            runtimeMoneyText = CreateText("Money", moneyPanel, 18, FontStyles.Bold, TextAlignmentOptions.Center);
+            runtimeMoneyText = CreateText("Money", moneyPanel, 21, FontStyles.Bold, TextAlignmentOptions.Center);
             runtimeMoneyText.rectTransform.anchorMin = Vector2.zero;
             runtimeMoneyText.rectTransform.anchorMax = Vector2.one;
             runtimeMoneyText.rectTransform.offsetMin = new Vector2(14f, 2f);
@@ -141,7 +159,7 @@ namespace GanhHangRong.UI
             panel.anchorMax = new Vector2(0f, 0.5f);
             panel.pivot = new Vector2(0f, 0.5f);
             panel.anchoredPosition = new Vector2(28f, -20f);
-            panel.sizeDelta = new Vector2(340f, 282f);
+            panel.sizeDelta = new Vector2(390f, 322f);
 
             recipeCanvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
             Image bg = panel.gameObject.AddComponent<Image>();
@@ -158,7 +176,7 @@ namespace GanhHangRong.UI
             stripeImage.color = new Color(0.1f, 0.7f, 0.62f, 1f);
             stripeImage.raycastTarget = false;
 
-            TextMeshProUGUI caption = CreateText("Caption", panel, 13, FontStyles.Bold, TextAlignmentOptions.Left);
+            TextMeshProUGUI caption = CreateText("Caption", panel, 19, FontStyles.Bold, TextAlignmentOptions.Left);
             caption.rectTransform.anchorMin = new Vector2(0f, 1f);
             caption.rectTransform.anchorMax = new Vector2(1f, 1f);
             caption.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -167,7 +185,7 @@ namespace GanhHangRong.UI
             caption.text = "YÊU CẦU CỦA KHÁCH";
             caption.color = new Color(0.95f, 0.6f, 0.25f, 1f);
 
-            recipeDrinkText = CreateText("Drink", panel, 26, FontStyles.Bold, TextAlignmentOptions.Left);
+            recipeDrinkText = CreateText("Drink", panel, 34, FontStyles.Bold, TextAlignmentOptions.Left);
             recipeDrinkText.rectTransform.anchorMin = new Vector2(0f, 1f);
             recipeDrinkText.rectTransform.anchorMax = new Vector2(1f, 1f);
             recipeDrinkText.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -175,14 +193,14 @@ namespace GanhHangRong.UI
             recipeDrinkText.rectTransform.sizeDelta = new Vector2(-40f, 38f);
             recipeDrinkText.color = new Color(1f, 0.93f, 0.75f, 1f);
 
-            recipeBodyText = CreateText("Recipe", panel, 16, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            recipeBodyText = CreateText("Recipe", panel, 24, FontStyles.Bold, TextAlignmentOptions.TopLeft);
             recipeBodyText.rectTransform.anchorMin = new Vector2(0f, 0f);
             recipeBodyText.rectTransform.anchorMax = new Vector2(1f, 1f);
             recipeBodyText.rectTransform.offsetMin = new Vector2(22f, 18f);
             recipeBodyText.rectTransform.offsetMax = new Vector2(-18f, -92f);
-            recipeBodyText.color = new Color(0.9f, 0.9f, 0.84f, 1f);
+            recipeBodyText.color = new Color(1f, 0.97f, 0.88f, 1f);
             recipeBodyText.textWrappingMode = TextWrappingModes.Normal;
-            recipeBodyText.lineSpacing = 8f;
+            recipeBodyText.lineSpacing = 7f;
         }
 
         private void InitializeValues()
@@ -327,6 +345,10 @@ namespace GanhHangRong.UI
             text.fontStyle = style;
             text.alignment = alignment;
             text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.extraPadding = true;
+            text.enableWordWrapping = false;
+            text.outlineWidth = 0.12f;
+            text.outlineColor = new Color(0f, 0f, 0f, 0.9f);
             text.raycastTarget = false;
             return text;
         }
