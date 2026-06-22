@@ -34175,15 +34175,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3447742079981357586, guid: 7935b62b2836d964886d89b457b7570b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -22.5
+      value: -21.71
       objectReference: {fileID: 0}
     - target: {fileID: 3447742079981357586, guid: 7935b62b2836d964886d89b457b7570b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.62
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 3447742079981357586, guid: 7935b62b2836d964886d89b457b7570b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 19.2
+      value: 16.05
       objectReference: {fileID: 0}
     - target: {fileID: 3447742079981357586, guid: 7935b62b2836d964886d89b457b7570b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -41011,11 +41011,6 @@ MonoBehaviour:
   leftArmOffset: {x: -45, y: 0, z: 25}
   leftForeArmOffset: {x: -55, y: 0, z: 0}
   leftHandOffset: {x: 0, y: 15, z: -10}
-  useNaturalIdlePose: 1
-  idleRightArmOffset: {x: 10, y: 0, z: -8}
-  idleRightForeArmOffset: {x: 12, y: 0, z: 4}
-  idleLeftArmOffset: {x: 10, y: 0, z: 8}
-  idleLeftForeArmOffset: {x: 12, y: 0, z: -4}
   useProceduralHold: 1
 --- !u!114 &535948341
 MonoBehaviour:
