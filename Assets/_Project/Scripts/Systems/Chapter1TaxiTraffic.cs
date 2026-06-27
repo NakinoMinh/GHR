@@ -26,6 +26,7 @@ namespace GanhHangRong.Systems
         [SerializeField] private TaxiRoute[] routes;
         [SerializeField] private GameObject passengerPrefab;
         [SerializeField] private GameObject[] portNpcModelPrefabs;
+        [SerializeField] private RuntimeAnimatorController[] portNpcAnimatorControllers;
         [SerializeField] private Material yellowTaxiMaterial;
         [SerializeField] private Material greenTaxiMaterial;
         [SerializeField] private int maxActiveTaxis = 2;
@@ -114,7 +115,7 @@ namespace GanhHangRong.Systems
             GameObject passenger = Instantiate(passengerPrefab, route.passengerSpawn.position, Quaternion.identity, transform);
             passenger.name = "TaxiPassenger";
             passenger.SetActive(true);
-            ReplacePassengerPlaceholder(passenger.transform, Random.Range(0, int.MaxValue));
+            ReplacePassengerPlaceholder(passenger.transform, Random.Range(0, int.MaxValue), 0.35f);
 
             float duration = 2.5f;
             float elapsed = 0f;
@@ -151,18 +152,26 @@ namespace GanhHangRong.Systems
             {
                 if (child.name.StartsWith("PierPassenger_", System.StringComparison.Ordinal))
                 {
-                    ReplacePassengerPlaceholder(child, Mathf.Abs(child.GetSiblingIndex()));
+                    ReplacePassengerPlaceholder(child, Mathf.Abs(child.GetSiblingIndex()), 0f);
                 }
             }
         }
 
-        private void ReplacePassengerPlaceholder(Transform passengerRoot, int modelSeed)
+        private void ReplacePassengerPlaceholder(Transform passengerRoot, int modelSeed, float animatorSpeed)
         {
-            if (passengerRoot == null || passengerRoot.Find("NPCModel") != null) return;
+            if (passengerRoot == null) return;
             if (portNpcModelPrefabs == null || portNpcModelPrefabs.Length == 0) return;
 
             int safeSeed = modelSeed == int.MinValue ? 0 : Mathf.Abs(modelSeed);
+            Transform existingModel = passengerRoot.Find("NPCModel");
+            if (existingModel != null)
+            {
+                ConfigurePassengerAnimator(existingModel.gameObject, GetPortNpcAnimatorController(safeSeed), animatorSpeed);
+                return;
+            }
+
             GameObject prefab = portNpcModelPrefabs[safeSeed % portNpcModelPrefabs.Length];
+            RuntimeAnimatorController animatorController = GetPortNpcAnimatorController(safeSeed);
             if (prefab == null) return;
 
             HideLegacyPassengerRenderers(passengerRoot);
@@ -173,8 +182,16 @@ namespace GanhHangRong.Systems
             model.transform.localRotation = Quaternion.identity;
             model.transform.localScale = Vector3.one;
 
-            ConfigurePassengerAnimator(model);
+            ConfigurePassengerAnimator(model, animatorController, animatorSpeed);
             FitModelToStandingHeight(model.transform, passengerRoot, 1.86f);
+        }
+
+        private RuntimeAnimatorController GetPortNpcAnimatorController(int modelSeed)
+        {
+            if (portNpcAnimatorControllers == null || portNpcAnimatorControllers.Length == 0) return null;
+
+            int safeSeed = modelSeed == int.MinValue ? 0 : Mathf.Abs(modelSeed);
+            return portNpcAnimatorControllers[safeSeed % portNpcAnimatorControllers.Length];
         }
 
         private static void HideLegacyPassengerRenderers(Transform passengerRoot)
@@ -185,15 +202,29 @@ namespace GanhHangRong.Systems
             }
         }
 
-        private static void ConfigurePassengerAnimator(GameObject model)
+        private static void ConfigurePassengerAnimator(GameObject model, RuntimeAnimatorController animatorController, float animatorSpeed)
         {
             Animator animator = model.GetComponentInChildren<Animator>(true);
             if (animator == null) return;
 
+            if (animatorController != null)
+            {
+                animator.runtimeAnimatorController = animatorController;
+            }
+
             animator.applyRootMotion = false;
             animator.updateMode = AnimatorUpdateMode.Normal;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            animator.speed = 0f;
+            animator.speed = animatorSpeed;
+
+            foreach (AnimatorControllerParameter parameter in animator.parameters)
+            {
+                if (parameter.name == "State")
+                {
+                    animator.SetInteger("State", 0);
+                    break;
+                }
+            }
         }
 
         private static void FitModelToStandingHeight(Transform model, Transform anchor, float targetHeight)
