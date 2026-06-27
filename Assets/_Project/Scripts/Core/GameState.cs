@@ -81,6 +81,7 @@ namespace GanhHangRong.Core
         Paying,         // Đang trả tiền
         LeavingHappy,   // Rời đi vui vẻ
         LeavingSad,     // Rời đi không vui (chờ quá lâu)
+        LeavingSeat,
         WalkingOut      // Đang đi ra
     }
 

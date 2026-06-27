@@ -17,10 +17,26 @@ namespace GanhHangRong.UI
 
         private void Awake()
         {
+            ConfigurePromptText();
+
             if (canvasGroup != null)
             {
                 canvasGroup.alpha = 0f;
             }
+        }
+
+        private void ConfigurePromptText()
+        {
+            if (promptText == null) return;
+
+            promptText.fontSize = Mathf.Max(promptText.fontSize, 34f);
+            promptText.fontStyle = FontStyles.Bold;
+            promptText.color = Color.white;
+            promptText.outlineWidth = 0.14f;
+            promptText.outlineColor = new Color(0f, 0f, 0f, 0.95f);
+            promptText.extraPadding = true;
+            promptText.enableWordWrapping = true;
+            promptText.textWrappingMode = TextWrappingModes.Normal;
         }
 
         private void OnEnable()
@@ -72,6 +88,7 @@ namespace GanhHangRong.UI
 
         private void ShowPrompt(string text)
         {
+            ConfigurePromptText();
             if (promptText != null) promptText.text = text;
             if (canvasGroup != null) canvasGroup.alpha = 1f;
         }

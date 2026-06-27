@@ -18,6 +18,20 @@ namespace GanhHangRong.Interaction
         private GameObject placedCupObj;
         public GameObject PlacedCupObj { get => placedCupObj; set => placedCupObj = value; }
 
+        private const float TargetChairHeight = 0.43f;
+        private const float TargetTableHeight = 0.70f;
+        private const float FallbackSeatSurfaceHeight = 0.44f;
+
+        private void Awake()
+        {
+            ApplySceneSeatingLayoutFixOnce();
+        }
+
+        private void Start()
+        {
+            ApplySceneSeatingLayoutFixOnce();
+        }
+
         private void Update()
         {
             if (isOccupied)
@@ -74,6 +88,88 @@ namespace GanhHangRong.Interaction
             promptText = string.Empty;
         }
 
+        public float GetSeatSurfaceY()
+        {
+            if (TryGetRendererBounds(transform, out Bounds bounds))
+            {
+                return bounds.max.y;
+            }
+
+            return transform.position.y + FallbackSeatSurfaceHeight;
+        }
+
+        public float GetSeatBaseY()
+        {
+            if (TryGetRendererBounds(transform, out Bounds bounds))
+            {
+                return bounds.min.y;
+            }
+
+            return transform.position.y;
+        }
+
+        private static void ApplySceneSeatingLayoutFixOnce()
+        {
+            CustomerSeat[] seats = FindObjectsByType<CustomerSeat>(FindObjectsInactive.Exclude);
+            foreach (CustomerSeat seat in seats)
+            {
+                if (seat != null)
+                {
+                    NormalizeObjectHeight(seat.transform, TargetChairHeight);
+                }
+            }
+
+            Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Exclude);
+            foreach (Transform item in transforms)
+            {
+                if (item != null && item.name == "TeaTable")
+                {
+                    NormalizeObjectHeight(item, TargetTableHeight);
+                }
+            }
+        }
+
+        private static void NormalizeObjectHeight(Transform root, float targetHeight)
+        {
+            if (root == null || targetHeight <= 0f) return;
+            if (!TryGetRendererBounds(root, out Bounds beforeBounds)) return;
+            if (beforeBounds.size.y <= 0.001f) return;
+
+            float bottomBefore = beforeBounds.min.y;
+            float scaleFactor = targetHeight / beforeBounds.size.y;
+            root.localScale *= scaleFactor;
+
+            if (TryGetRendererBounds(root, out Bounds afterBounds))
+            {
+                float bottomDelta = bottomBefore - afterBounds.min.y;
+                root.position += Vector3.up * bottomDelta;
+            }
+        }
+
+        private static bool TryGetRendererBounds(Transform root, out Bounds bounds)
+        {
+            bounds = default;
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            bool hasBounds = false;
+
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null || !renderer.enabled) continue;
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return hasBounds;
+        }
+
         protected override void OnInteract(Player.PlayerController player)
         {
             if (!isOccupied || !CartItem.HasPreparedTea) return;
@@ -102,7 +198,8 @@ namespace GanhHangRong.Interaction
             seatNPC.ServeDrink();
 
             // 2. Đặt ly trà đá tĩnh lên bàn ảo phía trước khách
-            Vector3 tablePos = transform.position + transform.forward * 0.5f + Vector3.up * 0.35f;
+            Vector3 tablePos = transform.position + transform.forward * 0.5f;
+            tablePos.y = GetSeatSurfaceY() + 0.3f;
             placedCupObj = CartItem.CreateStaticTeaCupModel(tablePos);
 
             // 3. Bỏ ly trà trên tay Hoàng Hôn

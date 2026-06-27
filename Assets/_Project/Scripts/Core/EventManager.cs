@@ -44,11 +44,15 @@ namespace GanhHangRong.Core
         public static event Action<NPCType> OnCustomerServed;
         public static event Action<NPCType> OnCustomerLeftHappy;
         public static event Action<NPCType> OnCustomerLeftSad;
+        public static event Action<int, string> OnCustomerOrderPlaced;
+        public static event Action OnCustomerOrderCleared;
 
         public static void TriggerCustomerArrived(NPCType t) => OnCustomerArrived?.Invoke(t);
         public static void TriggerCustomerServed(NPCType t) => OnCustomerServed?.Invoke(t);
         public static void TriggerCustomerLeftHappy(NPCType t) => OnCustomerLeftHappy?.Invoke(t);
         public static void TriggerCustomerLeftSad(NPCType t) => OnCustomerLeftSad?.Invoke(t);
+        public static void TriggerCustomerOrderPlaced(int drinkId, string drinkName) => OnCustomerOrderPlaced?.Invoke(drinkId, drinkName);
+        public static void TriggerCustomerOrderCleared() => OnCustomerOrderCleared?.Invoke();
 
         // PLAYER
         public static event Action<PlayerState> OnPlayerStateChanged;
@@ -79,9 +83,11 @@ namespace GanhHangRong.Core
         // TƯƠNG TÁC
         public static event Action<string> OnInteractionPromptShow;
         public static event Action OnInteractionPromptHide;
+        public static event Action<bool> OnCartInteractionChanged;
 
         public static void TriggerInteractionPromptShow(string t) => OnInteractionPromptShow?.Invoke(t);
         public static void TriggerInteractionPromptHide() => OnInteractionPromptHide?.Invoke();
+        public static void TriggerCartInteractionChanged(bool active) => OnCartInteractionChanged?.Invoke(active);
 
         public static void ClearAll()
         {
@@ -91,11 +97,12 @@ namespace GanhHangRong.Core
             OnMoneyChanged = null; OnMoneyEarned = null; OnMoneySpent = null;
             OnCustomerArrived = null; OnCustomerServed = null;
             OnCustomerLeftHappy = null; OnCustomerLeftSad = null;
+            OnCustomerOrderPlaced = null; OnCustomerOrderCleared = null;
             OnPlayerStateChanged = null; OnFatigueChanged = null; OnIceLevelChanged = null;
             OnStressChanged = null;
             OnDialogueStarted = null; OnDialogueEnded = null; OnDialogueLine = null;
             OnEmotionalLevelChanged = null;
-            OnInteractionPromptShow = null; OnInteractionPromptHide = null;
+            OnInteractionPromptShow = null; OnInteractionPromptHide = null; OnCartInteractionChanged = null;
         }
     }
 }

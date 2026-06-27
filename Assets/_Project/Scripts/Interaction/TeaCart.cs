@@ -17,7 +17,18 @@ namespace GanhHangRong.Interaction
         [Tooltip("Transform chính giữa mặt bàn xe đẩy, camera sẽ đứng nhìn từ đây")]
         [SerializeField] private Transform cartOrbitCenter;
 
+        private const float TargetCartVisualHeight = 2.35f;
+        private const float CartCameraTableHeightRatio = 0.42f;
+        private const float CartCameraForwardPadding = 0.52f;
+        private const float CartCameraHeightAboveTable = 0.82f;
+        private const float CartCameraLookHeightAboveTable = -0.02f;
         private bool isPlayerInteracting = false;
+        private Player.PlayerController interactingPlayer;
+        private Renderer[] hiddenPlayerRenderers;
+        private Transform dynamicCameraViewPoint;
+        private Vector3 playerPositionBeforeInteraction;
+        private Quaternion playerRotationBeforeInteraction;
+        private bool hasSavedPlayerTransform;
 
         /// <summary>
         /// Có đang ở chế độ tương tác xe đẩy không.
@@ -30,7 +41,52 @@ namespace GanhHangRong.Interaction
             if (cartOrbitCenter == null)
                 cartOrbitCenter = transform;
 
+            ScaleCartForStreetPresence();
             promptText = "Nhấn F để tương tác xe đẩy";
+        }
+
+        private void OnDisable()
+        {
+            if (isPlayerInteracting)
+            {
+                RestorePlayerTransform(interactingPlayer);
+                SetPlayerVisualsVisible(interactingPlayer, true);
+                EventManager.TriggerCartInteractionChanged(false);
+            }
+        }
+
+        private void ScaleCartForStreetPresence()
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    bounds.Encapsulate(renderers[i].bounds);
+                }
+            }
+
+            if (bounds.size.y <= 0.001f) return;
+            float scaleFactor = TargetCartVisualHeight / bounds.size.y;
+            if (scaleFactor <= 1.03f) return;
+
+            float bottomBefore = bounds.min.y;
+            transform.localScale *= scaleFactor;
+
+            renderers = GetComponentsInChildren<Renderer>(true);
+            bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    bounds.Encapsulate(renderers[i].bounds);
+                }
+            }
+
+            transform.position += Vector3.up * (bottomBefore - bounds.min.y);
         }
 
         protected override void OnInteract(Player.PlayerController player)
@@ -63,6 +119,11 @@ namespace GanhHangRong.Interaction
         private void EnterCartInteraction(Player.PlayerController player)
         {
             isPlayerInteracting = true;
+            interactingPlayer = player;
+            playerPositionBeforeInteraction = player.transform.position;
+            playerRotationBeforeInteraction = player.transform.rotation;
+            hasSavedPlayerTransform = true;
+            EventManager.TriggerCartInteractionChanged(true);
             player.SetState(PlayerState.Interacting);
             player.DisableMovement();
 
@@ -81,18 +142,14 @@ namespace GanhHangRong.Interaction
                 cartForward = transform.forward;
             cartForward.Normalize();
 
-            // Đứng cố định ở phía sau xe đẩy
-            Vector3 targetStandPos = transform.position - cartForward * 1.1f;
-            targetStandPos.y = player.transform.position.y; // Giữ nhân vật trên mặt đất
-            player.transform.position = targetStandPos;
-            player.transform.rotation = Quaternion.LookRotation(cartForward, Vector3.up);
+            StopPlayerRigidbody(player);
+            SetPlayerVisualsVisible(player, false);
 
             // ═══ BẬT CAMERA GÓC NHÌN THỨ 1 TỪ MẶT BÀN XE ĐẨY ═══
             var cam = Camera.main != null ? Camera.main.GetComponent<Player.CinematicCamera>() : null;
             if (cam != null)
             {
-                // Ưu tiên cameraViewPoint (được gán từ SceneBuilder là FirstPersonCameraPoint)
-                Transform viewPoint = (cameraViewPoint != null) ? cameraViewPoint : cartOrbitCenter;
+                Transform viewPoint = BuildClearTableCameraPoint(cartForward);
                 cam.EnableCartFirstPerson(viewPoint);
             }
 
@@ -109,9 +166,81 @@ namespace GanhHangRong.Interaction
             EventManager.TriggerInteractionPromptShow(promptText);
         }
 
+        private Transform BuildClearTableCameraPoint(Vector3 cartForward)
+        {
+            if (dynamicCameraViewPoint == null)
+            {
+                GameObject point = new GameObject("RuntimeCartCameraPoint");
+                point.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                point.transform.SetParent(transform, true);
+                dynamicCameraViewPoint = point.transform;
+            }
+
+            if (cartForward.sqrMagnitude < 0.001f)
+            {
+                cartForward = transform.forward;
+                cartForward.y = 0f;
+            }
+            cartForward.Normalize();
+
+            if (!TryGetVisualBounds(out Bounds bounds))
+            {
+                Transform fallback = (cameraViewPoint != null) ? cameraViewPoint : cartOrbitCenter;
+                if (fallback != null)
+                {
+                    dynamicCameraViewPoint.position = fallback.position;
+                    dynamicCameraViewPoint.rotation = fallback.rotation;
+                    return dynamicCameraViewPoint;
+                }
+
+                dynamicCameraViewPoint.position = transform.position - cartForward * 1.6f + Vector3.up * 1.25f;
+                dynamicCameraViewPoint.rotation = Quaternion.LookRotation(cartForward, Vector3.up);
+                return dynamicCameraViewPoint;
+            }
+
+            float tableY = Mathf.Lerp(bounds.min.y, bounds.max.y, CartCameraTableHeightRatio);
+            float horizontalDepth = Mathf.Max(bounds.extents.x, bounds.extents.z);
+            Vector3 tableCenter = new Vector3(transform.position.x, tableY, transform.position.z);
+            Vector3 cameraPosition = tableCenter - cartForward * (horizontalDepth + CartCameraForwardPadding);
+            cameraPosition.y = tableY + CartCameraHeightAboveTable;
+
+            Vector3 lookTarget = tableCenter + Vector3.up * CartCameraLookHeightAboveTable + cartForward * 0.35f;
+            dynamicCameraViewPoint.position = cameraPosition;
+            dynamicCameraViewPoint.rotation = Quaternion.LookRotation(lookTarget - cameraPosition, Vector3.up);
+            return dynamicCameraViewPoint;
+        }
+
+        private bool TryGetVisualBounds(out Bounds bounds)
+        {
+            bounds = default;
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            bool hasBounds = false;
+
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null || !renderer.enabled) continue;
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return hasBounds;
+        }
+
         private void ExitCartInteraction(Player.PlayerController player)
         {
             isPlayerInteracting = false;
+            interactingPlayer = null;
+            EventManager.TriggerCartInteractionChanged(false);
+            RestorePlayerTransform(player);
+            SetPlayerVisualsVisible(player, true);
             player.SetState(PlayerState.Idle);
             player.EnableMovement();
 
@@ -124,6 +253,60 @@ namespace GanhHangRong.Interaction
 
             promptText = "Nhấn F để tương tác xe đẩy";
             EventManager.TriggerInteractionPromptShow(promptText);
+        }
+
+        private void RestorePlayerTransform(Player.PlayerController player)
+        {
+            if (player == null || !hasSavedPlayerTransform) return;
+
+            Rigidbody rb = player.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.position = playerPositionBeforeInteraction;
+                rb.rotation = playerRotationBeforeInteraction;
+            }
+            else
+            {
+                player.transform.SetPositionAndRotation(playerPositionBeforeInteraction, playerRotationBeforeInteraction);
+            }
+
+            hasSavedPlayerTransform = false;
+        }
+
+        private void StopPlayerRigidbody(Player.PlayerController player)
+        {
+            if (player == null) return;
+
+            Rigidbody rb = player.GetComponent<Rigidbody>();
+            if (rb == null) return;
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        private void SetPlayerVisualsVisible(Player.PlayerController player, bool visible)
+        {
+            if (player == null) return;
+
+            if (!visible)
+            {
+                hiddenPlayerRenderers = player.GetComponentsInChildren<Renderer>(true);
+            }
+
+            if (hiddenPlayerRenderers == null) return;
+
+            foreach (Renderer renderer in hiddenPlayerRenderers)
+            {
+                if (renderer != null)
+                    renderer.enabled = visible;
+            }
+
+            if (visible)
+            {
+                hiddenPlayerRenderers = null;
+            }
         }
 
         public void ServeFromFirstPerson(Player.PlayerController player)
@@ -148,13 +331,23 @@ namespace GanhHangRong.Interaction
 
             if (!stats.HasSuppliesForTea())
             {
+                int chapter = GameManager.HasInstance ? GameManager.Instance.CurrentChapter : 1;
+                if (chapter >= 2 && !CartItem.IsHoldingCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có món nào được chuẩn bị! Hãy nhấp vào món trên xe hàng rồi nhấn Space để phục vụ.");
+                    return;
+                }
+
                 if (CartItem.IsHoldingCup)
                 {
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", $"Ly trà đá chưa pha xong! (Hiện có: Trà {CartItem.TeaInCup}g/50g, Nước {Mathf.RoundToInt(CartItem.WaterInCup * 1000f)}ml/200ml, Đá {CartItem.IceInCup}%/5%)");
+                    string brewBase = CartItem.CoffeeInCup > 0
+                        ? $"Cà phê {CartItem.CoffeeInCup}g/30g"
+                        : $"Trà {CartItem.TeaInCup}g/50g";
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", $"Ly chưa pha xong! (Hiện có: {brewBase}, Nước {Mathf.RoundToInt(CartItem.WaterInCup * 1000f)}ml/200ml, Đá {CartItem.IceInCup}%/5%)");
                 }
                 else
                 {
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có ly trà nào được pha! Hãy nhấp vào Ly Nước trên bàn để lấy ly và bắt đầu pha chế.");
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có ly nào được pha! Hãy nhấp vào ly nước trên bàn để lấy ly và bắt đầu pha chế.");
                 }
                 return;
             }
@@ -179,6 +372,13 @@ namespace GanhHangRong.Interaction
 
             if (closestWaiting != null)
             {
+                string preparedDrinkName = CartItem.PreparedDrinkName;
+                if (CartItem.PreparedDrinkId >= 0 && CartItem.PreparedDrinkId != closestWaiting.OrderedDrinkId)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", $"Khách gọi {closestWaiting.OrderedDrinkName}, nhưng món đang có là {preparedDrinkName}. Chuẩn bị lại đúng món trước đã.");
+                    return;
+                }
+
                 // Play animation serving
                 player.SetState(PlayerState.Serving);
                 stats.UseTeaSupplies();
@@ -187,14 +387,15 @@ namespace GanhHangRong.Interaction
                 // Đặt ly trà đá tĩnh lên bàn ảo trước mặt khách nếu ghế ngồi hợp lệ
                 if (closestWaiting.TargetSeat != null)
                 {
-                    Vector3 tablePos = closestWaiting.TargetSeat.transform.position + closestWaiting.TargetSeat.transform.forward * 0.5f + Vector3.up * 0.35f;
-                    GameObject placedCup = CartItem.CreateStaticTeaCupModel(tablePos);
-                    closestWaiting.TargetSeat.PlacedCupObj = placedCup;
+                    Vector3 tablePos = closestWaiting.TargetSeat.transform.position + closestWaiting.TargetSeat.transform.forward * 0.5f;
+                    tablePos.y = closestWaiting.TargetSeat.GetSeatSurfaceY() + 0.3f;
+                    GameObject placedOrder = CartItem.CreateStaticPreparedOrderModel(CartItem.PreparedDrinkId, tablePos);
+                    closestWaiting.TargetSeat.PlacedCupObj = placedOrder;
                 }
 
                 // Tháo mô hình ly trà đá khỏi tay nhân vật sau khi phục vụ
                 CartItem.DetachTeaCup();
-                EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã trao ly trà đá cho khách! Cảm ơn vì đã đến ủng hộ.");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã trao {preparedDrinkName} cho khách! Cảm ơn vì đã đến ủng hộ.");
             }
             else
             {

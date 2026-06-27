@@ -72,10 +72,13 @@ namespace GanhHangRong.Editor
             stationGO.transform.position = stationPos;
 
             // Chi xoay theo truc Y de bon rua dung huong voi xe, tranh lay theo goc import X cua xe.
-            stationGO.transform.rotation = Quaternion.Euler(0f, teaCartObj.transform.eulerAngles.y, 0f);
+            stationGO.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
 
             // Scale nhỏ hơn xe đẩy cho phù hợp (bồn rửa thường nhỏ hơn xe)
             stationGO.transform.localScale = teaCartObj.transform.localScale * 0.6f;
+            stationPos = CalculateStationBehindCartPosition(teaCartObj, stationGO, 0.18f);
+            stationGO.transform.position = stationPos;
+            AlignObjectBottomToY(stationGO, FindSidewalkSurfaceY(stationPos, 0.2f) + 0.01f);
 
             // 6. Thêm DishwashingStation component
             var stationComp = stationGO.GetComponent<DishwashingStation>();
@@ -191,6 +194,77 @@ namespace GanhHangRong.Editor
                 "Hãy kiểm tra và điều chỉnh vị trí/scale nếu cần trong Scene View.\n" +
                 "Nhớ Save Scene (Ctrl+S)!",
                 "OK");
+        }
+        private static Vector3 CalculateStationBehindCartPosition(GameObject cart, GameObject station, float gap)
+        {
+            Bounds cartBounds = GetRendererBounds(cart, new Bounds(cart.transform.position, Vector3.zero));
+            Bounds stationBounds = GetRendererBounds(station, new Bounds(station.transform.position, Vector3.one));
+
+            Vector3 position = station.transform.position;
+            position.x = cartBounds.center.x + 1.15f;
+            position.z = cartBounds.max.z + stationBounds.extents.z + gap;
+            return position;
+        }
+
+        private static Bounds GetRendererBounds(GameObject obj, Bounds fallback)
+        {
+            if (obj == null) return fallback;
+
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return fallback;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
+        }
+
+        private static float FindSidewalkSurfaceY(Vector3 position, float fallback)
+        {
+            float surfaceY = fallback;
+            bool found = false;
+            var renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+
+            foreach (var renderer in renderers)
+            {
+                string rootName = renderer.transform.root.name;
+                if (!renderer.name.Contains("Sidewalk") && !rootName.Contains("Sidewalk") &&
+                    !renderer.name.Contains("StoneFloor") && !rootName.Contains("StoneFloor"))
+                {
+                    continue;
+                }
+
+                Bounds bounds = renderer.bounds;
+                bool containsX = position.x >= bounds.min.x - 0.05f && position.x <= bounds.max.x + 0.05f;
+                bool containsZ = position.z >= bounds.min.z - 0.05f && position.z <= bounds.max.z + 0.05f;
+                if (!containsX || !containsZ) continue;
+
+                surfaceY = found ? Mathf.Max(surfaceY, bounds.max.y) : bounds.max.y;
+                found = true;
+            }
+
+            return surfaceY;
+        }
+
+        private static void AlignObjectBottomToY(GameObject obj, float targetBottomY)
+        {
+            if (obj == null) return;
+
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            Vector3 position = obj.transform.position;
+            position.y += targetBottomY - bounds.min.y;
+            obj.transform.position = position;
         }
     }
 }

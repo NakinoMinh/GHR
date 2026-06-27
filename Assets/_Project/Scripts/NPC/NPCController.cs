@@ -16,6 +16,8 @@ namespace GanhHangRong.NPC
         [SerializeField] private float walkSpeed = 2f;
         [SerializeField] private float stopDistance = 0.1f;
         [SerializeField] private float rotationSpeed = 10f;
+        [SerializeField] private float seatApproachDistance = 0.95f;
+        [SerializeField] private float seatEntryDistance = 0.18f;
 
         private NPCProfile profile;
         private NPCState currentState = NPCState.Spawning;
@@ -35,9 +37,18 @@ namespace GanhHangRong.NPC
         private int orderedDrink = 0; // 0: Trà đá, 1: Cà phê
         private NPCInteractable interactable;
         private Player.PlayerController interactingPlayer;
+        private Transform visualRoot;
+        private Transform visualModel;
+        private Animator visualAnimator;
+        private bool visualReferencesCached;
+        private Vector3 visualModelOriginalLocalPosition;
+        private Quaternion visualModelOriginalLocalRotation;
+        private Vector3 visualModelOriginalLocalScale = Vector3.one;
 
         public NPCState CurrentState => currentState;
         public CustomerSeat TargetSeat => targetSeat;
+        public int OrderedDrinkId => orderedDrink;
+        public string OrderedDrinkName => GetDrinkName(orderedDrink);
 
         private void Awake()
         {
@@ -136,7 +147,11 @@ namespace GanhHangRong.NPC
             switch (currentState)
             {
                 case NPCState.WalkingIn:
-                    MoveTowards(targetSeat.transform.position, NPCState.SittingDown);
+                    MoveTowards(GetSeatApproachPosition(), NPCState.Approaching);
+                    break;
+
+                case NPCState.Approaching:
+                    MoveTowards(GetSeatEntryPosition(), NPCState.SittingDown);
                     break;
                     
                 case NPCState.SittingDown:
@@ -176,6 +191,7 @@ namespace GanhHangRong.NPC
                     else if (waitTimer >= maxWaitTime)
                     {
                         ChangeState(NPCState.LeavingSad);
+                        EventManager.TriggerCustomerOrderCleared();
                         EventManager.TriggerCustomerLeftSad(profile.npcType);
                         if (targetSeat != null) targetSeat.FreeSeat();
                     }
@@ -199,15 +215,19 @@ namespace GanhHangRong.NPC
                 case NPCState.LeavingHappy:
                     ShowSpeechBubble("Ngon!", Color.blue);
                     transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
-                    ChangeState(NPCState.WalkingOut);
+                    ChangeState(NPCState.LeavingSeat);
                     break;
                     
                 case NPCState.LeavingSad:
                     ShowSpeechBubble("Tệ quá!", Color.red);
                     transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
-                    ChangeState(NPCState.WalkingOut);
+                    ChangeState(NPCState.LeavingSeat);
                     break;
                     
+                case NPCState.LeavingSeat:
+                    MoveTowards(GetSeatApproachPosition(), NPCState.WalkingOut);
+                    break;
+
                 case NPCState.WalkingOut:
                     MoveTowards(exitPoint.position, NPCState.Spawning /* Destroy */);
                     if (Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(exitPoint.position.x, 0, exitPoint.position.z)) <= stopDistance)
@@ -215,6 +235,87 @@ namespace GanhHangRong.NPC
                         Destroy(gameObject);
                     }
                     break;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            ApplyVisualPoseForState();
+        }
+
+        private void ApplyVisualPoseForState()
+        {
+            CacheVisualReferences();
+            if (visualAnimator == null) return;
+
+            bool isWalking = currentState == NPCState.WalkingIn ||
+                             currentState == NPCState.Approaching ||
+                             currentState == NPCState.LeavingSeat ||
+                             currentState == NPCState.WalkingOut;
+            bool isSitting = currentState == NPCState.SittingDown ||
+                             currentState == NPCState.Ordering ||
+                             currentState == NPCState.Waiting ||
+                             currentState == NPCState.Drinking ||
+                             currentState == NPCState.Paying;
+
+            if (isWalking)
+            {
+                visualAnimator.enabled = true;
+                visualAnimator.speed = 0.35f;
+                SetAnimatorStateParameter(0);
+            }
+            else if (isSitting)
+            {
+                visualAnimator.enabled = true;
+                visualAnimator.speed = 1f;
+                SetAnimatorStateParameter(1);
+            }
+
+            RestoreVisualModelRoot();
+        }
+
+        private void CacheVisualReferences()
+        {
+            if (visualReferencesCached && visualRoot != null) return;
+
+            visualRoot = transform.Find("VisualRoot");
+            visualModel = visualRoot != null ? visualRoot.Find("NPCModel") : null;
+            visualAnimator = visualRoot != null ? visualRoot.GetComponentInChildren<Animator>(true) : null;
+            if (visualModel != null)
+            {
+                visualModelOriginalLocalPosition = visualModel.localPosition;
+                visualModelOriginalLocalRotation = visualModel.localRotation;
+                visualModelOriginalLocalScale = visualModel.localScale;
+            }
+            visualReferencesCached = true;
+        }
+
+        private void RestoreVisualModelRoot()
+        {
+            if (visualRoot != null)
+            {
+                visualRoot.localPosition = Vector3.zero;
+                visualRoot.localRotation = Quaternion.identity;
+            }
+
+            if (visualModel == null) return;
+
+            visualModel.localPosition = visualModelOriginalLocalPosition;
+            visualModel.localRotation = visualModelOriginalLocalRotation;
+            visualModel.localScale = visualModelOriginalLocalScale;
+        }
+
+        private void SetAnimatorStateParameter(int value)
+        {
+            if (visualAnimator == null || visualAnimator.runtimeAnimatorController == null) return;
+
+            foreach (var parameter in visualAnimator.parameters)
+            {
+                if (parameter.name == "State")
+                {
+                    visualAnimator.SetInteger("State", value);
+                    return;
+                }
             }
         }
 
@@ -244,9 +345,37 @@ namespace GanhHangRong.NPC
             }
         }
 
+        private Vector3 GetSeatApproachPosition()
+        {
+            if (targetSeat == null) return transform.position;
+
+            Vector3 seatForward = GetSeatYawForward(targetSeat.transform);
+            Vector3 approach = targetSeat.transform.position - seatForward * seatApproachDistance;
+            return new Vector3(approach.x, transform.position.y, approach.z);
+        }
+
+        private Vector3 GetSeatEntryPosition()
+        {
+            if (targetSeat == null) return transform.position;
+
+            Vector3 seatForward = GetSeatYawForward(targetSeat.transform);
+            Vector3 entry = targetSeat.transform.position - seatForward * seatEntryDistance;
+            return new Vector3(entry.x, transform.position.y, entry.z);
+        }
+
+        private static Vector3 GetSeatYawForward(Transform seatTransform)
+        {
+            if (seatTransform == null) return Vector3.forward;
+
+            Vector3 forward = Quaternion.Euler(0f, seatTransform.eulerAngles.y, 0f) * Vector3.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
+        }
+
         private void ChangeState(NPCState newState)
         {
             currentState = newState;
+            ApplyVisualPoseForState();
         }
 
         public void ServeDrink()
@@ -254,12 +383,13 @@ namespace GanhHangRong.NPC
             if (currentState == NPCState.Waiting && !isServed)
             {
                 isServed = true;
+                EventManager.TriggerCustomerOrderCleared();
             }
         }
 
         private void PayForDrink()
         {
-            int basePrice = orderedDrink == 1 ? Constants.COFFEE_SELL_PRICE : Constants.TRA_DA_SELL_PRICE;
+            int basePrice = ChapterOrderCatalog.GetOrderPrice(orderedDrink);
             int total = basePrice;
             
             // Tính tip
@@ -286,10 +416,15 @@ namespace GanhHangRong.NPC
             var cam = FindAnyObjectByType<Player.CinematicCamera>();
             if (cam != null) cam.FocusOnNPC(transform, player.transform);
 
-            // Random món
-            orderedDrink = Random.value > 0.5f ? 1 : 0;
-            string drinkName = orderedDrink == 1 ? "Cà Phê đá" : "Trà Đá";
+            // Random món theo chapter hiện tại.
+            int chapter = GameManager.HasInstance ? GameManager.Instance.CurrentChapter : 1;
+            orderedDrink = ChapterOrderCatalog.GetRandomOrderId(chapter);
+            string drinkName = GetDrinkName(orderedDrink);
             string text = $"Cho tui một ly {drinkName} nha!";
+            if (ChapterOrderCatalog.IsChapter2Order(orderedDrink))
+            {
+                text = $"Cho tui một phần {drinkName} nha!";
+            }
 
             // Kích hoạt thoại
             Narrative.DialogueManager.Instance.StartSingleDialogue(profile.npcType.ToString(), text);
@@ -308,9 +443,15 @@ namespace GanhHangRong.NPC
                 // Chuyển state
                 EventManager.TriggerCustomerArrived(profile.npcType);
                 ChangeState(NPCState.Waiting);
-                string drinkName = orderedDrink == 1 ? "Cà Phê!" : "Trà Đá!";
+                string drinkName = GetDrinkName(orderedDrink);
+                EventManager.TriggerCustomerOrderPlaced(orderedDrink, drinkName);
                 ShowSpeechBubble(drinkName);
             }
+        }
+
+        private static string GetDrinkName(int drinkId)
+        {
+            return ChapterOrderCatalog.GetOrderName(drinkId);
         }
 
         private void ShowSpeechBubble(string text, Color? textColor = null)

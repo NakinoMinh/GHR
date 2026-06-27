@@ -61,6 +61,11 @@ namespace GanhHangRong.UI
 
         private void Start()
         {
+            if (GetComponent<GameplayHUDRuntimeDesigner>() == null)
+            {
+                gameObject.AddComponent<GameplayHUDRuntimeDesigner>();
+            }
+
             playerStats = FindAnyObjectByType<PlayerStats>();
             if (playerStats != null)
             {
@@ -156,11 +161,14 @@ namespace GanhHangRong.UI
             {
                 if (Interaction.CartItem.IsHoldingCup)
                 {
-                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: Trà {Interaction.CartItem.TeaInCup}g, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
+                    string brewBase = Interaction.CartItem.CoffeeInCup > 0
+                        ? $"Cà phê {Interaction.CartItem.CoffeeInCup}g"
+                        : $"Trà {Interaction.CartItem.TeaInCup}g";
+                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: {brewBase}, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
                 }
                 else if (Interaction.CartItem.HasPreparedTea)
                 {
-                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Sẵn sàng!)";
+                    cupCountText.text = $"LY: {playerStats.CupSupply}\n({Interaction.CartItem.PreparedDrinkName} sẵn sàng!)";
                 }
                 else
                 {

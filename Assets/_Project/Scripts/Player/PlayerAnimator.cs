@@ -30,15 +30,15 @@ namespace GanhHangRong.Player
 
         [Header("Cup Holding Arm Adjustments (Xoay xương cánh tay khi cầm ly)")]
         [Tooltip("Điều chỉnh góc xoay upper arm phải khi cầm ly (Euler angles)")]
-        [SerializeField] private Vector3 rightArmOffset = new Vector3(-55f, 0f, -25f);
+        [SerializeField] private Vector3 rightArmOffset = new Vector3(-32f, 28f, -48f);
         [Tooltip("Điều chỉnh góc xoay forearm phải khi cầm ly")]
-        [SerializeField] private Vector3 rightForeArmOffset = new Vector3(-65f, 0f, 0f);
+        [SerializeField] private Vector3 rightForeArmOffset = new Vector3(-96f, -8f, 18f);
         [Tooltip("Điều chỉnh góc xoay bàn tay phải khi cầm ly")]
-        [SerializeField] private Vector3 rightHandOffset = new Vector3(0f, -15f, 10f);
+        [SerializeField] private Vector3 rightHandOffset = new Vector3(12f, -62f, 72f);
 
-        [SerializeField] private Vector3 leftArmOffset = new Vector3(-45f, 0f, 25f);
-        [SerializeField] private Vector3 leftForeArmOffset = new Vector3(-55f, 0f, 0f);
-        [SerializeField] private Vector3 leftHandOffset = new Vector3(0f, 15f, -10f);
+        [SerializeField] private Vector3 leftArmOffset = new Vector3(-8f, 0f, 10f);
+        [SerializeField] private Vector3 leftForeArmOffset = new Vector3(-10f, 0f, 0f);
+        [SerializeField] private Vector3 leftHandOffset = new Vector3(0f, 8f, -6f);
 
         [Header("Chế Độ Cầm Ly")]
         [Tooltip("true = Dùng procedural bone rotation (mặc định, luôn hoạt động). false = Dùng Animator HoldCupLayer (cần chạy GHR > Thiết lập Animator trước).")]
@@ -98,11 +98,12 @@ namespace GanhHangRong.Player
             if (has3DAnimator)
             {
                 // === 3D ANIMATION MODE ===
-                int targetState = (int)currentState;
+                PlayerState animatorState = currentState == PlayerState.Interacting ? PlayerState.Idle : currentState;
+                int targetState = (int)animatorState;
                 
                 // Smooth speed parameter (cho blend mượt)
                 float targetSpeed = 0f;
-                switch (currentState)
+                switch (animatorState)
                 {
                     case PlayerState.Idle: targetSpeed = 0f; break;
                     case PlayerState.Walking: targetSpeed = 0.5f; break;
@@ -147,7 +148,6 @@ namespace GanhHangRong.Player
                     }
                 }
 
-                // Căn chỉnh vị trí mô hình 3D khi ngồi
                 if (currentState == PlayerState.Sitting)
                 {
                     float breathe = Mathf.Sin(animTimer * 1f) * 0.01f;
@@ -244,8 +244,10 @@ namespace GanhHangRong.Player
 
         private void LateUpdate()
         {
+            bool isHoldingCup = Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea;
+
             // Nếu đang cầm ly pha chế hoặc đã có ly trà đá thành phẩm
-            if (Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea)
+            if (isHoldingCup)
             {
                 // Dùng procedural bone rotation khi toggle bật
                 if (useProceduralHold)

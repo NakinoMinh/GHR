@@ -60,6 +60,7 @@ namespace GanhHangRong.Editor
             // ==========================================
             GameObject camObj = new GameObject("Main Camera");
             Camera cam = camObj.AddComponent<Camera>();
+            camObj.AddComponent<AudioListener>();
             camObj.tag = "MainCamera";
             cam.orthographic = false;
             cam.fieldOfView = 50f; // Góc nhìn rộng hơn để thấy rõ toàn cảnh thành phố
@@ -328,8 +329,8 @@ namespace GanhHangRong.Editor
                 }
 
                 // Mô hình FBX của bạn có kích thước Mesh rất nhỏ (extents 0.01 -> size 0.02)
-                // Chúng ta sẽ scale tự động để xe cao khoảng 1.6m
-                float targetHeight = 1.6f;
+                // Chúng ta sẽ scale tự động để xe cao khoảng 2.35m
+                float targetHeight = 2.35f;
                 float unscaledHeight = CalculateModelHeight(cartObj, Quaternion.Euler(-90f, 180f, 0f), out float bottomOffsetAtScale1);
                 float scaleFactor = targetHeight / unscaledHeight;
 
@@ -380,8 +381,8 @@ namespace GanhHangRong.Editor
                     // Quy đổi tỉ lệ cục bộ tương đối với cha
                     kettleObj.transform.localScale = Vector3.one * (kettleScaleFactor / scaleFactor);
                     
-                    float tableWorldY = sidewalkTopY + 0.63f; // Hạ độ cao xuống mặt bàn chính (khoảng 63cm trên vỉa hè)
-                    kettleObj.transform.position = new Vector3(3.65f, tableWorldY + (kettleOffset * kettleScaleFactor), -0.12f);
+                    float tableWorldY = sidewalkTopY + 0.71f; // Hạ độ cao xuống mặt bàn chính (khoảng 63cm trên vỉa hè)
+                    kettleObj.transform.position = new Vector3(3.95f, tableWorldY + (kettleOffset * kettleScaleFactor) + 0.13f, -0.12f);
                     kettleObj.transform.rotation = Quaternion.identity;
                     
                     Material kettleMat = CreateKettleMaterial();
@@ -433,7 +434,7 @@ namespace GanhHangRong.Editor
                     // Quy đổi tỉ lệ cục bộ tương đối với cha
                     tinObj.transform.localScale = Vector3.one * (tinScaleFactor / scaleFactor);
                     
-                    float tableWorldY = sidewalkTopY + 0.63f; // Hạ độ cao xuống mặt bàn chính
+                    float tableWorldY = sidewalkTopY + 0.71f; // Hạ độ cao xuống mặt bàn chính
                     tinObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f); // Xoay đứng thẳng (-90 độ X) trước để khớp pivot đứng
                     tinObj.transform.position = new Vector3(4.15f, tableWorldY + (tinOffset * tinScaleFactor), 0.12f);
 
@@ -485,7 +486,7 @@ namespace GanhHangRong.Editor
                     sugarObj.transform.SetParent(cartObj.transform);
                     sugarObj.transform.localScale = Vector3.one * (sugarScaleFactor / scaleFactor);
                     
-                    float tableWorldY = sidewalkTopY + 0.63f;
+                    float tableWorldY = sidewalkTopY + 0.71f;
                     sugarObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                     sugarObj.transform.position = new Vector3(3.8f, tableWorldY + (sugarOffset * sugarScaleFactor), 0.12f);
                     
@@ -534,7 +535,7 @@ namespace GanhHangRong.Editor
                     stoveObj.transform.SetParent(cartObj.transform);
                     stoveObj.transform.localScale = Vector3.one * (stoveScaleFactor / scaleFactor);
                     
-                    float tableWorldY = sidewalkTopY + 0.63f;
+                    float tableWorldY = sidewalkTopY + 0.71f;
                     stoveObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                     stoveObj.transform.position = new Vector3(3.95f, tableWorldY + (stoveOffset * stoveScaleFactor), -0.12f);
                     
@@ -583,7 +584,7 @@ namespace GanhHangRong.Editor
                     coffeeObj.transform.SetParent(cartObj.transform);
                     coffeeObj.transform.localScale = Vector3.one * (coffeeScaleFactor / scaleFactor);
                     
-                    float tableWorldY = sidewalkTopY + 0.63f;
+                    float tableWorldY = sidewalkTopY + 0.71f;
                     coffeeObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                     coffeeObj.transform.position = new Vector3(4.35f, tableWorldY + (coffeeOffset * coffeeScaleFactor), -0.12f);
                     
@@ -634,6 +635,7 @@ namespace GanhHangRong.Editor
                     
                     iceObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                     iceObj.transform.position = new Vector3(3.0f, sidewalkTopY + (iceOffset * iceScaleFactor) + 0.002f, -0.6f);
+                    AlignObjectBottomToY(iceObj, sidewalkTopY + 0.01f);
                     
                     Material iceMat = CreateIceCoolerMaterial();
                     var iceRenderers = iceObj.GetComponentsInChildren<MeshRenderer>(true);
@@ -682,6 +684,7 @@ namespace GanhHangRong.Editor
                     
                     waterObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                     waterObj.transform.position = new Vector3(2.6f, sidewalkTopY + (waterOffset * waterScaleFactor) + 0.002f, -0.6f);
+                    AlignObjectBottomToY(waterObj, sidewalkTopY + 0.01f);
                     
                     Material waterMat = CreateWaterBottleMaterial();
                     var waterRenderers = waterObj.GetComponentsInChildren<MeshRenderer>(true);
@@ -741,7 +744,7 @@ namespace GanhHangRong.Editor
                         cupObj.transform.SetParent(cartObj.transform);
                         cupObj.transform.localScale = Vector3.one * (cupScaleFactor / scaleFactor);
 
-                        float tableWorldY = sidewalkTopY + 0.63f;
+                        float tableWorldY = sidewalkTopY + 0.71f;
                         cupObj.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
                         cupObj.transform.position = new Vector3(cupPositions[i].x, tableWorldY + (cupOffset * cupScaleFactor), cupPositions[i].z);
 
@@ -778,8 +781,8 @@ namespace GanhHangRong.Editor
                 // --- Add First Person Camera Point ---
                 GameObject camPointObj = new GameObject("FirstPersonCameraPoint");
                 camPointObj.transform.SetParent(cartObj.transform);
-                camPointObj.transform.position = new Vector3(4.0f, sidewalkTopY + 1.55f, 0.9f);
-                camPointObj.transform.rotation = Quaternion.Euler(30f, 180f, 0f);
+                camPointObj.transform.position = new Vector3(4.0f, sidewalkTopY + 1.18f, 1.65f);
+                camPointObj.transform.rotation = Quaternion.Euler(18f, 180f, 0f);
                 
                 var camField = typeof(TeaCart).GetField("cameraViewPoint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (camField != null) camField.SetValue(teaCartComp, camPointObj.transform);
@@ -790,7 +793,7 @@ namespace GanhHangRong.Editor
                 cartObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 cartObj.name = "TeaCart";
                 cartObj.transform.position = new Vector3(4f, 1f, 0f);
-                cartObj.transform.localScale = new Vector3(2f, 2f, 1f);
+                cartObj.transform.localScale = new Vector3(2.55f, 2.55f, 1.28f);
                 cartObj.GetComponent<MeshRenderer>().sharedMaterial = matCart;
                 var cartCollider = cartObj.GetComponent<BoxCollider>();
                 if (cartCollider != null) cartCollider.isTrigger = true;
@@ -820,20 +823,20 @@ namespace GanhHangRong.Editor
             Material chairMat = CreateChairModelMaterial();
 
             // Dãy 1: Trên vỉa hè (Z = 0) bên cạnh xe đẩy (đã dịch chuyển sang X=4)
-            Vector3 tablePos1 = new Vector3(-1.25f, sidewalkTopY, 0f);
+            Vector3 tablePos1 = new Vector3(-1.65f, sidewalkTopY, 0f);
             SpawnTable(tablePos1, tablesGroup, tableMat);
             SpawnChairsAroundTable(tablePos1, chairsGroup, chairMat);
 
-            Vector3 tablePos2 = new Vector3(1.75f, sidewalkTopY, 0f);
+            Vector3 tablePos2 = new Vector3(1.35f, sidewalkTopY, 0f);
             SpawnTable(tablePos2, tablesGroup, tableMat);
             SpawnChairsAroundTable(tablePos2, chairsGroup, chairMat);
 
             // Dãy 2: Trên nền đá bên trái (Z = stoneLeftZ) bên cạnh xe đẩy
-            Vector3 tablePos3 = new Vector3(-1.25f, stoneTopY, stoneLeftZ);
+            Vector3 tablePos3 = new Vector3(-1.65f, stoneTopY, stoneLeftZ);
             SpawnTable(tablePos3, tablesGroup, tableMat);
             SpawnChairsAroundTable(tablePos3, chairsGroup, chairMat);
 
-            Vector3 tablePos4 = new Vector3(1.75f, stoneTopY, stoneLeftZ);
+            Vector3 tablePos4 = new Vector3(1.35f, stoneTopY, stoneLeftZ);
             SpawnTable(tablePos4, tablesGroup, tableMat);
             SpawnChairsAroundTable(tablePos4, chairsGroup, chairMat);
 
@@ -842,7 +845,8 @@ namespace GanhHangRong.Editor
             GameObject playerObj = new GameObject("Player_HoangHon");
             playerObj.tag = "Player";
             playerObj.layer = LayerMask.NameToLayer("Default");
-            playerObj.transform.position = new Vector3(0f, 1.5f, 0f); // Đặt trên vỉa hè
+            playerObj.transform.position = new Vector3(4f, 1.5f, 1.35f); // Spawn ngay cạnh xe bán hàng, phía tương tác
+            playerObj.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
             
             // Trả lại đường dẫn model cũ của User
             string modelPath = "Assets/_Project/Art/Models/Player/Meshy_AI_Ripped_Jeans_Portrait_biped/Meshy_AI_Ripped_Jeans_Portrait_biped_Animation_Walking_withSkin.glb";
@@ -987,6 +991,12 @@ namespace GanhHangRong.Editor
             managersObj.AddComponent<GanhHangRong.Systems.TimeOfDayLighting>();
             managersObj.AddComponent<Narrative.DialogueManager>();
             managersObj.AddComponent<AudioManager>();
+            var sceneMusicPlayer = managersObj.AddComponent<SceneMusicPlayer>();
+            var serializedMusic = new SerializedObject(sceneMusicPlayer);
+            serializedMusic.FindProperty("musicResourcePath").stringValue = "Music/Chapter1_ChuyenTauDem";
+            serializedMusic.FindProperty("loop").boolValue = true;
+            serializedMusic.FindProperty("fadeDuration").floatValue = 1.5f;
+            serializedMusic.ApplyModifiedPropertiesWithoutUndo();
             managersObj.AddComponent<GanhHangRong.Systems.EmotionalFailureSystem>();
             managersObj.AddComponent<GanhHangRong.Systems.GameplayLoop>();
             var npcVisualFactory = managersObj.AddComponent<NPCVisualFactory>();
@@ -995,9 +1005,9 @@ namespace GanhHangRong.Editor
             
             Material npcMat = CreateGrabRiderMaterial(); 
             
-            AddNPCModelData(serializedFactory, 0, "Assets/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_withSkin.glb", "NPCGrabController", npcMat);
-            AddNPCModelData(serializedFactory, 1, "Assets/Meshy_AI_Maroon_Tunic_Portrait_biped/Meshy_AI_Maroon_Tunic_Portrait_biped_Animation_Walking_withSkin.glb", "NPCMaroonController", npcMat);
-            AddNPCModelData(serializedFactory, 2, "Assets/Meshy_AI_T_Pose_in_the_Studio_biped/Meshy_AI_T_Pose_in_the_Studio_biped_Animation_Walking_withSkin.glb", "NPCTPoseController", npcMat);
+            AddNPCModelData(serializedFactory, 0, "Assets/_Project/Art/Characters/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_withSkin.glb", "NPCGrabController", npcMat);
+            AddNPCModelData(serializedFactory, 1, "Assets/_Project/Art/Characters/Meshy_AI_Maroon_Tunic_Portrait_biped/Meshy_AI_Maroon_Tunic_Portrait_biped_Animation_Walking_withSkin.glb", "NPCMaroonController", npcMat);
+            AddNPCModelData(serializedFactory, 2, "Assets/_Project/Art/Characters/Meshy_AI_Grab_Rider_in_Green_J_biped/Meshy_AI_Grab_Rider_in_Green_J_biped_Animation_Walking_Woman_withSkin.glb", "NPCGrabController", npcMat);
             
             serializedFactory.ApplyModifiedPropertiesWithoutUndo();
 
@@ -1039,7 +1049,7 @@ namespace GanhHangRong.Editor
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
             scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.referenceResolution = new Vector2(1280, 720);
             canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             
             GameObject hudObj = new GameObject("HUD");
@@ -1195,7 +1205,7 @@ namespace GanhHangRong.Editor
             promptObj.transform.SetParent(canvasObj.transform, false);
             var pRect = promptObj.AddComponent<RectTransform>();
             pRect.anchoredPosition = new Vector2(0, 150); // Nâng lên khỏi xe đẩy
-            pRect.sizeDelta = new Vector2(160, 60);
+            pRect.sizeDelta = new Vector2(240, 74);
             
             // Viền đỏ cho nút E
             promptObj.AddComponent<UnityEngine.UI.Image>().color = new Color(0, 0, 0, 0.7f);
@@ -1211,7 +1221,11 @@ namespace GanhHangRong.Editor
             promptText.rectTransform.anchorMin = Vector2.zero; promptText.rectTransform.anchorMax = Vector2.one;
             promptText.rectTransform.sizeDelta = Vector2.zero;
             promptText.text = "Nhấn F";
-            promptText.fontSize = 28; promptText.color = Color.white;
+            promptText.fontSize = 36; promptText.color = Color.white;
+            promptText.fontStyle = TMPro.FontStyles.Bold;
+            promptText.outlineWidth = 0.14f;
+            promptText.outlineColor = new Color(0f, 0f, 0f, 0.95f);
+            promptText.extraPadding = true;
             promptText.alignment = TMPro.TextAlignmentOptions.Center;
             promptUI.GetType().GetField("promptText", bf).SetValue(promptUI, promptText);
             promptUI.GetType().GetField("canvasGroup", bf).SetValue(promptUI, promptObj.GetComponent<CanvasGroup>());
@@ -1427,7 +1441,7 @@ namespace GanhHangRong.Editor
             }
 
             // Chiều cao bàn nước tiêu chuẩn (khoảng 0.65m)
-            float targetHeight = 0.65f;
+            float targetHeight = 0.70f;
             float unscaledHeight = CalculateModelHeight(tableObj, Quaternion.Euler(-90f, 0f, 0f), out float bottomOffsetAtScale1);
             float scaleFactor = targetHeight / unscaledHeight;
 
@@ -1536,7 +1550,7 @@ namespace GanhHangRong.Editor
             }
 
             // Chiều cao ghế nhựa đỏ tiêu chuẩn (khoảng 0.35m)
-            float targetHeight = 0.35f;
+            float targetHeight = 0.43f;
             float unscaledHeight = CalculateModelHeight(chairObj, Quaternion.Euler(-90f, rotationY, 0f), out float bottomOffsetAtScale1);
             float scaleFactor = targetHeight / unscaledHeight;
 
@@ -1551,9 +1565,9 @@ namespace GanhHangRong.Editor
             // Không dùng mesh bounds vì sau khi scale bounds.center bị lệch sang local space
             var boxCol = chairObj.AddComponent<BoxCollider>();
             boxCol.isTrigger = true;
-            boxCol.center = new Vector3(0f, 0.2f / chairObj.transform.localScale.y, 0f); // ~0.2m trên mặt đất
+            boxCol.center = new Vector3(0f, 0.24f / chairObj.transform.localScale.y, 0f); // ~0.24m trên mặt đất
             boxCol.size = new Vector3(0.6f / chairObj.transform.localScale.x,
-                                     0.4f / chairObj.transform.localScale.y,
+                                     0.48f / chairObj.transform.localScale.y,
                                      0.6f / chairObj.transform.localScale.z);
 
             // Thêm script để khách hoặc người chơi ngồi
@@ -1566,7 +1580,7 @@ namespace GanhHangRong.Editor
 
         private static void SpawnChairsAroundTable(Vector3 tablePos, GameObject parent, Material chairMat)
         {
-            float offset = 0.7f;
+            float offset = 0.62f;
             // Trái (hướng Đông)
             SpawnChair(new Vector3(tablePos.x - offset, tablePos.y, tablePos.z), 90f, parent, chairMat);
             // Phải (hướng Tây)
@@ -2547,6 +2561,24 @@ namespace GanhHangRong.Editor
 
             bottomOffsetAtScale1 = 0f;
             return 1f; // Fallback
+        }
+
+        private static void AlignObjectBottomToY(GameObject obj, float targetBottomY)
+        {
+            if (obj == null) return;
+
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            Vector3 position = obj.transform.position;
+            position.y += targetBottomY - bounds.min.y;
+            obj.transform.position = position;
         }
 
         private static float CalculateModelMaxY(GameObject prefab, Quaternion rotation, Vector3 scale)

@@ -133,7 +133,7 @@ namespace GanhHangRong.Core
         // ═══════════════════════════════════════════
         public const float AUDIO_CROSSFADE_DURATION = 2f;
         public const float AMBIENT_BASE_VOLUME = 0.5f;
-        public const float MUSIC_BASE_VOLUME = 0.3f;
+        public const float MUSIC_BASE_VOLUME = 0.18f;
         public const float SFX_BASE_VOLUME = 0.7f;
     }
 }
