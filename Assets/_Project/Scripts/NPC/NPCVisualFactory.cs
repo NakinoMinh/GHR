@@ -23,7 +23,7 @@ namespace GanhHangRong.NPC
         [SerializeField] private System.Collections.Generic.List<NPCModelData> npcModels = new System.Collections.Generic.List<NPCModelData>();
         [Tooltip("Xoay model con quanh Y. Parent đã xoay theo hướng đi — để 0 nếu model Meshy AI hướng +Z.")]
         [SerializeField] private float modelYawOffset = 0f;
-        private const float ModelGroundSink = 0.08f;
+        private const float ModelGroundSink = 0.25f;
 
         // Bảng màu cho từng loại NPC
         private Color colorFisherman = new Color(0.2f, 0.4f, 0.8f);    // Xanh dương
