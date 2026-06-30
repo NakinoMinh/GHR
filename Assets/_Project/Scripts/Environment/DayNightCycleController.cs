@@ -1,3 +1,4 @@
+using GanhHangRong.Economy;
 using UnityEngine;
 
 namespace GanhHangRong.Environment
@@ -5,6 +6,7 @@ namespace GanhHangRong.Environment
     public class DayNightCycleController : MonoBehaviour
     {
         [Header("Nguon thoi gian")]
+        [SerializeField] private DayNightCycle gameTimeSource;
         [SerializeField] private TimeOfDayManager timeManager;
 
         [Header("Mat troi va mat trang")]
@@ -19,12 +21,10 @@ namespace GanhHangRong.Environment
 
         [Header("Hien thi mat troi / mat trang")]
         [SerializeField] private Vector3 visualCenter = new Vector3(76f, 0f, -18f);
-        [SerializeField, Min(1f)] private float visualOrbitRadius = 80f;
-        [SerializeField, Min(0f)] private float visualHorizonHeight = 8f;
-        [SerializeField] private float visualSeaSideOffset = -55f;
-        [SerializeField] private float visualForwardOffset = -95f;
-        [SerializeField, Min(1f)] private float visualVerticalRadius = 70f;
         [SerializeField] private bool hideVisualBelowHorizon = true;
+        [SerializeField, Min(10f)] private float celestialVisualDistance = 650f;
+        [SerializeField, Min(1f)] private float sunVisualSize = 42f;
+        [SerializeField, Min(1f)] private float moonVisualSize = 28f;
 
         [Header("Cuong do anh sang")]
         [SerializeField] private AnimationCurve sunIntensityCurve = CreateSunCurve();
@@ -46,10 +46,13 @@ namespace GanhHangRong.Environment
         [SerializeField] private AnimationCurve fogDensityCurve = CreateFogDensityCurve();
 
         private bool warnedMissingTimeManager;
+        private Material sunVisualMaterial;
+        private Material moonVisualMaterial;
 
         private void Reset()
         {
             timeManager = FindAnyObjectByType<TimeOfDayManager>();
+            gameTimeSource = FindAnyObjectByType<DayNightCycle>();
             if (sunLight == null)
             {
                 sunLight = RenderSettings.sun;
@@ -63,23 +66,29 @@ namespace GanhHangRong.Environment
                 timeManager = FindAnyObjectByType<TimeOfDayManager>();
             }
 
+            if (gameTimeSource == null)
+            {
+                gameTimeSource = FindAnyObjectByType<DayNightCycle>();
+            }
+
             CacheLightTransforms();
+            EnsureCelestialVisuals();
         }
 
         private void Update()
         {
-            if (timeManager == null)
+            if (gameTimeSource == null && timeManager == null)
             {
                 if (!warnedMissingTimeManager)
                 {
-                    Debug.LogWarning($"{nameof(DayNightCycleController)} can TimeOfDayManager de cap nhat anh sang.", this);
+                    Debug.LogWarning($"{nameof(DayNightCycleController)} can DayNightCycle hoac TimeOfDayManager de cap nhat anh sang.", this);
                     warnedMissingTimeManager = true;
                 }
 
                 return;
             }
 
-            ApplyLighting(timeManager.NormalizedTime);
+            ApplyLighting(GetNormalizedTime());
         }
 
         public void ApplyLighting(float normalizedTime)
@@ -91,8 +100,8 @@ namespace GanhHangRong.Environment
 
             ApplyDirectionalLight(sunLight, sunTransform, sunValue, sunColorGradient.Evaluate(normalizedTime), sunRotationOffset, normalizedTime);
             ApplyDirectionalLight(moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonRotationOffset, normalizedTime);
-            ApplyCelestialVisual(sunVisual, normalizedTime, 0f, sunValue, sunColorGradient.Evaluate(normalizedTime));
-            ApplyCelestialVisual(moonVisual, normalizedTime, 180f, moonValue, moonColorGradient.Evaluate(normalizedTime));
+            ApplyCelestialVisual(sunVisual, sunLight, sunTransform, sunValue, sunColorGradient.Evaluate(normalizedTime), sunVisualSize);
+            ApplyCelestialVisual(moonVisual, moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonVisualSize);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = ambientColorGradient.Evaluate(normalizedTime) * ambientIntensity;
@@ -121,25 +130,19 @@ namespace GanhHangRong.Environment
             pivot.rotation = Quaternion.Euler(normalizedTime * 360f + rotationOffset.x, rotationOffset.y, rotationOffset.z);
         }
 
-        private void ApplyCelestialVisual(Transform visual, float normalizedTime, float phaseDegrees, float intensity, Color color)
+        private void ApplyCelestialVisual(Transform visual, Light sourceLight, Transform sourceTransform, float intensity, Color color, float size)
         {
-            if (visual == null)
+            if (visual == null || sourceLight == null)
             {
                 return;
             }
 
-            // 06:00 nam o chan troi, 12:00 len cao, 18:00 xuong chan troi phia bien.
-            float angle = normalizedTime * 360f - 90f + phaseDegrees;
-            float radians = angle * Mathf.Deg2Rad;
-            float x = Mathf.Cos(radians) * visualOrbitRadius;
-            float y = Mathf.Sin(radians) * visualVerticalRadius + visualHorizonHeight;
-            float sunsetBlend = Mathf.Clamp01(1f - Mathf.Abs(Mathf.DeltaAngle(angle, 180f)) / 90f);
-            float sunriseBlend = Mathf.Clamp01(1f - Mathf.Abs(Mathf.DeltaAngle(angle, 0f)) / 90f);
-            float horizonBlend = Mathf.Max(sunsetBlend, sunriseBlend);
-            float z = Mathf.Lerp(0f, visualForwardOffset, horizonBlend);
-
-            visual.position = visualCenter + new Vector3(x + visualSeaSideOffset * sunsetBlend, y, z);
-            visual.gameObject.SetActive(!hideVisualBelowHorizon || y >= visualHorizonHeight - 0.01f || intensity > 0.01f);
+            Transform lightTransform = sourceTransform != null ? sourceTransform : sourceLight.transform;
+            Vector3 apparentSourceDirection = -lightTransform.forward.normalized;
+            visual.position = visualCenter + apparentSourceDirection * celestialVisualDistance;
+            visual.rotation = Quaternion.identity;
+            visual.localScale = Vector3.one * size;
+            visual.gameObject.SetActive(!hideVisualBelowHorizon || intensity > 0.01f);
 
             Renderer renderer = visual.GetComponent<Renderer>();
             if (renderer != null)
@@ -173,6 +176,103 @@ namespace GanhHangRong.Environment
             {
                 moonTransform = moonLight.transform;
             }
+        }
+
+        private float GetNormalizedTime()
+        {
+            if (gameTimeSource != null)
+            {
+                return Mathf.Repeat(gameTimeSource.CurrentHour / 24f, 1f);
+            }
+
+            return timeManager != null ? timeManager.NormalizedTime : 17f / 24f;
+        }
+
+        private void EnsureCelestialVisuals()
+        {
+            if (sunVisual == null || !IsSphereVisual(sunVisual))
+            {
+                ReplaceWithCelestialSphere(ref sunVisual, "RealisticSun", new Color(1f, 0.78f, 0.32f, 1f), sunVisualSize, ref sunVisualMaterial);
+            }
+            else
+            {
+                sunVisual.localScale = Vector3.one * sunVisualSize;
+            }
+
+            if (moonVisual == null || !IsSphereVisual(moonVisual))
+            {
+                ReplaceWithCelestialSphere(ref moonVisual, "RealisticMoon", new Color(0.82f, 0.86f, 0.9f, 1f), moonVisualSize, ref moonVisualMaterial);
+            }
+            else
+            {
+                moonVisual.localScale = Vector3.one * moonVisualSize;
+            }
+        }
+
+        private static bool IsSphereVisual(Transform visual)
+        {
+            MeshFilter meshFilter = visual != null ? visual.GetComponent<MeshFilter>() : null;
+            return meshFilter != null && meshFilter.sharedMesh != null && meshFilter.sharedMesh.name.Contains("Sphere");
+        }
+
+        private void ReplaceWithCelestialSphere(ref Transform visual, string objectName, Color color, float size, ref Material cachedMaterial)
+        {
+            if (visual != null)
+            {
+                visual.gameObject.SetActive(false);
+            }
+
+            visual = CreateCelestialSphere(objectName, color, size, ref cachedMaterial);
+        }
+
+        private Transform CreateCelestialSphere(string objectName, Color color, float size, ref Material cachedMaterial)
+        {
+            GameObject visualObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            visualObject.name = objectName;
+            visualObject.transform.SetParent(transform, false);
+            visualObject.transform.localScale = Vector3.one * size;
+
+            Collider collider = visualObject.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+
+            Renderer renderer = visualObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                cachedMaterial = CreateCelestialMaterial(objectName + "_Material", color);
+                renderer.sharedMaterial = cachedMaterial;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            return visualObject.transform;
+        }
+
+        private Material CreateCelestialMaterial(string materialName, Color color)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            Material material = new Material(shader);
+            material.name = materialName;
+            material.color = color;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+
+            if (material.HasProperty("_EmissionColor"))
+            {
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", color * 1.4f);
+            }
+
+            return material;
         }
 
         private static AnimationCurve CreateSunCurve()

@@ -23,7 +23,10 @@ namespace GanhHangRong.NPC
         [SerializeField] private System.Collections.Generic.List<NPCModelData> npcModels = new System.Collections.Generic.List<NPCModelData>();
         [Tooltip("Xoay model con quanh Y. Parent đã xoay theo hướng đi — để 0 nếu model Meshy AI hướng +Z.")]
         [SerializeField] private float modelYawOffset = 0f;
-        private const float ModelGroundSink = 0.25f;
+        [SerializeField, Min(1f)] private float fallbackStandingHeight = 1.92f;
+        [SerializeField, Min(0f)] private float heightAbovePlayer = 0.05f;
+        [SerializeField] private bool matchPlayerHeight = true;
+        private const float ModelGroundClearance = 0.01f;
 
         // Bảng màu cho từng loại NPC
         private Color colorFisherman = new Color(0.2f, 0.4f, 0.8f);    // Xanh dương
@@ -102,7 +105,7 @@ namespace GanhHangRong.NPC
                 }
 
                 // Chiều cao NPC mong muốn (khoảng 1.8m world units)
-                float targetHeight = 1.8f;
+                float targetHeight = GetTargetStandingHeight();
                 float scaleFactor = 1f;
                 float meshHeight = Mathf.Max(combinedBounds.size.y, Mathf.Max(combinedBounds.size.x, combinedBounds.size.z));
                 if (hasBounds && meshHeight > 0.001f)
@@ -111,7 +114,7 @@ namespace GanhHangRong.NPC
                 }
                 else
                 {
-                    scaleFactor = 1.8f; // Giá trị dự phòng nếu không đo được
+                    scaleFactor = targetHeight;
                 }
 
                 modelObj.transform.localScale = Vector3.one * scaleFactor;
@@ -219,9 +222,43 @@ namespace GanhHangRong.NPC
                 bounds.Encapsulate(renderers[i].bounds);
             }
 
-            float deltaWorldY = (visualRoot.position.y - ModelGroundSink) - bounds.min.y;
+            float deltaWorldY = (visualRoot.position.y + ModelGroundClearance) - bounds.min.y;
             Vector3 localDelta = visualRoot.InverseTransformVector(Vector3.up * deltaWorldY);
             model.localPosition += localDelta;
+        }
+
+        private float GetTargetStandingHeight()
+        {
+            float targetHeight = fallbackStandingHeight;
+            if (!matchPlayerHeight)
+            {
+                return targetHeight;
+            }
+
+            var player = FindAnyObjectByType<GanhHangRong.Player.PlayerController>();
+            if (player == null)
+            {
+                return targetHeight;
+            }
+
+            Renderer[] playerRenderers = player.GetComponentsInChildren<Renderer>(true);
+            if (playerRenderers == null || playerRenderers.Length == 0)
+            {
+                return targetHeight;
+            }
+
+            Bounds playerBounds = playerRenderers[0].bounds;
+            for (int i = 1; i < playerRenderers.Length; i++)
+            {
+                playerBounds.Encapsulate(playerRenderers[i].bounds);
+            }
+
+            if (playerBounds.size.y <= 0.1f)
+            {
+                return targetHeight;
+            }
+
+            return Mathf.Max(targetHeight, playerBounds.size.y + heightAbovePlayer);
         }
 
         private static bool LooksLikeTPoseModel(NPCModelData modelData)
@@ -280,11 +317,12 @@ namespace GanhHangRong.NPC
         private float sittingYOffset = 0f;  // Độ bù Y khi ngồi, được tính 1 lần
         private bool sittingOffsetCalculated = false;
         private int sittingFrameCount = 0;  // Đếm frame để chờ animation blend
-        private const float SeatedHipAboveSeat = 0.18f;
-        private const float SeatedFeetFloorClearance = 0.02f;
-        private const float SittingOffsetClamp = 1.25f;
+        private const float SeatedHipAboveSeat = -0.65f;
+        private const float SeatedFeetFloorClearance = -0.45f;
+        private const float SittingOffsetClamp = 2.4f;
+        private const float SittingForcedDrop = -0.65f;
         private const float ProceduralSeatForwardOffset = 0.10f;
-        private const float ProceduralSeatVisualDrop = -0.30f;
+        private const float ProceduralSeatVisualDrop = -1.45f;
 
         // Walking animation parameters (chỉ dùng cho model static)
         private const float WALK_CYCLE_SPEED = 8f;
@@ -292,10 +330,11 @@ namespace GanhHangRong.NPC
         private const float SWAY_AMOUNT = 3f;
         private const float LEAN_FORWARD = 5f;
         private const float ARM_SWING_AMOUNT = 8f;
-        private const float STATIC_SIT_DROP = 0.62f;
+        private const float STATIC_SIT_DROP = 1.65f;
         private const float STATIC_SIT_LEAN = -10f;
-        private const float STATIC_SIT_SCALE_Y = 0.82f;
+        private const float STATIC_SIT_SCALE_Y = 0.68f;
         private const float INFERRED_WALK_SPEED_THRESHOLD = 0.03f;
+        private const float WalkingFeetGroundClearance = 0.005f;
         private MeshFilter[] staticMeshFilters;
         private Mesh[] staticAnimatedMeshes;
         private Vector3[][] staticBaseVertices;
@@ -475,7 +514,7 @@ private void Start()
                                 bottomOffset = floorY - modelBounds.min.y;
                             }
 
-                            sittingYOffset = Mathf.Clamp(Mathf.Max(hipOffset, bottomOffset), -SittingOffsetClamp, SittingOffsetClamp);
+                            sittingYOffset = Mathf.Clamp(Mathf.Min(hipOffset, bottomOffset) + SittingForcedDrop, -SittingOffsetClamp, SittingOffsetClamp);
                             sittingOffsetCalculated = true;
                         }
                     }
@@ -544,6 +583,7 @@ private void Start()
                 if (HasParameter(animator, "State"))
                     animator.SetInteger("State", 0);
                 KeepNPCModelPinned();
+                PinNPCModelFeetToGround();
                 return;
             }
 
@@ -570,6 +610,7 @@ private void Start()
                 else
                 {
                     KeepNPCModelPinned();
+                    PinNPCModelFeetToGround();
                 }
             }
         }
@@ -610,6 +651,18 @@ private void Start()
             npcModelTransform.localPosition = npcModelOriginalLocalPosition;
             npcModelTransform.localRotation = npcModelOriginalLocalRotation;
             npcModelTransform.localScale = npcModelOriginalLocalScale;
+        }
+
+        private void PinNPCModelFeetToGround()
+        {
+            if (npcModelTransform == null) return;
+            if (!TryGetModelBounds(out Bounds bounds)) return;
+
+            float groundY = controller != null ? controller.transform.position.y : transform.position.y;
+            float deltaWorldY = (groundY + WalkingFeetGroundClearance) - bounds.min.y;
+            Transform localSpace = npcModelTransform.parent != null ? npcModelTransform.parent : transform;
+            Vector3 localDelta = localSpace.InverseTransformVector(Vector3.up * deltaWorldY);
+            npcModelTransform.localPosition += localDelta;
         }
 
         private void AnimateAnimatorProceduralSitting()
@@ -983,6 +1036,7 @@ private void AnimateWalking()
                 npcModelTransform.localScale = npcModelOriginalLocalScale;
             }
             ApplyStaticMeshWalk(t);
+            PinNPCModelFeetToGround();
         }
 
 private void AnimateSitting()
@@ -1010,6 +1064,7 @@ private void AnimateIdle()
             transform.localPosition = originalPos + new Vector3(0, breathe, 0);
             transform.localRotation = originalRot * Quaternion.Euler(0, 0, sway);
             RestoreStaticModelPose();
+            PinNPCModelFeetToGround();
         }
     }
 }
