@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Meshy_AI_Green_Shirt_Straw_Ha_biped_Animation_Walking_withSkin_NPCOverride
+  m_Controller: {fileID: 9100000, guid: 3c2b49143a9df1946a138e3ed974349d, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: f324e4d0274262946afe9583edd3624e, type: 2}
+    m_OverrideClip: {fileID: 0}
+  - m_OriginalClip: {fileID: -8559126739998960628, guid: 9e713fcf82f9b604285f958f9a478428, type: 3}
+    m_OverrideClip: {fileID: -8559126739998960628, guid: 1d1d065599c713c4baceda56751442aa, type: 3}

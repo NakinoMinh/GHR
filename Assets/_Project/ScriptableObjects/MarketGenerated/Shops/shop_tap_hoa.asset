@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaa7377ebc3769a4b8503f12a1251fc3, type: 3}
+  m_Name: shop_tap_hoa
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ShopData
+  shopId: shop_tap_hoa
+  shopName: "T\u1EA1p H\xF3a"
+  shopIcon: {fileID: 0}
+  itemsForSale:
+  - item: {fileID: 11400000, guid: 1790228d4bc1a404f9817cc6d318b6c1, type: 2}
+    priceOverride: 5000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 1b14aed7245776b4c81d878234d25e1b, type: 2}
+    priceOverride: 4000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 105a664fec1678e49948eefd05f0cd1c, type: 2}
+    priceOverride: 3000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 3e8abb0444f09dc4d9e80a846c6b5368, type: 2}
+    priceOverride: 2000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 32175c5b30c770a409b2058a08d7d963, type: 2}
+    priceOverride: 3000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 907be5796d4a0064caedf16a9f722274, type: 2}
+    priceOverride: 8000
+    stockAmount: -1
