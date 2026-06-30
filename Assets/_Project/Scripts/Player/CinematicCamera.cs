@@ -186,9 +186,6 @@ namespace GanhHangRong.Player
 
         private void UpdateCartItemRaycast()
         {
-            // Nếu đang trong tiến trình đun nước nóng, giữ nguyên UI đếm ngược, không cho raycast thay thế
-            if (Interaction.CartItem.IsBoilingWater) return;
-
             // Nếu không phải là chế độ góc nhìn thứ 1, và chuột đang bị khóa (đang giữ chuột phải xoay orbit camera)
             if (!isCartFirstPersonMode && Cursor.lockState == CursorLockMode.Locked)
             {

@@ -38,8 +38,9 @@ namespace GanhHangRong.Interaction
         private void Start()
         {
             // Nếu chưa gán cartOrbitCenter, dùng chính transform của xe đẩy
-            if (cartOrbitCenter == null)
-                cartOrbitCenter = transform;
+            if (cartOrbitCenter == null) cartOrbitCenter = transform;
+            // Khởi tạo Recipe UI để nó nghe sự kiện
+            var initUI = UI.RecipeMiniGameUI.Instance;
 
             ScaleCartForStreetPresence();
             promptText = "Nhấn F để tương tác xe đẩy";

@@ -11,8 +11,9 @@ namespace GanhHangRong.UI
     public class GameplayHUDRuntimeDesigner : MonoBehaviour
     {
         private CanvasGroup recipeCanvasGroup;
-        private TextMeshProUGUI recipeDrinkText;
-        private TextMeshProUGUI recipeBodyText;
+        private TextMeshProUGUI recipeTitleText;
+        private RectTransform ingredientContainer;
+        private System.Collections.Generic.List<GameObject> ingredientRows = new System.Collections.Generic.List<GameObject>();
         private TextMeshProUGUI runtimeClockText;
         private TextMeshProUGUI runtimeDayText;
         private TextMeshProUGUI runtimePeriodText;
@@ -159,48 +160,44 @@ namespace GanhHangRong.UI
             panel.anchorMax = new Vector2(0f, 0.5f);
             panel.pivot = new Vector2(0f, 0.5f);
             panel.anchoredPosition = new Vector2(28f, -20f);
-            panel.sizeDelta = new Vector2(390f, 322f);
+            panel.sizeDelta = new Vector2(360f, 340f);
 
             recipeCanvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
             Image bg = panel.gameObject.AddComponent<Image>();
-            bg.color = new Color(0.075f, 0.065f, 0.055f, 0.91f);
+            bg.color = new Color(0.145f, 0.18f, 0.26f, 0.95f);
             bg.raycastTarget = false;
 
-            RectTransform stripe = CreateRect("Stripe", panel);
-            stripe.anchorMin = new Vector2(0f, 0f);
-            stripe.anchorMax = new Vector2(0f, 1f);
-            stripe.pivot = new Vector2(0f, 0.5f);
-            stripe.anchoredPosition = Vector2.zero;
-            stripe.sizeDelta = new Vector2(6f, 0f);
-            Image stripeImage = stripe.gameObject.AddComponent<Image>();
-            stripeImage.color = new Color(0.1f, 0.7f, 0.62f, 1f);
-            stripeImage.raycastTarget = false;
+            recipeTitleText = CreateText("Title", panel, 24, FontStyles.Bold, TextAlignmentOptions.Left);
+            recipeTitleText.rectTransform.anchorMin = new Vector2(0f, 1f);
+            recipeTitleText.rectTransform.anchorMax = new Vector2(1f, 1f);
+            recipeTitleText.rectTransform.pivot = new Vector2(0.5f, 1f);
+            recipeTitleText.rectTransform.anchoredPosition = new Vector2(0f, -16f);
+            recipeTitleText.rectTransform.sizeDelta = new Vector2(-44f, 32f);
+            recipeTitleText.color = new Color(1f, 0.93f, 0.75f, 1f);
 
-            TextMeshProUGUI caption = CreateText("Caption", panel, 19, FontStyles.Bold, TextAlignmentOptions.Left);
-            caption.rectTransform.anchorMin = new Vector2(0f, 1f);
-            caption.rectTransform.anchorMax = new Vector2(1f, 1f);
-            caption.rectTransform.pivot = new Vector2(0.5f, 1f);
-            caption.rectTransform.anchoredPosition = new Vector2(0f, -18f);
-            caption.rectTransform.sizeDelta = new Vector2(-40f, 24f);
-            caption.text = "Y√äU C·∫¶U C·ª¶A KH√ÅCH";
-            caption.color = new Color(0.95f, 0.6f, 0.25f, 1f);
+            RectTransform separator = CreateRect("Separator", panel);
+            separator.anchorMin = new Vector2(0f, 1f);
+            separator.anchorMax = new Vector2(1f, 1f);
+            separator.pivot = new Vector2(0.5f, 1f);
+            separator.anchoredPosition = new Vector2(0f, -54f);
+            separator.sizeDelta = new Vector2(-44f, 1.5f);
+            Image sepImage = separator.gameObject.AddComponent<Image>();
+            sepImage.color = new Color(0.3f, 0.4f, 0.5f, 0.5f);
+            sepImage.raycastTarget = false;
 
-            recipeDrinkText = CreateText("Drink", panel, 34, FontStyles.Bold, TextAlignmentOptions.Left);
-            recipeDrinkText.rectTransform.anchorMin = new Vector2(0f, 1f);
-            recipeDrinkText.rectTransform.anchorMax = new Vector2(1f, 1f);
-            recipeDrinkText.rectTransform.pivot = new Vector2(0.5f, 1f);
-            recipeDrinkText.rectTransform.anchoredPosition = new Vector2(0f, -46f);
-            recipeDrinkText.rectTransform.sizeDelta = new Vector2(-40f, 38f);
-            recipeDrinkText.color = new Color(1f, 0.93f, 0.75f, 1f);
+            ingredientContainer = CreateRect("IngredientContainer", panel);
+            ingredientContainer.anchorMin = new Vector2(0f, 0f);
+            ingredientContainer.anchorMax = new Vector2(1f, 1f);
+            ingredientContainer.offsetMin = new Vector2(22f, 18f);
+            ingredientContainer.offsetMax = new Vector2(-22f, -65f);
 
-            recipeBodyText = CreateText("Recipe", panel, 24, FontStyles.Bold, TextAlignmentOptions.TopLeft);
-            recipeBodyText.rectTransform.anchorMin = new Vector2(0f, 0f);
-            recipeBodyText.rectTransform.anchorMax = new Vector2(1f, 1f);
-            recipeBodyText.rectTransform.offsetMin = new Vector2(22f, 18f);
-            recipeBodyText.rectTransform.offsetMax = new Vector2(-18f, -92f);
-            recipeBodyText.color = new Color(1f, 0.97f, 0.88f, 1f);
-            recipeBodyText.textWrappingMode = TextWrappingModes.Normal;
-            recipeBodyText.lineSpacing = 7f;
+            VerticalLayoutGroup vlg = ingredientContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+            vlg.childAlignment = TextAnchor.UpperLeft;
+            vlg.childControlHeight = false;
+            vlg.childControlWidth = true;
+            vlg.childForceExpandHeight = false;
+            vlg.childForceExpandWidth = true;
+            vlg.spacing = 12f;
         }
 
         private void InitializeValues()
@@ -263,10 +260,118 @@ namespace GanhHangRong.UI
 
         private void UpdateRecipeContent()
         {
-            if (recipeDrinkText == null || recipeBodyText == null || !hasActiveOrder) return;
+            if (recipeTitleText == null || !hasActiveOrder) return;
 
-            recipeDrinkText.text = activeDrinkName;
-            recipeBodyText.text = ChapterOrderCatalog.GetOrderRecipe(activeDrinkId);
+            recipeTitleText.text = "–ON H¿NG: " + activeDrinkName;
+
+            string recipeStr = ChapterOrderCatalog.GetOrderRecipe(activeDrinkId);
+            string[] ingredients = ParseIngredients(recipeStr);
+
+            for (int i = 0; i < ingredients.Length; i++)
+            {
+                if (i >= ingredientRows.Count)
+                {
+                    ingredientRows.Add(CreateIngredientRow());
+                }
+                ingredientRows[i].SetActive(true);
+                PopulateIngredientRow(ingredientRows[i], ingredients[i]);
+            }
+
+            for (int i = ingredients.Length; i < ingredientRows.Count; i++)
+            {
+                ingredientRows[i].SetActive(false);
+            }
+        }
+
+        private string[] ParseIngredients(string recipeString)
+        {
+            if (string.IsNullOrEmpty(recipeString)) return new string[0];
+            string[] lines = recipeString.Split('\n');
+            string firstLine = lines[0];
+            if (firstLine.StartsWith("CÙng th?c: "))
+            {
+                firstLine = firstLine.Substring("CÙng th?c: ".Length);
+            }
+            if (firstLine.EndsWith("."))
+            {
+                firstLine = firstLine.Substring(0, firstLine.Length - 1);
+            }
+            return firstLine.Split(new string[] { ", " }, System.StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private GameObject CreateIngredientRow()
+        {
+            RectTransform row = CreateRect("Row", ingredientContainer);
+            row.sizeDelta = new Vector2(0f, 48f);
+
+            RectTransform iconContainer = CreateRect("IconBg", row);
+            iconContainer.anchorMin = new Vector2(0f, 0.5f);
+            iconContainer.anchorMax = new Vector2(0f, 0.5f);
+            iconContainer.pivot = new Vector2(0f, 0.5f);
+            iconContainer.anchoredPosition = new Vector2(0f, 0f);
+            iconContainer.sizeDelta = new Vector2(44f, 44f);
+            Image iconBg = iconContainer.gameObject.AddComponent<Image>();
+            iconBg.color = new Color(0.12f, 0.15f, 0.22f, 0.9f);
+
+            RectTransform icon = CreateRect("Icon", iconContainer);
+            icon.anchorMin = Vector2.zero;
+            icon.anchorMax = Vector2.one;
+            icon.offsetMin = new Vector2(6f, 6f);
+            icon.offsetMax = new Vector2(-6f, -6f);
+            Image iconImage = icon.gameObject.AddComponent<Image>();
+            iconImage.preserveAspect = true;
+
+            TextMeshProUGUI text = CreateText("Text", row, 24, FontStyles.Normal, TextAlignmentOptions.Left);
+            text.rectTransform.anchorMin = new Vector2(0f, 0f);
+            text.rectTransform.anchorMax = new Vector2(1f, 1f);
+            text.rectTransform.offsetMin = new Vector2(60f, 0f);
+            text.rectTransform.offsetMax = Vector2.zero;
+            text.color = new Color(0.9f, 0.9f, 0.9f, 1f);
+            text.enableWordWrapping = false;
+
+            return row.gameObject;
+        }
+
+        private void PopulateIngredientRow(GameObject row, string ingredientText)
+        {
+            Transform iconBg = row.transform.Find("IconBg");
+            Image iconImage = iconBg.Find("Icon").GetComponent<Image>();
+            TextMeshProUGUI text = row.transform.Find("Text").GetComponent<TextMeshProUGUI>();
+
+            string dispText = ingredientText;
+            if (dispText.Length > 0)
+            {
+                dispText = char.ToUpper(dispText[0]) + dispText.Substring(1);
+            }
+            if (dispText.StartsWith("1 ly")) dispText = dispText.Replace("1 ly", "1 Ly");
+
+            text.text = dispText;
+
+            string lowerText = ingredientText.ToLower();
+            string spriteName = null;
+            if (lowerText.Contains("ly") || lowerText.Contains("c?c")) spriteName = "ly";
+            else if (lowerText.Contains("c‡ phÍ") || lowerText.Contains("coffee")) spriteName = "caphe";
+            else if (lowerText.Contains("tr‡")) spriteName = "tra";
+            else if (lowerText.Contains("nu?c") || lowerText.Contains("sÙi")) spriteName = "nuoc";
+            else if (lowerText.Contains("d·") || lowerText.Contains("ice")) spriteName = "da";
+
+            if (!string.IsNullOrEmpty(spriteName))
+            {
+                Sprite s = Resources.Load<Sprite>("RecipeIcons/" + spriteName);
+                if (s != null)
+                {
+                    iconImage.sprite = s;
+                    iconImage.color = Color.white;
+                }
+                else
+                {
+                    iconImage.color = new Color(1, 1, 1, 0);
+                }
+            }
+            else
+            {
+                iconImage.color = new Color(1, 1, 1, 0);
+            }
         }
 
         private void UpdateRecipeVisibility()
@@ -283,7 +388,7 @@ namespace GanhHangRong.UI
         {
             if (runtimeMoneyText != null)
             {
-                runtimeMoneyText.text = string.Format("{0:N0} VNƒê", money);
+                runtimeMoneyText.text = string.Format("{0:N0} VN–", money);
             }
         }
 
@@ -299,7 +404,7 @@ namespace GanhHangRong.UI
         {
             if (runtimeDayText != null && GameManager.HasInstance)
             {
-                runtimeDayText.text = string.Format("Ng√†y {0}", GameManager.Instance.CurrentDay);
+                runtimeDayText.text = string.Format("Ng‡y {0}", GameManager.Instance.CurrentDay);
             }
         }
 
@@ -309,19 +414,19 @@ namespace GanhHangRong.UI
             switch (timeOfDay)
             {
                 case TimeOfDay.EarlyMorning:
-                    runtimePeriodText.text = "B√¨nh minh";
+                    runtimePeriodText.text = "BÏnh minh";
                     break;
                 case TimeOfDay.Morning:
-                    runtimePeriodText.text = "Bu·ªïi s√°ng";
+                    runtimePeriodText.text = "Bu?i s·ng";
                     break;
                 case TimeOfDay.Afternoon:
-                    runtimePeriodText.text = "Bu·ªïi chi·ªÅu";
+                    runtimePeriodText.text = "Bu?i chi?u";
                     break;
                 case TimeOfDay.Evening:
-                    runtimePeriodText.text = "Chi·ªÅu t·ªëi";
+                    runtimePeriodText.text = "Chi?u t?i";
                     break;
                 case TimeOfDay.Night:
-                    runtimePeriodText.text = "ƒê√™m b√°n";
+                    runtimePeriodText.text = "–Ím b·n";
                     break;
                 default:
                     runtimePeriodText.text = "Khuya";

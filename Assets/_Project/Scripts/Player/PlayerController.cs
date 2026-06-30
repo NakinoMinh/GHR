@@ -171,8 +171,11 @@ namespace GanhHangRong.Player
             CheckInteraction();
             if (currentState != PlayerState.Interacting)
             {
-                // Nhấn F để tương tác phụ/hành động
-                if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+                // Nhấn F hoặc Click Chuột Trái để tương tác phụ/hành động
+                bool interactPressed = (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) ||
+                                       (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
+
+                if (interactPressed)
                 {
                     if (nearestInteractable != null)
                     {

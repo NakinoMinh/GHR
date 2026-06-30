@@ -28,7 +28,7 @@ namespace GanhHangRong.Player
         [Header("Sitting Settings")]
         [SerializeField] private float sittingYOffset = 0f;
 
-        [Header("Cup Holding Arm Adjustments (Xoay xương cánh tay khi cầm ly)")]
+        [Header("Chế Độ Cầm Ly & Nghỉ")]
         [Tooltip("Điều chỉnh góc xoay upper arm phải khi cầm ly (Euler angles)")]
         [SerializeField] private Vector3 rightArmOffset = new Vector3(-32f, 28f, -48f);
         [Tooltip("Điều chỉnh góc xoay forearm phải khi cầm ly")]
@@ -54,6 +54,10 @@ namespace GanhHangRong.Player
         private Transform rightArmBone;
         private Transform rightForeArmBone;
         private Transform rightHandBone;
+        
+        private Quaternion rightArmBaseRot;
+        private Quaternion rightForeArmBaseRot;
+        private Quaternion rightHandBaseRot;
 
         // Xương cánh tay trái
         private Transform leftArmBone;
@@ -89,6 +93,10 @@ namespace GanhHangRong.Player
 
             // Tìm các bone tay phải để xoay cầm ly nước
             FindArmBones();
+            
+            if (rightArmBone != null) rightArmBaseRot = rightArmBone.localRotation;
+            if (rightForeArmBone != null) rightForeArmBaseRot = rightForeArmBone.localRotation;
+            if (rightHandBone != null) rightHandBaseRot = rightHandBone.localRotation;
         }
 
         private void Update()
@@ -244,7 +252,31 @@ namespace GanhHangRong.Player
 
         private void LateUpdate()
         {
+            if (animator == null || rightArmBone == null || leftArmBone == null) return;
+
             bool isHoldingCup = Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea;
+
+            // Hạ tay xuống khi đứng nghỉ (tránh A-pose)
+            if (currentState == PlayerState.Idle)
+            {
+                if (!isHoldingCup)
+                {
+                    if (rightForeArmBone != null && leftForeArmBone != null)
+                    {
+                        // Lấy hướng thực tế của xương cánh tay (từ bắp tay đến cùi chỏ)
+                        Vector3 rArmDir = (rightForeArmBone.position - rightArmBone.position).normalized;
+                        Vector3 lArmDir = (leftForeArmBone.position - leftArmBone.position).normalized;
+
+                        // Tính hướng buông tay tự nhiên: chĩa xuống dưới, hơi dang ra ngoài một chút (tránh xuyên đùi) và nhích nhẹ ra trước
+                        Vector3 rTarget = (-transform.up + transform.right * 0.25f + transform.forward * 0.1f).normalized;
+                        Vector3 lTarget = (-transform.up - transform.right * 0.25f + transform.forward * 0.1f).normalized;
+
+                        // Áp dụng phép xoay thế giới để ép cánh tay về đúng hướng
+                        rightArmBone.rotation = Quaternion.FromToRotation(rArmDir, rTarget) * rightArmBone.rotation;
+                        leftArmBone.rotation = Quaternion.FromToRotation(lArmDir, lTarget) * leftArmBone.rotation;
+                    }
+                }
+            }
 
             // Nếu đang cầm ly pha chế hoặc đã có ly trà đá thành phẩm
             if (isHoldingCup)
@@ -252,32 +284,49 @@ namespace GanhHangRong.Player
                 // Dùng procedural bone rotation khi toggle bật
                 if (useProceduralHold)
                 {
-                    // Xoay tay phải
-                    if (rightArmBone != null)
+                    // ============================================================
+                    // TAY PHẢI: Cầm lon/ly theo kiểu thư giãn (cánh tay xuôi sườn,
+                    //           cẳng tay gập ~90° ra trước, lòng bàn tay quay vào)
+                    // ============================================================
+                    if (rightArmBone != null && rightForeArmBone != null)
                     {
-                        rightArmBone.localRotation = rightArmBone.localRotation * Quaternion.Euler(rightArmOffset);
-                    }
-                    if (rightForeArmBone != null)
-                    {
-                        rightForeArmBone.localRotation = rightForeArmBone.localRotation * Quaternion.Euler(rightForeArmOffset);
-                    }
-                    if (rightHandBone != null)
-                    {
-                        rightHandBone.localRotation = rightHandBone.localRotation * Quaternion.Euler(rightHandOffset);
+                        // Reset về T-pose/Idle pose để loại bỏ animation đi bộ/chạy
+                        rightArmBone.localRotation = rightArmBaseRot;
+                        rightForeArmBone.localRotation = rightForeArmBaseRot;
+                        if (rightHandBone != null) rightHandBone.localRotation = rightHandBaseRot;
+
+                        // 1. Bắp tay: chĩa XUỐNG và HƠI RA TRƯỚC
+                        Vector3 rArmDir = (rightForeArmBone.position - rightArmBone.position).normalized;
+                        Vector3 rArmTarget = (-transform.up * 0.8f + transform.forward * 0.2f + transform.right * 0.1f).normalized;
+                        rightArmBone.rotation = Quaternion.FromToRotation(rArmDir, rArmTarget) * rightArmBone.rotation;
+
+                        // 2. Cẳng tay: gập góc ~90 độ ra trước mặt, tạo dáng bưng ly
+                        if (rightHandBone != null)
+                        {
+                            Vector3 rForeDir = (rightHandBone.position - rightForeArmBone.position).normalized;
+                            Vector3 rForeTarget = (transform.forward * 0.8f + transform.up * 0.4f - transform.right * 0.2f).normalized;
+                            rightForeArmBone.rotation = Quaternion.FromToRotation(rForeDir, rForeTarget) * rightForeArmBone.rotation;
+                        }
                     }
 
-                    // Xoay tay trái (đối xứng để bưng bằng hai tay)
-                    if (leftArmBone != null)
+                    // Cổ tay phải: xoay lòng bàn tay hướng vào ngực (tránh bị trẹo tay)
+                    if (rightHandBone != null)
                     {
-                        leftArmBone.localRotation = leftArmBone.localRotation * Quaternion.Euler(leftArmOffset);
+                        // Hướng các ngón tay ra trước
+                        Vector3 rFingers = (transform.forward * 0.9f + transform.up * 0.1f).normalized;
+                        // Hướng trục Y của xương tay (chỉa vào ngực = -right) để ngón cái chỉa lên trời
+                        Vector3 rYAxis = -transform.right;
+                        rightHandBone.rotation = Quaternion.LookRotation(rFingers, rYAxis);
                     }
-                    if (leftForeArmBone != null)
+
+                    // ============================================================
+                    // TAY TRÁI: Thả tự nhiên xuống (giống Idle, không cầm gì)
+                    // ============================================================
+                    if (leftArmBone != null && leftForeArmBone != null)
                     {
-                        leftForeArmBone.localRotation = leftForeArmBone.localRotation * Quaternion.Euler(leftForeArmOffset);
-                    }
-                    if (leftHandBone != null)
-                    {
-                        leftHandBone.localRotation = leftHandBone.localRotation * Quaternion.Euler(leftHandOffset);
+                        Vector3 lArmDir = (leftForeArmBone.position - leftArmBone.position).normalized;
+                        Vector3 lArmTarget = (-transform.up + (-transform.right) * 0.2f + transform.forward * 0.05f).normalized;
+                        leftArmBone.rotation = Quaternion.FromToRotation(lArmDir, lArmTarget) * leftArmBone.rotation;
                     }
                 }
             }
