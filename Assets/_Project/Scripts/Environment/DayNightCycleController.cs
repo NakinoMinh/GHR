@@ -20,9 +20,10 @@ namespace GanhHangRong.Environment
         [SerializeField] private Vector3 moonRotationOffset = new Vector3(-90f, -10f, 0f);
 
         [Header("Hien thi mat troi / mat trang")]
-        [SerializeField] private Vector3 visualCenter = new Vector3(76f, 0f, -18f);
+        [SerializeField] private Vector3 visualCenter = new Vector3(76f, 0f, 2.5f);
+        [SerializeField] private Vector3 sunSeaDirection = Vector3.forward;
         [SerializeField] private bool hideVisualBelowHorizon = true;
-        [SerializeField, Min(10f)] private float celestialVisualDistance = 650f;
+        [SerializeField, Min(10f)] private float celestialVisualDistance = 900f;
         [SerializeField, Min(1f)] private float sunVisualSize = 42f;
         [SerializeField, Min(1f)] private float moonVisualSize = 28f;
 
@@ -97,11 +98,13 @@ namespace GanhHangRong.Environment
 
             float sunValue = Mathf.Clamp01(sunIntensityCurve.Evaluate(normalizedTime)) * maxSunIntensity;
             float moonValue = Mathf.Clamp01(moonIntensityCurve.Evaluate(normalizedTime)) * maxMoonIntensity;
+            Color sunColor = Color.Lerp(sunColorGradient.Evaluate(normalizedTime), GetRealisticSunColor(normalizedTime), 0.85f);
+            Color moonColor = Color.Lerp(moonColorGradient.Evaluate(normalizedTime), GetRealisticMoonColor(normalizedTime), 0.85f);
 
-            ApplyDirectionalLight(sunLight, sunTransform, sunValue, sunColorGradient.Evaluate(normalizedTime), sunRotationOffset, normalizedTime);
-            ApplyDirectionalLight(moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonRotationOffset, normalizedTime);
-            ApplyCelestialVisual(sunVisual, sunLight, sunTransform, sunValue, sunColorGradient.Evaluate(normalizedTime), sunVisualSize);
-            ApplyCelestialVisual(moonVisual, moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonVisualSize);
+            ApplyDirectionalLight(sunLight, sunTransform, sunValue, sunColor, sunRotationOffset, normalizedTime, true);
+            ApplyDirectionalLight(moonLight, moonTransform, moonValue, moonColor, moonRotationOffset, normalizedTime);
+            ApplyCelestialVisual(sunVisual, sunLight, sunTransform, sunValue, sunColor, sunVisualSize);
+            ApplyCelestialVisual(moonVisual, moonLight, moonTransform, moonValue, moonColor, moonVisualSize);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = ambientColorGradient.Evaluate(normalizedTime) * ambientIntensity;
@@ -114,7 +117,7 @@ namespace GanhHangRong.Environment
             }
         }
 
-        private void ApplyDirectionalLight(Light targetLight, Transform targetTransform, float intensity, Color color, Vector3 rotationOffset, float normalizedTime)
+        private void ApplyDirectionalLight(Light targetLight, Transform targetTransform, float intensity, Color color, Vector3 rotationOffset, float normalizedTime, bool alignToSea = false)
         {
             if (targetLight == null)
             {
@@ -127,7 +130,16 @@ namespace GanhHangRong.Environment
             targetLight.color = color;
 
             Transform pivot = targetTransform != null ? targetTransform : targetLight.transform;
-            pivot.rotation = Quaternion.Euler(normalizedTime * 360f + rotationOffset.x, rotationOffset.y, rotationOffset.z);
+            Quaternion baseRotation = Quaternion.Euler(normalizedTime * 360f + rotationOffset.x, rotationOffset.y, rotationOffset.z);
+            if (alignToSea)
+            {
+                Vector3 apparentSourceDirection = GetSeaAlignedApparentDirection(-(baseRotation * Vector3.forward).normalized);
+                pivot.rotation = Quaternion.LookRotation(-apparentSourceDirection, Vector3.up);
+                pivot.position = visualCenter + apparentSourceDirection * celestialVisualDistance;
+                return;
+            }
+
+            pivot.rotation = baseRotation;
         }
 
         private void ApplyCelestialVisual(Transform visual, Light sourceLight, Transform sourceTransform, float intensity, Color color, float size)
@@ -165,6 +177,21 @@ namespace GanhHangRong.Environment
             }
         }
 
+        private Vector3 GetSeaAlignedApparentDirection(Vector3 apparentSourceDirection)
+        {
+            Vector3 seaDirection = sunSeaDirection;
+            seaDirection.y = 0f;
+            if (seaDirection.sqrMagnitude < 0.001f)
+            {
+                seaDirection = Vector3.forward;
+            }
+
+            seaDirection.Normalize();
+            float height = Mathf.Clamp(apparentSourceDirection.y, -0.95f, 0.95f);
+            float horizontal = Mathf.Sqrt(Mathf.Max(0.001f, 1f - height * height));
+            return (seaDirection * horizontal + Vector3.up * height).normalized;
+        }
+
         private void CacheLightTransforms()
         {
             if (sunTransform == null && sunLight != null)
@@ -192,7 +219,7 @@ namespace GanhHangRong.Environment
         {
             if (sunVisual == null || !IsSphereVisual(sunVisual))
             {
-                ReplaceWithCelestialSphere(ref sunVisual, "RealisticSun", new Color(1f, 0.78f, 0.32f, 1f), sunVisualSize, ref sunVisualMaterial);
+                ReplaceWithCelestialSphere(ref sunVisual, "RealisticSun", new Color(1f, 0.92f, 0.62f, 1f), sunVisualSize, ref sunVisualMaterial);
             }
             else
             {
@@ -201,7 +228,7 @@ namespace GanhHangRong.Environment
 
             if (moonVisual == null || !IsSphereVisual(moonVisual))
             {
-                ReplaceWithCelestialSphere(ref moonVisual, "RealisticMoon", new Color(0.82f, 0.86f, 0.9f, 1f), moonVisualSize, ref moonVisualMaterial);
+                ReplaceWithCelestialSphere(ref moonVisual, "RealisticMoon", new Color(0.82f, 0.82f, 0.78f, 1f), moonVisualSize, ref moonVisualMaterial);
             }
             else
             {
@@ -275,6 +302,22 @@ namespace GanhHangRong.Environment
             return material;
         }
 
+        private static Color GetRealisticSunColor(float normalizedTime)
+        {
+            float noonAmount = Mathf.Clamp01(1f - Mathf.Abs(normalizedTime - 0.5f) / 0.28f);
+            Color lowSun = new Color(1f, 0.56f, 0.28f, 1f);
+            Color highSun = new Color(1f, 0.96f, 0.82f, 1f);
+            return Color.Lerp(lowSun, highSun, noonAmount);
+        }
+
+        private static Color GetRealisticMoonColor(float normalizedTime)
+        {
+            float highMoonAmount = Mathf.Clamp01(Mathf.Abs(normalizedTime - 0.5f) / 0.5f);
+            Color lowMoon = new Color(0.62f, 0.64f, 0.64f, 1f);
+            Color highMoon = new Color(0.88f, 0.87f, 0.82f, 1f);
+            return Color.Lerp(lowMoon, highMoon, highMoonAmount);
+        }
+
         private static AnimationCurve CreateSunCurve()
         {
             return new AnimationCurve(
@@ -313,9 +356,9 @@ namespace GanhHangRong.Environment
             gradient.SetKeys(
                 new[]
                 {
-                    new GradientColorKey(new Color(1f, 0.58f, 0.34f), 0.23f),
-                    new GradientColorKey(new Color(1f, 0.93f, 0.78f), 0.5f),
-                    new GradientColorKey(new Color(1f, 0.52f, 0.25f), 0.72f)
+                    new GradientColorKey(new Color(1f, 0.62f, 0.34f), 0.23f),
+                    new GradientColorKey(new Color(1f, 0.96f, 0.86f), 0.5f),
+                    new GradientColorKey(new Color(1f, 0.58f, 0.3f), 0.72f)
                 },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
             return gradient;
@@ -327,8 +370,8 @@ namespace GanhHangRong.Environment
             gradient.SetKeys(
                 new[]
                 {
-                    new GradientColorKey(new Color(0.5f, 0.62f, 1f), 0f),
-                    new GradientColorKey(new Color(0.78f, 0.86f, 1f), 1f)
+                    new GradientColorKey(new Color(0.62f, 0.64f, 0.64f), 0f),
+                    new GradientColorKey(new Color(0.88f, 0.87f, 0.82f), 1f)
                 },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
             return gradient;

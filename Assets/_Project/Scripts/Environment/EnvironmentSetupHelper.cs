@@ -178,7 +178,7 @@ namespace GanhHangRong.Environment
             {
                 Vector3 basePos = origin + new Vector3(roadWidth * 0.5f + 0.85f, 0f, -30f + i * 10f);
                 CreateCylinder($"PowerPole_{i:00}", basePos + new Vector3(0f, 1.7f, 0f), new Vector3(0.18f, 3.4f, 0.18f), trunkMaterial, lightRoot.transform);
-                GameObject lampHead = CreateCube($"LampHead_{i:00}", basePos + new Vector3(-0.55f, 3.15f, 0f), new Vector3(0.45f, 0.18f, 0.45f), warmLampMaterial, lightRoot.transform);
+                GameObject lampHead = CreateCube($"LampHead_{i:00}", basePos + new Vector3(-0.55f, 3.85f, 0f), new Vector3(0.45f, 0.18f, 0.45f), warmLampMaterial, lightRoot.transform);
                 Light lamp = lampHead.AddComponent<Light>();
                 lamp.type = LightType.Point;
                 lamp.color = new Color(1f, 0.68f, 0.42f);

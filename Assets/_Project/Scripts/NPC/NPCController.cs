@@ -44,6 +44,7 @@ namespace GanhHangRong.NPC
         private Vector3 visualModelOriginalLocalPosition;
         private Quaternion visualModelOriginalLocalRotation;
         private Vector3 visualModelOriginalLocalScale = Vector3.one;
+        private Transform[] visualFootBones = new Transform[0];
         private const float VisualFeetGroundClearance = 0.005f;
         private const float SittingVisualDrop = 0.55f;
 
@@ -312,7 +313,30 @@ namespace GanhHangRong.NPC
                 visualModelOriginalLocalRotation = visualModel.localRotation;
                 visualModelOriginalLocalScale = visualModel.localScale;
             }
+
+            CacheVisualFootBones();
             visualReferencesCached = true;
+        }
+
+        private void CacheVisualFootBones()
+        {
+            if (visualModel == null)
+            {
+                visualFootBones = new Transform[0];
+                return;
+            }
+
+            var bones = new System.Collections.Generic.List<Transform>();
+            foreach (Transform bone in visualModel.GetComponentsInChildren<Transform>(true))
+            {
+                string lowerName = bone.name.ToLowerInvariant();
+                if (lowerName.Contains("foot") || lowerName.Contains("toe") || lowerName.Contains("ankle"))
+                {
+                    bones.Add(bone);
+                }
+            }
+
+            visualFootBones = bones.ToArray();
         }
 
         private void RestoreVisualModelRoot()
@@ -334,20 +358,51 @@ namespace GanhHangRong.NPC
         {
             if (visualModel == null) return;
 
-            Renderer[] renderers = visualModel.GetComponentsInChildren<Renderer>(true);
-            if (renderers == null || renderers.Length == 0) return;
+            float currentFootY;
+            if (!TryGetLowestFootBoneY(out currentFootY))
+            {
+                if (!TryGetVisualBounds(out Bounds bounds)) return;
+                currentFootY = bounds.min.y;
+            }
 
-            Bounds bounds = renderers[0].bounds;
+            float targetBottomY = transform.position.y + VisualFeetGroundClearance;
+            float deltaWorldY = targetBottomY - currentFootY;
+            Transform localSpace = visualModel.parent != null ? visualModel.parent : transform;
+            Vector3 localDelta = localSpace.InverseTransformVector(Vector3.up * deltaWorldY);
+            visualModel.localPosition += localDelta;
+        }
+
+        private bool TryGetLowestFootBoneY(out float lowestY)
+        {
+            lowestY = float.PositiveInfinity;
+            if (visualFootBones == null || visualFootBones.Length == 0) return false;
+
+            bool found = false;
+            for (int i = 0; i < visualFootBones.Length; i++)
+            {
+                Transform footBone = visualFootBones[i];
+                if (footBone == null) continue;
+
+                lowestY = Mathf.Min(lowestY, footBone.position.y);
+                found = true;
+            }
+
+            return found;
+        }
+
+        private bool TryGetVisualBounds(out Bounds bounds)
+        {
+            bounds = new Bounds();
+            Renderer[] renderers = visualModel.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return false;
+
+            bounds = renderers[0].bounds;
             for (int i = 1; i < renderers.Length; i++)
             {
                 bounds.Encapsulate(renderers[i].bounds);
             }
 
-            float targetBottomY = transform.position.y + VisualFeetGroundClearance;
-            float deltaWorldY = targetBottomY - bounds.min.y;
-            Transform localSpace = visualModel.parent != null ? visualModel.parent : transform;
-            Vector3 localDelta = localSpace.InverseTransformVector(Vector3.up * deltaWorldY);
-            visualModel.localPosition += localDelta;
+            return true;
         }
 
         private void ApplyLowSittingPose()
