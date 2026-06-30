@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaa7377ebc3769a4b8503f12a1251fc3, type: 3}
+  m_Name: shop_hai_san_pho
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ShopData
+  shopId: shop_hai_san_pho
+  shopName: "H\u1EA3i S\u1EA3n Ph\u1ED1"
+  shopIcon: {fileID: 0}
+  itemsForSale:
+  - item: {fileID: 11400000, guid: d45e4f85ae8bb124e83a6d5248149305, type: 2}
+    priceOverride: 15000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: e364317a972a9684897297c29e34941c, type: 2}
+    priceOverride: 18000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: d0570b1aea333f444b0a667ae0a103eb, type: 2}
+    priceOverride: 22000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: f05c544d9c8b5a64793fbf871d738509, type: 2}
+    priceOverride: 12000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 95da897f39365b1459b415bf26a3cf27, type: 2}
+    priceOverride: 12000
+    stockAmount: -1

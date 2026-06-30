@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: nuoc_mam_phu_quoc
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: nuoc_mam_phu_quoc
+  displayName: "N\u01B0\u1EDBc m\u1EAFm Ph\xFA Qu\u1ED1c"
+  description: 
+  icon: {fileID: 0}
+  itemType: 0
+  price: 12000
+  isRecipeBook: 0
+  recipeIdToUnlock: 
+  itemName: 
+  buyPrice: 0
+  sellPrice: 0

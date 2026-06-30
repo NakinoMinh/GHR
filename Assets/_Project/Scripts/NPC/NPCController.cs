@@ -37,6 +37,13 @@ namespace GanhHangRong.NPC
         private int orderedDrink = 0; // 0: Trà đá, 1: Cà phê
         private NPCInteractable interactable;
         private Player.PlayerController interactingPlayer;
+        private Transform visualRoot;
+        private Transform visualModel;
+        private Animator visualAnimator;
+        private bool visualReferencesCached;
+        private Vector3 visualModelOriginalLocalPosition;
+        private Quaternion visualModelOriginalLocalRotation;
+        private Vector3 visualModelOriginalLocalScale = Vector3.one;
 
         public NPCState CurrentState => currentState;
         public CustomerSeat TargetSeat => targetSeat;
@@ -231,6 +238,87 @@ namespace GanhHangRong.NPC
             }
         }
 
+        private void LateUpdate()
+        {
+            ApplyVisualPoseForState();
+        }
+
+        private void ApplyVisualPoseForState()
+        {
+            CacheVisualReferences();
+            if (visualAnimator == null) return;
+
+            bool isWalking = currentState == NPCState.WalkingIn ||
+                             currentState == NPCState.Approaching ||
+                             currentState == NPCState.LeavingSeat ||
+                             currentState == NPCState.WalkingOut;
+            bool isSitting = currentState == NPCState.SittingDown ||
+                             currentState == NPCState.Ordering ||
+                             currentState == NPCState.Waiting ||
+                             currentState == NPCState.Drinking ||
+                             currentState == NPCState.Paying;
+
+            if (isWalking)
+            {
+                visualAnimator.enabled = true;
+                visualAnimator.speed = 0.35f;
+                SetAnimatorStateParameter(0);
+            }
+            else if (isSitting)
+            {
+                visualAnimator.enabled = true;
+                visualAnimator.speed = 1f;
+                SetAnimatorStateParameter(1);
+            }
+
+            RestoreVisualModelRoot();
+        }
+
+        private void CacheVisualReferences()
+        {
+            if (visualReferencesCached && visualRoot != null) return;
+
+            visualRoot = transform.Find("VisualRoot");
+            visualModel = visualRoot != null ? visualRoot.Find("NPCModel") : null;
+            visualAnimator = visualRoot != null ? visualRoot.GetComponentInChildren<Animator>(true) : null;
+            if (visualModel != null)
+            {
+                visualModelOriginalLocalPosition = visualModel.localPosition;
+                visualModelOriginalLocalRotation = visualModel.localRotation;
+                visualModelOriginalLocalScale = visualModel.localScale;
+            }
+            visualReferencesCached = true;
+        }
+
+        private void RestoreVisualModelRoot()
+        {
+            if (visualRoot != null)
+            {
+                visualRoot.localPosition = Vector3.zero;
+                visualRoot.localRotation = Quaternion.identity;
+            }
+
+            if (visualModel == null) return;
+
+            visualModel.localPosition = visualModelOriginalLocalPosition;
+            visualModel.localRotation = visualModelOriginalLocalRotation;
+            visualModel.localScale = visualModelOriginalLocalScale;
+        }
+
+        private void SetAnimatorStateParameter(int value)
+        {
+            if (visualAnimator == null || visualAnimator.runtimeAnimatorController == null) return;
+
+            foreach (var parameter in visualAnimator.parameters)
+            {
+                if (parameter.name == "State")
+                {
+                    visualAnimator.SetInteger("State", value);
+                    return;
+                }
+            }
+        }
+
         private void MoveTowards(Vector3 target, NPCState nextState)
         {
             Vector3 targetPos = new Vector3(target.x, transform.position.y, target.z);
@@ -287,6 +375,7 @@ namespace GanhHangRong.NPC
         private void ChangeState(NPCState newState)
         {
             currentState = newState;
+            ApplyVisualPoseForState();
         }
 
         public void ServeDrink()
