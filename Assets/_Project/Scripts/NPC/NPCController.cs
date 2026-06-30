@@ -44,6 +44,8 @@ namespace GanhHangRong.NPC
         private Vector3 visualModelOriginalLocalPosition;
         private Quaternion visualModelOriginalLocalRotation;
         private Vector3 visualModelOriginalLocalScale = Vector3.one;
+        private const float VisualFeetGroundClearance = 0.005f;
+        private const float SittingVisualDrop = 0.55f;
 
         public NPCState CurrentState => currentState;
         public CustomerSeat TargetSeat => targetSeat;
@@ -124,6 +126,7 @@ namespace GanhHangRong.NPC
             this.targetSeat = seat;
             this.exitPoint = exit;
             this.walkSpeed = walkSpd;
+            SnapToGround();
             this.startY = transform.position.y;
             
             this.maxWaitTime = Random.Range(profile.minPatience, profile.maxPatience);
@@ -137,6 +140,18 @@ namespace GanhHangRong.NPC
             }
                 
             ChangeState(NPCState.WalkingIn);
+        }
+
+        private void SnapToGround()
+        {
+            Vector3 origin = transform.position + Vector3.up * 2f;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 8f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.normal.y > 0.45f)
+                {
+                    transform.position = new Vector3(transform.position.x, hit.point.y, transform.position.z);
+                }
+            }
         }
 
         private void Update()
@@ -246,8 +261,6 @@ namespace GanhHangRong.NPC
         private void ApplyVisualPoseForState()
         {
             CacheVisualReferences();
-            if (visualAnimator == null) return;
-
             bool isWalking = currentState == NPCState.WalkingIn ||
                              currentState == NPCState.Approaching ||
                              currentState == NPCState.LeavingSeat ||
@@ -258,13 +271,13 @@ namespace GanhHangRong.NPC
                              currentState == NPCState.Drinking ||
                              currentState == NPCState.Paying;
 
-            if (isWalking)
+            if (visualAnimator != null && isWalking)
             {
                 visualAnimator.enabled = true;
                 visualAnimator.speed = 0.35f;
                 SetAnimatorStateParameter(0);
             }
-            else if (isSitting)
+            else if (visualAnimator != null && isSitting)
             {
                 visualAnimator.enabled = true;
                 visualAnimator.speed = 1f;
@@ -272,6 +285,18 @@ namespace GanhHangRong.NPC
             }
 
             RestoreVisualModelRoot();
+            if (isWalking)
+            {
+                PinVisualModelFeetToGround();
+            }
+            else if (isSitting)
+            {
+                ApplyLowSittingPose();
+            }
+            else
+            {
+                PinVisualModelFeetToGround();
+            }
         }
 
         private void CacheVisualReferences()
@@ -303,6 +328,35 @@ namespace GanhHangRong.NPC
             visualModel.localPosition = visualModelOriginalLocalPosition;
             visualModel.localRotation = visualModelOriginalLocalRotation;
             visualModel.localScale = visualModelOriginalLocalScale;
+        }
+
+        private void PinVisualModelFeetToGround()
+        {
+            if (visualModel == null) return;
+
+            Renderer[] renderers = visualModel.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            float targetBottomY = transform.position.y + VisualFeetGroundClearance;
+            float deltaWorldY = targetBottomY - bounds.min.y;
+            Transform localSpace = visualModel.parent != null ? visualModel.parent : transform;
+            Vector3 localDelta = localSpace.InverseTransformVector(Vector3.up * deltaWorldY);
+            visualModel.localPosition += localDelta;
+        }
+
+        private void ApplyLowSittingPose()
+        {
+            if (visualRoot != null)
+            {
+                visualRoot.localPosition = Vector3.down * SittingVisualDrop;
+                visualRoot.localRotation = Quaternion.identity;
+            }
         }
 
         private void SetAnimatorStateParameter(int value)
@@ -337,6 +391,7 @@ namespace GanhHangRong.NPC
 
             float step = walkSpeed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
+            SnapToGround();
 
             if (Vector3.Distance(transform.position, targetPos) <= stopDistance)
             {
