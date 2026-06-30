@@ -74,8 +74,11 @@ namespace GanhHangRong.UI
 
         private void HideLegacyTopRightWidgets()
         {
-            string[] names = { "ClockPanel", "ClockArt", "MoneyBoard", "InfoHUD" };
-            Transform[] children = GetComponentsInChildren<Transform>(true);
+            string[] names = { "ClockPanel", "ClockArt", "MoneyBoard", "InfoHUD", "GHR_TimeHUD" };
+            Canvas parentCanvas = GetComponentInParent<Canvas>();
+            Transform[] children = parentCanvas != null
+                ? parentCanvas.GetComponentsInChildren<Transform>(true)
+                : GetComponentsInChildren<Transform>(true);
             foreach (Transform child in children)
             {
                 if (child == null || child == transform) continue;
