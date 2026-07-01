@@ -37,9 +37,9 @@ namespace GanhHangRong.Interaction
         [Tooltip("Prefab mô hình ly trà đá (WaterCup FBX). Nếu để trống sẽ dùng primitive Cylinder thay thế.")]
         [SerializeField] private GameObject teaCupHeldPrefab;
         [Tooltip("Vị trí của ly khi cầm trên tay (Local Position)")]
-        [SerializeField] private Vector3 heldLocalPosition = new Vector3(-0.02f, 0.04f, 0.06f);
+        [SerializeField] private Vector3 heldLocalPosition = new Vector3(0.015f, 0.045f, 0.015f);
         [Tooltip("Góc xoay của ly khi cầm trên tay (Local Rotation)")]
-        [SerializeField] private Vector3 heldLocalRotation = new Vector3(0f, 90f, 0f);
+        [SerializeField] private Vector3 heldLocalRotation = new Vector3(84f, -8f, 12f);
 
         // State
         private bool isHighlighted = false;
@@ -610,22 +610,9 @@ private void EnsureInteractionCollider()
 
             if (attachPoint != null)
             {
-                cupGO.transform.SetParent(attachPoint, false);
-                
-                Vector3 parentScale = attachPoint.lossyScale;
-                float scaleX = targetWorldScale.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float scaleY = targetWorldScale.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float scaleZ = targetWorldScale.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
-
                 Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
                 Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
-
-                float posX = targetPos.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float posY = targetPos.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = targetPos.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(targetRot);
+                AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
             {
@@ -702,22 +689,9 @@ private void EnsureInteractionCollider()
 
             if (attachPoint != null)
             {
-                cupGO.transform.SetParent(attachPoint, false);
-                
-                Vector3 parentScale = attachPoint.lossyScale;
-                float scaleX = targetWorldScale.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float scaleY = targetWorldScale.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float scaleZ = targetWorldScale.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
-
                 Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
                 Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
-
-                float posX = targetPos.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float posY = targetPos.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = targetPos.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(targetRot);
+                AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
             {
@@ -730,6 +704,23 @@ private void EnsureInteractionCollider()
             cupGO.name = "HeldTeaCup";
             if (cupTemplate == null && teaCupHeldPrefab == null) ApplyHeldCupMaterials(cupGO, true);
             heldTeaCupObj = cupGO;
+        }
+
+        private static void AttachCupToHand(GameObject cupGO, Transform hand, Vector3 targetWorldScale, Vector3 localPosition, Vector3 localRotation)
+        {
+            cupGO.transform.SetParent(hand, false);
+
+            Vector3 parentScale = hand.lossyScale;
+            float scaleX = targetWorldScale.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+            float scaleY = targetWorldScale.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+            float scaleZ = targetWorldScale.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+            cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+
+            float posX = localPosition.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+            float posY = localPosition.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+            float posZ = localPosition.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+            cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
+            cupGO.transform.localRotation = Quaternion.Euler(localRotation);
         }
 
         /// <summary>Xóa mô hình ly trà khỏi tay khi phục vụ xong.</summary>

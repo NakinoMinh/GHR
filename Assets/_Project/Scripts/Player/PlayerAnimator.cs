@@ -297,14 +297,14 @@ namespace GanhHangRong.Player
 
                         // 1. Bắp tay: chĩa XUỐNG và HƠI RA TRƯỚC
                         Vector3 rArmDir = (rightForeArmBone.position - rightArmBone.position).normalized;
-                        Vector3 rArmTarget = (-transform.up * 0.8f + transform.forward * 0.2f + transform.right * 0.1f).normalized;
+                        Vector3 rArmTarget = (-transform.up * 0.78f + transform.forward * 0.12f + transform.right * 0.08f).normalized;
                         rightArmBone.rotation = Quaternion.FromToRotation(rArmDir, rArmTarget) * rightArmBone.rotation;
 
                         // 2. Cẳng tay: gập góc ~90 độ ra trước mặt, tạo dáng bưng ly
                         if (rightHandBone != null)
                         {
                             Vector3 rForeDir = (rightHandBone.position - rightForeArmBone.position).normalized;
-                            Vector3 rForeTarget = (transform.forward * 0.8f + transform.up * 0.4f - transform.right * 0.2f).normalized;
+                            Vector3 rForeTarget = (transform.forward * 0.62f + transform.up * 0.12f - transform.right * 0.34f).normalized;
                             rightForeArmBone.rotation = Quaternion.FromToRotation(rForeDir, rForeTarget) * rightForeArmBone.rotation;
                         }
                     }
@@ -313,7 +313,7 @@ namespace GanhHangRong.Player
                     if (rightHandBone != null)
                     {
                         // Hướng các ngón tay ra trước
-                        Vector3 rFingers = (transform.forward * 0.9f + transform.up * 0.1f).normalized;
+                        Vector3 rFingers = (transform.forward * 0.78f - transform.right * 0.22f + transform.up * 0.04f).normalized;
                         // Hướng trục Y của xương tay (chỉa vào ngực = -right) để ngón cái chỉa lên trời
                         Vector3 rYAxis = -transform.right;
                         rightHandBone.rotation = Quaternion.LookRotation(rFingers, rYAxis);
