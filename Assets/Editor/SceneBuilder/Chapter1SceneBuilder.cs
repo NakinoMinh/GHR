@@ -238,10 +238,28 @@ namespace GanhHangRong.Editor
             }
 
             // Spawn 1 căn nhà Building_N_Prefab ở phía bên phải trên nền Stone Floor (Z = stoneZ2) quay mặt về phía đường
-            spawnPrefab("Building_N_Prefab.prefab", "Building_N_Foreground", new Vector3(30f, 0f, stoneZ2), Quaternion.Euler(0f, 90f, 0f), envParent.transform);
+            var buildingN = spawnPrefab("Building_N_Prefab.prefab", "Building_N_Foreground", new Vector3(30f, 0f, stoneZ2), Quaternion.Euler(0f, 90f, 0f), envParent.transform);
+            if (buildingN != null)
+            {
+                // Gắn script tự động thay MeshCollider bằng BoxCollider có lỗ cửa — nhân vật đi vào được
+                var bwc = buildingN.AddComponent<GanhHangRong.Interaction.BuildingWalkthroughCollider>();
+                // Building_N xoay 90° quanh Y → cửa nằm ở mặt Right (trục X+) trong local space
+                bwc.doorFacade = GanhHangRong.Interaction.BuildingWalkthroughCollider.FacadeDirection.Right;
+                bwc.doorWidth  = 2.0f;
+                bwc.doorHeight = 2.5f;
+                bwc.doorOffsetX = 0f;
+            }
 
             // Spawn 1 căn nhà Building_A1_prefab ở kế bên phải tòa Building_N_Prefab (X = 42f)
-            spawnPrefab("Building_A1_prefab.prefab", "Building_A1_Foreground", new Vector3(42f, 0f, stoneZ2), Quaternion.Euler(0f, 90f, 0f), envParent.transform);
+            var buildingA1 = spawnPrefab("Building_A1_prefab.prefab", "Building_A1_Foreground", new Vector3(42f, 0f, stoneZ2), Quaternion.Euler(0f, 90f, 0f), envParent.transform);
+            if (buildingA1 != null)
+            {
+                var bwc = buildingA1.AddComponent<GanhHangRong.Interaction.BuildingWalkthroughCollider>();
+                bwc.doorFacade = GanhHangRong.Interaction.BuildingWalkthroughCollider.FacadeDirection.Right;
+                bwc.doorWidth  = 2.0f;
+                bwc.doorHeight = 2.5f;
+                bwc.doorOffsetX = 0f;
+            }
 
             // Spawn 1 máy bán nước ColaMachine prefab ở bên trái tòa Building_N_Prefab (X = 20f, dịch hẳn ra ngoài để không bị chìm vào trong tường nhà)
             spawnPrefab("ColaMachine prefab.prefab", "ColaMachine_Foreground", new Vector3(20f, 0f, stoneZ2), Quaternion.identity, envParent.transform);
@@ -1868,49 +1886,78 @@ namespace GanhHangRong.Editor
             float[] xPositions = { -22f, -8f, 6f, 20f };
             float zPos = 2.4f;
 
+            GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/cotden/Meshy_AI_Lone_Streetlight_0701084055_texture.fbx");
+            Material meshyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/cotden/Meshy_AI_Lone_Streetlight_Mat.mat");
+
             foreach (float x in xPositions)
             {
-                GameObject streetLight = new GameObject($"StreetLight_{x}");
-                streetLight.transform.SetParent(lightsGroup.transform);
+                if (modelPrefab != null && meshyMat != null)
+                {
+                    GameObject pole = PrefabUtility.InstantiatePrefab(modelPrefab, lightsGroup.transform) as GameObject;
+                    if (pole == null) pole = Object.Instantiate(modelPrefab, lightsGroup.transform);
+                    pole.name = $"StreetLight_{x}";
+                    pole.transform.position = new Vector3(x, 1.911082f, zPos);
+                    pole.transform.rotation = Quaternion.Euler(-90f, 90f, 0f);
+                    pole.transform.localScale = new Vector3(180f, 180f, 180f);
 
-                // Cột đứng (Cylinder)
-                GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                pole.name = "Pole";
-                pole.transform.SetParent(streetLight.transform);
-                pole.transform.position = new Vector3(x, 2f, zPos);
-                pole.transform.localScale = new Vector3(0.12f, 2f, 0.12f); // Cao 4m
-                pole.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
-                Object.DestroyImmediate(pole.GetComponent<CapsuleCollider>());
+                    var mr = pole.GetComponentInChildren<MeshRenderer>(true);
+                    if (mr != null) mr.sharedMaterial = meshyMat;
 
-                // Thanh ngang đỡ đèn (Cube)
-                GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                arm.name = "Arm";
-                arm.transform.SetParent(streetLight.transform);
-                arm.transform.position = new Vector3(x - 0.4f, 3.9f, zPos);
-                arm.transform.localScale = new Vector3(0.8f, 0.08f, 0.08f);
-                arm.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
-                Object.DestroyImmediate(arm.GetComponent<BoxCollider>());
+                    GameObject lightSource = new GameObject("LightSource");
+                    lightSource.transform.SetParent(pole.transform);
+                    lightSource.transform.position = new Vector3(x, 3.55f, zPos - 0.38f);
 
-                // Bóng đèn phát sáng (Sphere)
-                GameObject bulb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                bulb.name = "Bulb";
-                bulb.transform.SetParent(streetLight.transform);
-                bulb.transform.position = new Vector3(x - 0.8f, 3.8f, zPos);
-                bulb.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                bulb.GetComponent<MeshRenderer>().sharedMaterial = lightMat;
-                Object.DestroyImmediate(bulb.GetComponent<SphereCollider>());
+                    Light light = lightSource.AddComponent<Light>();
+                    light.type = LightType.Point;
+                    light.color = new Color(1f, 0.85f, 0.6f);
+                    light.intensity = 2f;
+                    light.range = 8f;
+                    light.shadows = LightShadows.Soft;
+                }
+                else
+                {
+                    GameObject streetLight = new GameObject($"StreetLight_{x}");
+                    streetLight.transform.SetParent(lightsGroup.transform);
 
-                // Nguồn sáng thực tế (Point Light)
-                GameObject lightSource = new GameObject("LightSource");
-                lightSource.transform.SetParent(streetLight.transform);
-                lightSource.transform.position = new Vector3(x - 0.8f, 3.6f, zPos);
-                
-                Light light = lightSource.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = new Color(1f, 0.85f, 0.6f); // Vàng ấm
-                light.intensity = 2f;
-                light.range = 8f;
-                light.shadows = LightShadows.Soft;
+                    // Cột đứng (Cylinder)
+                    GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    pole.name = "Pole";
+                    pole.transform.SetParent(streetLight.transform);
+                    pole.transform.position = new Vector3(x, 2f, zPos);
+                    pole.transform.localScale = new Vector3(0.12f, 2f, 0.12f); // Cao 4m
+                    pole.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
+                    Object.DestroyImmediate(pole.GetComponent<CapsuleCollider>());
+
+                    // Thanh ngang đỡ đèn (Cube)
+                    GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    arm.name = "Arm";
+                    arm.transform.SetParent(streetLight.transform);
+                    arm.transform.position = new Vector3(x - 0.4f, 3.9f, zPos);
+                    arm.transform.localScale = new Vector3(0.8f, 0.08f, 0.08f);
+                    arm.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
+                    Object.DestroyImmediate(arm.GetComponent<BoxCollider>());
+
+                    // Bóng đèn phát sáng (Sphere)
+                    GameObject bulb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    bulb.name = "Bulb";
+                    bulb.transform.SetParent(streetLight.transform);
+                    bulb.transform.position = new Vector3(x - 0.8f, 3.8f, zPos);
+                    bulb.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                    bulb.GetComponent<MeshRenderer>().sharedMaterial = lightMat;
+                    Object.DestroyImmediate(bulb.GetComponent<SphereCollider>());
+
+                    // Nguồn sáng thực tế (Point Light)
+                    GameObject lightSource = new GameObject("LightSource");
+                    lightSource.transform.SetParent(streetLight.transform);
+                    lightSource.transform.position = new Vector3(x - 0.8f, 3.6f, zPos);
+                    
+                    Light light = lightSource.AddComponent<Light>();
+                    light.type = LightType.Point;
+                    light.color = new Color(1f, 0.85f, 0.6f); // Vàng ấm
+                    light.intensity = 2f;
+                    light.range = 8f;
+                    light.shadows = LightShadows.Soft;
+                }
             }
         }
 

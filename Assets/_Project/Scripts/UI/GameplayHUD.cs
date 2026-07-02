@@ -161,10 +161,17 @@ namespace GanhHangRong.UI
             {
                 if (Interaction.CartItem.IsHoldingCup)
                 {
-                    string brewBase = Interaction.CartItem.CoffeeInCup > 0
-                        ? $"Cà phê {Interaction.CartItem.CoffeeInCup}g"
-                        : $"Trà {Interaction.CartItem.TeaInCup}g";
-                    cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: {brewBase}, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
+                    if (Interaction.CartItem.HasRuinedDrink)
+                    {
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly trà hỏng, hãy đem rửa!)";
+                    }
+                    else
+                    {
+                        string brewBase = Interaction.CartItem.CoffeeInCup > 0
+                            ? $"Cà phê {Interaction.CartItem.CoffeeInCup}g"
+                            : $"Trà {Interaction.CartItem.TeaInCup}g";
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: {brewBase}, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
+                    }
                 }
                 else if (Interaction.CartItem.HasPreparedTea)
                 {

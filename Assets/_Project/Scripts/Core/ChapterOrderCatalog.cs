@@ -69,6 +69,24 @@ namespace GanhHangRong.Core
         public static int GetRandomOrderId(int chapter)
         {
             OrderInfo[] orders = chapter >= 2 ? Chapter2Orders : Chapter1Orders;
+            
+            var activeIds = UI.TabMenuUI.GetActiveServingOrderIds();
+            if (activeIds != null && activeIds.Count > 0)
+            {
+                System.Collections.Generic.List<OrderInfo> validOrders = new System.Collections.Generic.List<OrderInfo>();
+                foreach (var order in orders)
+                {
+                    if (activeIds.Contains(order.Id))
+                    {
+                        validOrders.Add(order);
+                    }
+                }
+                if (validOrders.Count > 0)
+                {
+                    return validOrders[Random.Range(0, validOrders.Count)].Id;
+                }
+            }
+
             return orders[Random.Range(0, orders.Length)].Id;
         }
 

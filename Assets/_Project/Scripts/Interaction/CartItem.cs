@@ -36,6 +36,10 @@ namespace GanhHangRong.Interaction
         [Header("Ly Trà Đá — Mô Hình Cầm Tay")]
         [Tooltip("Prefab mô hình ly trà đá (WaterCup FBX). Nếu để trống sẽ dùng primitive Cylinder thay thế.")]
         [SerializeField] private GameObject teaCupHeldPrefab;
+        [Tooltip("Vị trí của ly khi cầm trên tay (Local Position)")]
+        [SerializeField] private Vector3 heldLocalPosition = new Vector3(0.015f, 0.045f, 0.015f);
+        [Tooltip("Góc xoay của ly khi cầm trên tay (Local Rotation)")]
+        [SerializeField] private Vector3 heldLocalRotation = new Vector3(84f, -8f, 12f);
 
         // State
         private bool isHighlighted = false;
@@ -47,11 +51,14 @@ namespace GanhHangRong.Interaction
         private Material[] originalMaterials;
         private float hoverTimer = 0f;
         private Coroutine resourceFeedbackRoutine;
+
         
         private static bool isBoilingWater = false;
         public static bool IsBoilingWater => isBoilingWater;
         private static bool isWaterBoiled = false;
         public static bool IsWaterBoiled => isWaterBoiled;
+
+        public static bool HasRuinedDrink { get; set; } = false;
 
         private static float bottleWater = 30f;
         public static float BottleWater => bottleWater;
@@ -62,7 +69,7 @@ namespace GanhHangRong.Interaction
         private const float maxKettleWater = 1.2f;
         private const float minKettleWaterToRefill = 0.2f;
         private const float boilDurationSeconds = 10f;
-        private const float boiledWaterCoolDownGameMinutes = 30f;
+        private const float boiledWaterCoolDownGameMinutes = 120f;
 
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
@@ -119,6 +126,7 @@ namespace GanhHangRong.Interaction
             waterInCup = 0f;
             iceInCup = 0f;
             hasPreparedTea = false;
+            HasRuinedDrink = false;
             preparedDrinkId = -1;
             DetachTeaCup();
         }
@@ -353,6 +361,7 @@ private void EnsureInteractionCollider()
                 ShowResourceDelta($"-200ml nước ấm (ấm còn {kettleWater:F1}L)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã rót 200ml nước sôi vào ly. (-200ml nước ấm, còn {kettleWater:F1}L trong ấm)");
 
+                if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Nước Sôi");
                 CheckBrewingCompletion(player);
                 return;
             }
@@ -413,6 +422,7 @@ private void EnsureInteractionCollider()
             ShowResourceDelta($"-50g trà (còn {stats.TeaSupply}g)");
             EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 50g trà vào ly. (-50g trà, còn {stats.TeaSupply}g)");
 
+            if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Trà");
             CheckBrewingCompletion(player);
         }
 
@@ -430,13 +440,28 @@ private void EnsureInteractionCollider()
 
         private void OnSugarJarInteract(Player.PlayerController player)
         {
-            // Hũ đường — lấy đường
             var stats = player.GetComponent<Player.PlayerStats>();
-            if (stats != null)
+            if (stats == null) return;
+
+            if (isHoldingCup)
             {
-                stats.AddSupplies(0, 200, 0); // Thêm 200g đường
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy đường từ hũ đường. (+200g đường, hiện có {stats.SugarSupply}g)");
+                if (stats.SugarSupply < 10)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ đường trong hũ (cần ít nhất 10g)!");
+                    return;
+                }
+                stats.AddSupplies(0, -10, 0); // Consume 10g sugar
+                ShowResourceDelta($"-10g đường (còn {stats.SugarSupply}g)");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 10g đường vào ly. (-10g đường, còn {stats.SugarSupply}g)");
+                
+                if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Đường");
+                CheckBrewingCompletion(player);
+                return;
             }
+
+            // Hũ đường — lấy đường
+            stats.AddSupplies(0, 200, 0); // Thêm 200g đường
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Lấy đường từ hũ đường. (+200g đường, hiện có {stats.SugarSupply}g)");
             Debug.Log("[CartItem] Tương tác hũ đường");
         }
 
@@ -511,6 +536,7 @@ private void EnsureInteractionCollider()
                 ShowResourceDelta($"-5% đá (còn {Mathf.RoundToInt(stats.IceLevel)}%)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 5% đá vào ly. (-5% đá, còn {Mathf.RoundToInt(stats.IceLevel)}%)");
 
+                if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Đá");
                 CheckBrewingCompletion(player);
                 return;
             }
@@ -549,7 +575,6 @@ private void EnsureInteractionCollider()
 
         private static void AttachEmptyCupToPlayer(Player.PlayerController player)
         {
-            // Dọn mô hình cũ nếu còn tồn tại
             if (heldTeaCupObj != null)
             {
                 Destroy(heldTeaCupObj);
@@ -557,45 +582,53 @@ private void EnsureInteractionCollider()
             }
 
             Transform attachPoint = FindRightHandBone(player.transform);
-            GameObject cupGO = CreateFallbackEmptyCupModel();
+            
+            CartItem[] items = Object.FindObjectsByType<CartItem>(FindObjectsSortMode.None);
+            CartItem cupTemplate = null;
+            foreach (var item in items)
+            {
+                if (item.itemType == CartItemType.WaterCup)
+                {
+                    cupTemplate = item;
+                    break;
+                }
+            }
+
+            GameObject cupGO;
+            Vector3 targetWorldScale = Vector3.one * 0.12f;
+            if (cupTemplate != null)
+            {
+                cupGO = Instantiate(cupTemplate.gameObject);
+                Destroy(cupGO.GetComponent<CartItem>());
+                foreach (var col in cupGO.GetComponentsInChildren<Collider>()) Destroy(col);
+                targetWorldScale = cupTemplate.transform.lossyScale;
+            }
+            else
+            {
+                cupGO = CreateFallbackEmptyCupModel();
+            }
 
             if (attachPoint != null)
             {
-                cupGO.transform.SetParent(attachPoint, false);
-                
-                // Khắc phục tỷ lệ scale của xương biped (tránh bị quá nhỏ/vô hình)
-                Vector3 parentScale = attachPoint.lossyScale;
-                float scaleX = 0.12f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float scaleY = 0.12f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float scaleZ = 0.12f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
-
-                // Khắc phục vị trí theo tỉ lệ xương
-                float posX = 0.015f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float posY = 0.045f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = 0.015f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(84f, -8f, 12f);
-                
-                Debug.Log($"[CartItem] Gắn ly rỗng vào xương {attachPoint.name}. Bone scale: {parentScale}, Local scale set: {cupGO.transform.localScale}");
+                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
+                AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
             {
                 cupGO.transform.SetParent(player.transform, false);
                 cupGO.transform.localPosition = new Vector3(0.35f, 0.85f, 0.15f);
                 cupGO.transform.localRotation = Quaternion.identity;
-                cupGO.transform.localScale = Vector3.one * 0.12f;
-                Debug.LogWarning("[CartItem] Không tìm thấy xương tay phải, gắn ly rỗng vào thân nhân vật.");
+                cupGO.transform.localScale = targetWorldScale;
             }
 
             cupGO.name = "HeldEmptyCup";
-            ApplyHeldCupMaterials(cupGO, false);
+            if (cupTemplate == null) ApplyHeldCupMaterials(cupGO, false);
             heldTeaCupObj = cupGO;
         }
 
         private void AttachTeaCupToPlayer(Player.PlayerController player)
         {
-            // Dọn mô hình cũ nếu còn tồn tại
             if (heldTeaCupObj != null)
             {
                 Destroy(heldTeaCupObj);
@@ -604,23 +637,48 @@ private void EnsureInteractionCollider()
 
             Transform attachPoint = FindRightHandBone(player.transform);
 
-            if (teaCupHeldPrefab == null)
+            CartItem[] items = Object.FindObjectsByType<CartItem>(FindObjectsSortMode.None);
+            CartItem cupTemplate = null;
+            foreach (var item in items)
             {
-                teaCupHeldPrefab = Resources.Load<GameObject>("lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture");
-                if (teaCupHeldPrefab != null)
+                if (item.itemType == CartItemType.WaterCup)
                 {
-                    Debug.Log("[CartItem] Đã load thành công ly trà đá fbx từ Resources.");
+                    cupTemplate = item;
+                    break;
                 }
             }
-#if UNITY_EDITOR
-            if (teaCupHeldPrefab == null)
-            {
-                teaCupHeldPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.fbx");
-            }
-#endif
 
             GameObject cupGO;
-            if (teaCupHeldPrefab != null)
+            Vector3 targetWorldScale = Vector3.one * 0.12f;
+            if (cupTemplate != null)
+            {
+                cupGO = Instantiate(cupTemplate.gameObject);
+                Destroy(cupGO.GetComponent<CartItem>());
+                foreach (var col in cupGO.GetComponentsInChildren<Collider>()) Destroy(col);
+                targetWorldScale = cupTemplate.transform.lossyScale;
+                
+                // Add a simple tea liquid inside the cloned mesh
+                GameObject teaLiquid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                teaLiquid.transform.SetParent(cupGO.transform, false);
+                // Adjust position/scale relative to the cup template's bounds
+                var mf = cupTemplate.GetComponent<MeshFilter>();
+                if(mf != null && mf.sharedMesh != null) {
+                    float h = mf.sharedMesh.bounds.size.y;
+                    teaLiquid.transform.localPosition = mf.sharedMesh.bounds.center + new Vector3(0, h * 0.1f, 0);
+                    teaLiquid.transform.localScale = new Vector3(mf.sharedMesh.bounds.size.x * 0.85f, h * 0.4f, mf.sharedMesh.bounds.size.z * 0.85f);
+                } else {
+                    teaLiquid.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+                    teaLiquid.transform.localScale = new Vector3(0.04f, 0.04f, 0.04f);
+                }
+                Object.Destroy(teaLiquid.GetComponent<Collider>());
+                var rend = teaLiquid.GetComponent<Renderer>();
+                if (rend != null)
+                {
+                    Material mat = CreateCupMaterial("FallbackTeaCup_Liquid", new Color(0.75f, 0.42f, 0.12f, 0.85f), true, 3001);
+                    if (mat != null) rend.material = mat;
+                }
+            }
+            else if (teaCupHeldPrefab != null)
             {
                 cupGO = Instantiate(teaCupHeldPrefab);
             }
@@ -631,36 +689,38 @@ private void EnsureInteractionCollider()
 
             if (attachPoint != null)
             {
-                cupGO.transform.SetParent(attachPoint, false);
-                
-                // Khắc phục tỷ lệ scale của xương biped (tránh bị quá nhỏ/vô hình)
-                Vector3 parentScale = attachPoint.lossyScale;
-                float scaleX = 0.12f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float scaleY = 0.12f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float scaleZ = 0.12f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
-
-                // Khắc phục vị trí theo tỉ lệ xương
-                float posX = 0.015f / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
-                float posY = 0.045f / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
-                float posZ = 0.015f / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
-                cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
-                cupGO.transform.localRotation = Quaternion.Euler(84f, -8f, 12f);
-
-                Debug.Log($"[CartItem] Gắn ly trà đá vào xương {attachPoint.name}. Bone scale: {parentScale}, Local scale set: {cupGO.transform.localScale}");
+                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
+                AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
             {
                 cupGO.transform.SetParent(player.transform, false);
                 cupGO.transform.localPosition = new Vector3(0.35f, 0.85f, 0.15f);
                 cupGO.transform.localRotation = Quaternion.identity;
-                cupGO.transform.localScale = Vector3.one * 0.12f;
-                Debug.LogWarning("[CartItem] Không tìm thấy xương tay phải, gắn ly trà đá vào thân nhân vật.");
+                cupGO.transform.localScale = targetWorldScale;
             }
 
             cupGO.name = "HeldTeaCup";
-            ApplyHeldCupMaterials(cupGO, true);
+            if (cupTemplate == null && teaCupHeldPrefab == null) ApplyHeldCupMaterials(cupGO, true);
             heldTeaCupObj = cupGO;
+        }
+
+        private static void AttachCupToHand(GameObject cupGO, Transform hand, Vector3 targetWorldScale, Vector3 localPosition, Vector3 localRotation)
+        {
+            cupGO.transform.SetParent(hand, false);
+
+            Vector3 parentScale = hand.lossyScale;
+            float scaleX = targetWorldScale.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+            float scaleY = targetWorldScale.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+            float scaleZ = targetWorldScale.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+            cupGO.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+
+            float posX = localPosition.x / (parentScale.x != 0 ? Mathf.Abs(parentScale.x) : 1f);
+            float posY = localPosition.y / (parentScale.y != 0 ? Mathf.Abs(parentScale.y) : 1f);
+            float posZ = localPosition.z / (parentScale.z != 0 ? Mathf.Abs(parentScale.z) : 1f);
+            cupGO.transform.localPosition = new Vector3(posX, posY, posZ);
+            cupGO.transform.localRotation = Quaternion.Euler(localRotation);
         }
 
         /// <summary>Xóa mô hình ly trà khỏi tay khi phục vụ xong.</summary>
@@ -803,6 +863,17 @@ private void EnsureInteractionCollider()
                 "RightHand", "Hand_R", "R_Hand", "hand_r", "mixamorig:RightHand",
                 "Bip001 R Hand", "RHand", "HandRight"
             };
+
+            // Tìm trong SkinnedMeshRenderer trước để tránh lỗi Optimize Game Objects
+            var smrs = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            foreach (var smr in smrs)
+            {
+                foreach (var bone in smr.bones)
+                {
+                    if (bone != null && System.Array.IndexOf(candidateNames, bone.name) >= 0)
+                        return bone;
+                }
+            }
 
             foreach (string name in candidateNames)
             {
@@ -1117,13 +1188,7 @@ private void EnsureInteractionCollider()
                 ShowResourceDelta($"-{refillAmount:F1}L nước bình (còn {bottleWater:F1}L)");
 
                 // Hứng nước trong 2 giây
-                float elapsedWater = 0f;
-                while (elapsedWater < 2f)
-                {
-                    elapsedWater += Time.deltaTime;
-                    EventManager.TriggerInteractionPromptShow($"Đang lấy nước vào ấm... {Mathf.CeilToInt(2f - elapsedWater)}s");
-                    yield return null;
-                }
+                yield return new WaitForSeconds(2f);
             }
             else
             {
@@ -1140,13 +1205,7 @@ private void EnsureInteractionCollider()
             GameObject steamFx = CreateSteamParticles(kettleT);
 
             // Đun nước trong 10 giây
-            float elapsedBoil = 0f;
-            while (elapsedBoil < 10f)
-            {
-                elapsedBoil += Time.deltaTime;
-                EventManager.TriggerInteractionPromptShow($"Nước đang sôi: {Mathf.CeilToInt(10f - elapsedBoil)}s");
-                yield return null;
-            }
+            yield return new WaitForSeconds(10f);
 
             // Hủy hiệu ứng hơi nước
             if (steamFx != null)
@@ -1304,6 +1363,12 @@ private void EnsureInteractionCollider()
 
             // Gắn mô hình ly trống lên tay Hoàng Hôn
             AttachEmptyCupToPlayer(player);
+            
+            // Báo cho UI (nếu có)
+            if (UI.RecipeMiniGameUI.Instance != null)
+            {
+                UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Ly Trà");
+            }
         }
 
         private System.Collections.IEnumerator ClickFeedback()

@@ -174,19 +174,58 @@ namespace GanhHangRong.Environment
             lightRoot.transform.SetParent(generatedRoot);
             StreetLightGroup group = lightRoot.AddComponent<StreetLightGroup>();
 
+#if UNITY_EDITOR
+            GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/cotden/Meshy_AI_Lone_Streetlight_0701084055_texture.fbx");
+            Material poleMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/cotden/Meshy_AI_Lone_Streetlight_Mat.mat");
+#else
+            GameObject modelPrefab = null;
+            Material poleMat = null;
+#endif
+
             for (int i = 0; i < 7; i++)
             {
                 Vector3 basePos = origin + new Vector3(roadWidth * 0.5f + 0.85f, 0f, -30f + i * 10f);
-                CreateCylinder($"PowerPole_{i:00}", basePos + new Vector3(0f, 1.7f, 0f), new Vector3(0.18f, 3.4f, 0.18f), trunkMaterial, lightRoot.transform);
-                GameObject lampHead = CreateCube($"LampHead_{i:00}", basePos + new Vector3(-0.55f, 3.85f, 0f), new Vector3(0.45f, 0.18f, 0.45f), warmLampMaterial, lightRoot.transform);
-                Light lamp = lampHead.AddComponent<Light>();
-                lamp.type = LightType.Point;
-                lamp.color = new Color(1f, 0.68f, 0.42f);
-                lamp.range = 7f;
-                lamp.intensity = 0f;
-                lamp.enabled = false;
-                group.RegisterLight(lamp);
-                group.RegisterEmissiveRenderer(lampHead.GetComponent<Renderer>());
+                if (modelPrefab != null && poleMat != null)
+                {
+                    GameObject pole = Instantiate(modelPrefab, lightRoot.transform);
+                    pole.name = $"PowerPole_{i:00}";
+                    pole.transform.position = basePos + new Vector3(0f, 1.711082f, 0f);
+                    pole.transform.rotation = Quaternion.Euler(-90f, 180f, 0f);
+                    pole.transform.localScale = new Vector3(180f, 180f, 180f);
+
+                    var mr = pole.GetComponentInChildren<MeshRenderer>(true);
+                    if (mr != null)
+                    {
+                        mr.sharedMaterial = poleMat;
+                        group.RegisterEmissiveRenderer(mr);
+                    }
+
+                    GameObject lampHead = new GameObject($"LampHead_{i:00}");
+                    lampHead.transform.SetParent(pole.transform);
+                    lampHead.transform.position = basePos + new Vector3(-0.38f, 3.35f, 0f);
+
+                    Light lamp = lampHead.AddComponent<Light>();
+                    lamp.type = LightType.Point;
+                    lamp.color = new Color(1f, 0.68f, 0.42f);
+                    lamp.range = 8f;
+                    lamp.intensity = 0f;
+                    lamp.enabled = false;
+                    lamp.shadows = LightShadows.Soft;
+                    group.RegisterLight(lamp);
+                }
+                else
+                {
+                    CreateCylinder($"PowerPole_{i:00}", basePos + new Vector3(0f, 1.7f, 0f), new Vector3(0.18f, 3.4f, 0.18f), trunkMaterial, lightRoot.transform);
+                    GameObject lampHead = CreateCube($"LampHead_{i:00}", basePos + new Vector3(-0.55f, 3.15f, 0f), new Vector3(0.45f, 0.18f, 0.45f), warmLampMaterial, lightRoot.transform);
+                    Light lamp = lampHead.AddComponent<Light>();
+                    lamp.type = LightType.Point;
+                    lamp.color = new Color(1f, 0.68f, 0.42f);
+                    lamp.range = 7f;
+                    lamp.intensity = 0f;
+                    lamp.enabled = false;
+                    group.RegisterLight(lamp);
+                    group.RegisterEmissiveRenderer(lampHead.GetComponent<Renderer>());
+                }
             }
 
             DrawWire("PowerWire_A", lightRoot.transform, new Vector3(roadWidth * 0.5f + 0.85f, 3.25f, -30f), new Vector3(roadWidth * 0.5f + 0.85f, 3.25f, 30f));
