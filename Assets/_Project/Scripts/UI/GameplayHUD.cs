@@ -1,8 +1,8 @@
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using GanhHangRong.Core;
 using GanhHangRong.Player;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace GanhHangRong.UI
 {
@@ -28,7 +28,7 @@ namespace GanhHangRong.UI
         [SerializeField] private TextMeshProUGUI dayText;
         [SerializeField] private TextMeshProUGUI moneyText;
         [SerializeField] private Image timeIconImage; // Icon hiển thị buổi (sáng/trưa/tối)
-        
+
         [Header("Canvas Group")]
         [SerializeField] private CanvasGroup canvasGroup;
 
@@ -106,7 +106,7 @@ namespace GanhHangRong.UI
         {
             // Trong game thực tế có thể dùng Event khi inventory đổi, 
             // tạm thời dùng Update để refetch số lượng nếu nó thay đổi (vì chưa làm event riêng cho item)
-            if (Time.frameCount % 30 == 0 && playerStats != null) 
+            if (Time.frameCount % 30 == 0 && playerStats != null)
             {
                 UpdateInventory();
             }
@@ -238,3 +238,4 @@ namespace GanhHangRong.UI
         }
     }
 }
+ahdsjdjasjdjashd
