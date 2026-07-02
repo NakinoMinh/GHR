@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace GanhHangRong.Environment
 {
+    [ExecuteAlways]
     public class DayNightCycleController : MonoBehaviour
     {
         [Header("Nguon thoi gian")]
@@ -17,14 +18,14 @@ namespace GanhHangRong.Environment
         [SerializeField] private Transform sunVisual;
         [SerializeField] private Transform moonVisual;
         [SerializeField] private Vector3 sunRotationOffset = new Vector3(-90f, 170f, 0f);
-        [SerializeField] private Vector3 moonRotationOffset = new Vector3(-90f, -10f, 0f);
+        [SerializeField] private Vector3 moonRotationOffset = new Vector3(90f, -10f, 0f);
 
         [Header("Hien thi mat troi / mat trang")]
         [SerializeField] private Vector3 visualCenter = new Vector3(76f, 0f, -18f);
         [SerializeField] private bool hideVisualBelowHorizon = true;
         [SerializeField, Min(10f)] private float celestialVisualDistance = 650f;
         [SerializeField, Min(1f)] private float sunVisualSize = 42f;
-        [SerializeField, Min(1f)] private float moonVisualSize = 28f;
+        [SerializeField, Min(1f)] private float moonVisualSize = 38f;
 
         [Header("Cuong do anh sang")]
         [SerializeField] private AnimationCurve sunIntensityCurve = CreateSunCurve();
@@ -48,6 +49,8 @@ namespace GanhHangRong.Environment
         private bool warnedMissingTimeManager;
         private Material sunVisualMaterial;
         private Material moonVisualMaterial;
+        private Material moonShadowMaterial;
+        private Material cloudMaterial;
 
         private void Reset()
         {
@@ -72,7 +75,9 @@ namespace GanhHangRong.Environment
             }
 
             CacheLightTransforms();
+            ConfigureCoastalNightTiming();
             EnsureCelestialVisuals();
+            EnsureWhiteClouds();
         }
 
         private void Update()
@@ -102,6 +107,8 @@ namespace GanhHangRong.Environment
             ApplyDirectionalLight(moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonRotationOffset, normalizedTime);
             ApplyCelestialVisual(sunVisual, sunLight, sunTransform, sunValue, sunColorGradient.Evaluate(normalizedTime), sunVisualSize);
             ApplyCelestialVisual(moonVisual, moonLight, moonTransform, moonValue, moonColorGradient.Evaluate(normalizedTime), moonVisualSize);
+            UpdateCrescentMask(normalizedTime);
+            UpdateClouds(normalizedTime);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = ambientColorGradient.Evaluate(normalizedTime) * ambientIntensity;
@@ -142,7 +149,8 @@ namespace GanhHangRong.Environment
             visual.position = visualCenter + apparentSourceDirection * celestialVisualDistance;
             visual.rotation = Quaternion.identity;
             visual.localScale = Vector3.one * size;
-            visual.gameObject.SetActive(!hideVisualBelowHorizon || intensity > 0.01f);
+            bool isAboveHorizon = !hideVisualBelowHorizon || visual.position.y >= -15f;
+            visual.gameObject.SetActive(isAboveHorizon && intensity > 0.01f);
 
             Renderer renderer = visual.GetComponent<Renderer>();
             if (renderer != null)
@@ -201,12 +209,14 @@ namespace GanhHangRong.Environment
 
             if (moonVisual == null || !IsSphereVisual(moonVisual))
             {
-                ReplaceWithCelestialSphere(ref moonVisual, "RealisticMoon", new Color(0.82f, 0.86f, 0.9f, 1f), moonVisualSize, ref moonVisualMaterial);
+                ReplaceWithCelestialSphere(ref moonVisual, "CrescentMoon", new Color(0.82f, 0.86f, 0.9f, 1f), moonVisualSize, ref moonVisualMaterial);
             }
             else
             {
                 moonVisual.localScale = Vector3.one * moonVisualSize;
             }
+
+            EnsureCrescentMask();
         }
 
         private static bool IsSphereVisual(Transform visual)
@@ -235,7 +245,7 @@ namespace GanhHangRong.Environment
             Collider collider = visualObject.GetComponent<Collider>();
             if (collider != null)
             {
-                Destroy(collider);
+                DestroySafely(collider);
             }
 
             Renderer renderer = visualObject.GetComponent<Renderer>();
@@ -248,6 +258,214 @@ namespace GanhHangRong.Environment
             }
 
             return visualObject.transform;
+        }
+
+        private void ConfigureCoastalNightTiming()
+        {
+            moonRotationOffset = new Vector3(90f, -10f, 0f);
+            sunIntensityCurve = CreateSunCurve();
+            moonIntensityCurve = CreateMoonCurve();
+        }
+
+        private void EnsureCrescentMask()
+        {
+            if (moonVisual == null)
+            {
+                return;
+            }
+
+            Transform mask = moonVisual.Find("CrescentShadow");
+            if (mask == null || !IsSphereVisual(mask))
+            {
+                if (mask != null)
+                {
+                    DestroySafely(mask.gameObject);
+                }
+
+                GameObject maskObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                maskObject.name = "CrescentShadow";
+                maskObject.transform.SetParent(moonVisual, false);
+
+                Collider collider = maskObject.GetComponent<Collider>();
+                if (collider != null)
+                {
+                    DestroySafely(collider);
+                }
+
+                Renderer renderer = maskObject.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    moonShadowMaterial = CreateCelestialMaterial("CrescentShadow_Material", new Color(0.05f, 0.08f, 0.16f, 1f));
+                    renderer.sharedMaterial = moonShadowMaterial;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+
+                mask = maskObject.transform;
+            }
+
+            mask.localPosition = new Vector3(0.28f, 0.02f, -0.04f);
+            mask.localRotation = Quaternion.identity;
+            mask.localScale = new Vector3(0.92f, 1.03f, 1.03f);
+        }
+
+        private void UpdateCrescentMask(float normalizedTime)
+        {
+            if (moonVisual == null)
+            {
+                return;
+            }
+
+            Transform mask = moonVisual.Find("CrescentShadow");
+            if (mask == null)
+            {
+                return;
+            }
+
+            Color skyColor = fogColorGradient.Evaluate(normalizedTime);
+            Renderer renderer = mask.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Material material = Application.isPlaying ? renderer.material : renderer.sharedMaterial;
+                if (material != null)
+                {
+                    material.color = skyColor;
+                    if (material.HasProperty("_BaseColor"))
+                    {
+                        material.SetColor("_BaseColor", skyColor);
+                    }
+
+                    if (material.HasProperty("_EmissionColor"))
+                    {
+                        material.SetColor("_EmissionColor", skyColor * 0.8f);
+                    }
+                }
+            }
+
+            mask.gameObject.SetActive(moonVisual.gameObject.activeSelf);
+        }
+
+        private void EnsureWhiteClouds()
+        {
+            Transform cloudRoot = transform.Find("WhiteClouds");
+            if (cloudRoot == null)
+            {
+                GameObject root = new GameObject("WhiteClouds");
+                root.transform.SetParent(transform, false);
+                cloudRoot = root.transform;
+            }
+
+            if (cloudMaterial == null)
+            {
+                cloudMaterial = CreateCelestialMaterial("SoftWhiteCloud_Material", new Color(1f, 0.96f, 0.88f, 0.88f));
+            }
+
+            Vector3[] positions =
+            {
+                visualCenter + new Vector3(-170f, 135f, 420f),
+                visualCenter + new Vector3(40f, 165f, 480f),
+                visualCenter + new Vector3(220f, 130f, 360f),
+                visualCenter + new Vector3(-60f, 210f, 520f)
+            };
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                Transform cloud = cloudRoot.Find("Cloud_" + (i + 1).ToString("00"));
+                if (cloud == null)
+                {
+                    GameObject cloudObject = new GameObject("Cloud_" + (i + 1).ToString("00"));
+                    cloudObject.transform.SetParent(cloudRoot, false);
+                    cloud = cloudObject.transform;
+                    BuildCloudCluster(cloud, i);
+                }
+
+                cloud.position = positions[i];
+                cloud.localRotation = Quaternion.Euler(0f, -18f + i * 9f, 0f);
+            }
+        }
+
+        private void BuildCloudCluster(Transform cloud, int index)
+        {
+            Vector3[] offsets =
+            {
+                new Vector3(-1.3f, -0.05f, 0f),
+                new Vector3(-0.35f, 0.25f, 0.1f),
+                new Vector3(0.65f, 0.15f, -0.1f),
+                new Vector3(1.45f, -0.08f, 0.05f)
+            };
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                GameObject puff = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                puff.name = "Puff_" + (i + 1).ToString("00");
+                puff.transform.SetParent(cloud, false);
+                puff.transform.localPosition = offsets[i] * 18f;
+                puff.transform.localScale = new Vector3(34f + i * 7f, 15f + (i % 2) * 8f, 12f);
+
+                Collider collider = puff.GetComponent<Collider>();
+                if (collider != null)
+                {
+                    DestroySafely(collider);
+                }
+
+                Renderer renderer = puff.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = cloudMaterial;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+            }
+
+            cloud.localScale = Vector3.one * (1f + index * 0.12f);
+        }
+
+        private void UpdateClouds(float normalizedTime)
+        {
+            Transform cloudRoot = transform.Find("WhiteClouds");
+            if (cloudRoot == null)
+            {
+                return;
+            }
+
+            Color cloudTint = Color.Lerp(new Color(0.95f, 0.94f, 1f, 0.72f), Color.white, sunIntensityCurve.Evaluate(normalizedTime));
+            if (cloudMaterial != null)
+            {
+                cloudMaterial.color = cloudTint;
+                if (cloudMaterial.HasProperty("_BaseColor"))
+                {
+                    cloudMaterial.SetColor("_BaseColor", cloudTint);
+                }
+            }
+
+            for (int i = 0; i < cloudRoot.childCount; i++)
+            {
+                Transform cloud = cloudRoot.GetChild(i);
+                if (Application.isPlaying)
+                {
+                    float drift = Mathf.Sin(Time.time * 0.04f + i * 1.7f) * 8f;
+                    Vector3 position = cloud.position;
+                    position.x += drift * Time.deltaTime;
+                    cloud.position = position;
+                }
+            }
+        }
+
+        private static void DestroySafely(Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private Material CreateCelestialMaterial(string materialName, Color color)
@@ -279,22 +497,25 @@ namespace GanhHangRong.Environment
         {
             return new AnimationCurve(
                 new Keyframe(0f, 0f),
-                new Keyframe(0.22f, 0.25f),
+                new Keyframe(0.25f, 0f),
+                new Keyframe(0.27f, 0.25f),
                 new Keyframe(0.38f, 1f),
                 new Keyframe(0.62f, 1f),
-                new Keyframe(0.74f, 0.45f),
-                new Keyframe(0.82f, 0f),
+                new Keyframe(0.75f, 0.45f),
+                new Keyframe(0.7708f, 0f),
                 new Keyframe(1f, 0f));
         }
 
         private static AnimationCurve CreateMoonCurve()
         {
             return new AnimationCurve(
-                new Keyframe(0f, 0.75f),
-                new Keyframe(0.2f, 0f),
-                new Keyframe(0.78f, 0f),
-                new Keyframe(0.88f, 0.65f),
-                new Keyframe(1f, 0.75f));
+                new Keyframe(0f, 0.82f),
+                new Keyframe(0.20f, 0.7f),
+                new Keyframe(0.25f, 0f),
+                new Keyframe(0.7708f, 0f),
+                new Keyframe(0.790f, 0.35f),
+                new Keyframe(0.86f, 0.78f),
+                new Keyframe(1f, 0.82f));
         }
 
         private static AnimationCurve CreateFogDensityCurve()

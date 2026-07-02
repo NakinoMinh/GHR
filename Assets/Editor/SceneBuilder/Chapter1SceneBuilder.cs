@@ -1886,49 +1886,78 @@ namespace GanhHangRong.Editor
             float[] xPositions = { -22f, -8f, 6f, 20f };
             float zPos = 2.4f;
 
+            GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/cotden/Meshy_AI_Lone_Streetlight_0701084055_texture.fbx");
+            Material meshyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/cotden/Meshy_AI_Lone_Streetlight_Mat.mat");
+
             foreach (float x in xPositions)
             {
-                GameObject streetLight = new GameObject($"StreetLight_{x}");
-                streetLight.transform.SetParent(lightsGroup.transform);
+                if (modelPrefab != null && meshyMat != null)
+                {
+                    GameObject pole = PrefabUtility.InstantiatePrefab(modelPrefab, lightsGroup.transform) as GameObject;
+                    if (pole == null) pole = Object.Instantiate(modelPrefab, lightsGroup.transform);
+                    pole.name = $"StreetLight_{x}";
+                    pole.transform.position = new Vector3(x, 1.911082f, zPos);
+                    pole.transform.rotation = Quaternion.Euler(-90f, 90f, 0f);
+                    pole.transform.localScale = new Vector3(180f, 180f, 180f);
 
-                // Cột đứng (Cylinder)
-                GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                pole.name = "Pole";
-                pole.transform.SetParent(streetLight.transform);
-                pole.transform.position = new Vector3(x, 2f, zPos);
-                pole.transform.localScale = new Vector3(0.12f, 2f, 0.12f); // Cao 4m
-                pole.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
-                Object.DestroyImmediate(pole.GetComponent<CapsuleCollider>());
+                    var mr = pole.GetComponentInChildren<MeshRenderer>(true);
+                    if (mr != null) mr.sharedMaterial = meshyMat;
 
-                // Thanh ngang đỡ đèn (Cube)
-                GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                arm.name = "Arm";
-                arm.transform.SetParent(streetLight.transform);
-                arm.transform.position = new Vector3(x - 0.4f, 3.9f, zPos);
-                arm.transform.localScale = new Vector3(0.8f, 0.08f, 0.08f);
-                arm.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
-                Object.DestroyImmediate(arm.GetComponent<BoxCollider>());
+                    GameObject lightSource = new GameObject("LightSource");
+                    lightSource.transform.SetParent(pole.transform);
+                    lightSource.transform.position = new Vector3(x, 3.55f, zPos - 0.38f);
 
-                // Bóng đèn phát sáng (Sphere)
-                GameObject bulb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                bulb.name = "Bulb";
-                bulb.transform.SetParent(streetLight.transform);
-                bulb.transform.position = new Vector3(x - 0.8f, 3.8f, zPos);
-                bulb.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                bulb.GetComponent<MeshRenderer>().sharedMaterial = lightMat;
-                Object.DestroyImmediate(bulb.GetComponent<SphereCollider>());
+                    Light light = lightSource.AddComponent<Light>();
+                    light.type = LightType.Point;
+                    light.color = new Color(1f, 0.85f, 0.6f);
+                    light.intensity = 2f;
+                    light.range = 8f;
+                    light.shadows = LightShadows.Soft;
+                }
+                else
+                {
+                    GameObject streetLight = new GameObject($"StreetLight_{x}");
+                    streetLight.transform.SetParent(lightsGroup.transform);
 
-                // Nguồn sáng thực tế (Point Light)
-                GameObject lightSource = new GameObject("LightSource");
-                lightSource.transform.SetParent(streetLight.transform);
-                lightSource.transform.position = new Vector3(x - 0.8f, 3.6f, zPos);
-                
-                Light light = lightSource.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = new Color(1f, 0.85f, 0.6f); // Vàng ấm
-                light.intensity = 2f;
-                light.range = 8f;
-                light.shadows = LightShadows.Soft;
+                    // Cột đứng (Cylinder)
+                    GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    pole.name = "Pole";
+                    pole.transform.SetParent(streetLight.transform);
+                    pole.transform.position = new Vector3(x, 2f, zPos);
+                    pole.transform.localScale = new Vector3(0.12f, 2f, 0.12f); // Cao 4m
+                    pole.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
+                    Object.DestroyImmediate(pole.GetComponent<CapsuleCollider>());
+
+                    // Thanh ngang đỡ đèn (Cube)
+                    GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    arm.name = "Arm";
+                    arm.transform.SetParent(streetLight.transform);
+                    arm.transform.position = new Vector3(x - 0.4f, 3.9f, zPos);
+                    arm.transform.localScale = new Vector3(0.8f, 0.08f, 0.08f);
+                    arm.GetComponent<MeshRenderer>().sharedMaterial = poleMat;
+                    Object.DestroyImmediate(arm.GetComponent<BoxCollider>());
+
+                    // Bóng đèn phát sáng (Sphere)
+                    GameObject bulb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    bulb.name = "Bulb";
+                    bulb.transform.SetParent(streetLight.transform);
+                    bulb.transform.position = new Vector3(x - 0.8f, 3.8f, zPos);
+                    bulb.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                    bulb.GetComponent<MeshRenderer>().sharedMaterial = lightMat;
+                    Object.DestroyImmediate(bulb.GetComponent<SphereCollider>());
+
+                    // Nguồn sáng thực tế (Point Light)
+                    GameObject lightSource = new GameObject("LightSource");
+                    lightSource.transform.SetParent(streetLight.transform);
+                    lightSource.transform.position = new Vector3(x - 0.8f, 3.6f, zPos);
+                    
+                    Light light = lightSource.AddComponent<Light>();
+                    light.type = LightType.Point;
+                    light.color = new Color(1f, 0.85f, 0.6f); // Vàng ấm
+                    light.intensity = 2f;
+                    light.range = 8f;
+                    light.shadows = LightShadows.Soft;
+                }
             }
         }
 

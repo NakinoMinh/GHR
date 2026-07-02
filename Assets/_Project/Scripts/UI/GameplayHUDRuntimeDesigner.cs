@@ -10,6 +10,8 @@ namespace GanhHangRong.UI
 {
     public class GameplayHUDRuntimeDesigner : MonoBehaviour
     {
+        private const bool ShowCustomerRecipePanel = false;
+
         private CanvasGroup recipeCanvasGroup;
         private TextMeshProUGUI recipeTitleText;
         private RectTransform ingredientContainer;
@@ -51,7 +53,10 @@ namespace GanhHangRong.UI
             TuneCanvasForCrispText();
             HideLegacyTopRightWidgets();
             BuildTopRightHud();
-            BuildRecipePanel();
+            if (ShowCustomerRecipePanel)
+            {
+                BuildRecipePanel();
+            }
             InitializeValues();
             UpdateRecipeVisibility();
         }
@@ -228,6 +233,11 @@ namespace GanhHangRong.UI
 
         private void HandleCustomerOrderPlaced(int drinkId, string drinkName)
         {
+            if (!ShowCustomerRecipePanel)
+            {
+                return;
+            }
+
             activeDrinkId = drinkId;
             activeDrinkName = drinkName;
             hasActiveOrder = true;
@@ -245,6 +255,11 @@ namespace GanhHangRong.UI
 
         private void RefreshOrderFromScene()
         {
+            if (!ShowCustomerRecipePanel)
+            {
+                return;
+            }
+
             if (hasActiveOrder) return;
 
             NPCController[] npcs = FindObjectsByType<NPCController>(FindObjectsInactive.Exclude);
@@ -381,7 +396,7 @@ namespace GanhHangRong.UI
         {
             if (recipeCanvasGroup == null) return;
 
-            bool visible = isCartInteractionActive && hasActiveOrder;
+            bool visible = ShowCustomerRecipePanel && isCartInteractionActive && hasActiveOrder;
             recipeCanvasGroup.alpha = visible ? 1f : 0f;
             recipeCanvasGroup.interactable = false;
             recipeCanvasGroup.blocksRaycasts = false;

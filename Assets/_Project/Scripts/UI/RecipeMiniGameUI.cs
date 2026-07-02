@@ -6,11 +6,18 @@ namespace GanhHangRong.UI
 {
     public class RecipeMiniGameUI : MonoBehaviour
     {
+        private const bool ShowRecipePanel = false;
+
         private static RecipeMiniGameUI instance;
         public static RecipeMiniGameUI Instance
         {
             get
             {
+                if (!ShowRecipePanel)
+                {
+                    return null;
+                }
+
                 if (instance == null)
                 {
                     GameObject go = new GameObject("RecipeMiniGameUI");
@@ -30,6 +37,12 @@ namespace GanhHangRong.UI
 
         private void Awake()
         {
+            if (!ShowRecipePanel)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             if (instance != null && instance != this)
             {
                 Destroy(gameObject);
