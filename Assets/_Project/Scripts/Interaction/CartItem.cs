@@ -73,6 +73,7 @@ namespace GanhHangRong.Interaction
 
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
+        public static bool IsHoldingDirtyCup { get; private set; } = false;
         public static bool HasCupToWash => isHoldingCup || hasPreparedTea;
 
         private static int teaInCup = 0;
@@ -121,6 +122,7 @@ namespace GanhHangRong.Interaction
         public static void ResetCupState()
         {
             isHoldingCup = false;
+            IsHoldingDirtyCup = false;
             teaInCup = 0;
             coffeeInCup = 0;
             waterInCup = 0f;
@@ -136,6 +138,26 @@ namespace GanhHangRong.Interaction
             ResetCupState();
             hasPreparedTea = true;
             preparedDrinkId = orderId;
+        }
+
+        public static void PickUpDirtyCupFromTable(Player.PlayerController player)
+        {
+            if (isHoldingCup || hasPreparedTea)
+            {
+                return;
+            }
+
+            isHoldingCup = true;
+            IsHoldingDirtyCup = true;
+            teaInCup = 0;
+            coffeeInCup = 0;
+            waterInCup = 0f;
+            iceInCup = 0f;
+
+            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã dọn ly cũ trên bàn. Hãy mang đến bồn rửa ly để tái sử dụng!");
+            Debug.Log("[CartItem] Dọn ly trên bàn -> Cầm ly cũ đi rửa");
+
+            AttachEmptyCupToPlayer(player);
         }
 
         public static void ConsumeWater(float amount)
@@ -313,6 +335,12 @@ private void EnsureInteractionCollider()
         {
             if (isHoldingCup)
             {
+                if (IsHoldingDirtyCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này khách vừa uống xong còn dơ, hãy mang đến bồn rửa trước khi rót nước!");
+                    return;
+                }
+
                 if (waterInCup >= 0.2f)
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly nước đã có đủ nước sôi rồi!");
@@ -404,6 +432,12 @@ private void EnsureInteractionCollider()
                 return;
             }
 
+            if (IsHoldingDirtyCup)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này khách vừa uống xong còn dơ, hãy mang đến bồn rửa trước khi cho trà vào!");
+                return;
+            }
+
             if (coffeeInCup > 0)
             {
                 EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này đang pha cà phê rồi, không trộn thêm trà vào được.");
@@ -445,6 +479,11 @@ private void EnsureInteractionCollider()
 
             if (isHoldingCup)
             {
+                if (IsHoldingDirtyCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này khách vừa uống xong còn dơ, hãy mang đến bồn rửa trước khi cho đường vào!");
+                    return;
+                }
                 if (stats.SugarSupply < 10)
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Không đủ đường trong hũ (cần ít nhất 10g)!");
@@ -478,6 +517,12 @@ private void EnsureInteractionCollider()
 
             if (isHoldingCup)
             {
+                if (IsHoldingDirtyCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này khách vừa uống xong còn dơ, hãy mang đến bồn rửa trước khi cho cà phê vào!");
+                    return;
+                }
+
                 if (teaInCup > 0)
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này đang pha trà rồi, không trộn thêm cà phê vào được.");
@@ -518,6 +563,12 @@ private void EnsureInteractionCollider()
 
             if (isHoldingCup)
             {
+                if (IsHoldingDirtyCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly này khách vừa uống xong còn dơ, hãy mang đến bồn rửa trước khi cho đá vào!");
+                    return;
+                }
+
                 if (stats.IceLevel < 5f)
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Thùng đựng đá đã hết đá sạch! Hãy tiếp thêm đá.");
@@ -558,6 +609,7 @@ private void EnsureInteractionCollider()
             if (isHoldingCup && (teaReady || coffeeReady) && waterInCup >= 0.2f && iceInCup >= 5f)
             {
                 isHoldingCup = false;
+                IsHoldingDirtyCup = false;
                 hasPreparedTea = true;
                 preparedDrinkId = coffeeReady ? 1 : 0;
                 string drinkName = GetDrinkName(preparedDrinkId);
@@ -1339,6 +1391,11 @@ private void EnsureInteractionCollider()
 
             if (isHoldingCup)
             {
+                if (IsHoldingDirtyCup)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Bạn đang cầm ly cũ dơ! Hãy mang đến bồn rửa ly trước khi lấy ly mới.");
+                    return;
+                }
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Bạn đang cầm sẵn một chiếc ly. (Trà: {teaInCup}g, Nước: {Mathf.RoundToInt(waterInCup * 1000f)}ml, Đá: {iceInCup}%)");
                 return;
             }

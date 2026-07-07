@@ -341,6 +341,11 @@ namespace GanhHangRong.Interaction
 
                 if (CartItem.IsHoldingCup)
                 {
+                    if (CartItem.IsHoldingDirtyCup)
+                    {
+                        EventManager.TriggerDialogueLine("Hoàng Hôn", "Bạn đang cầm ly cũ dơ! Hãy mang đến bồn rửa ly để rửa tái sử dụng trước.");
+                        return;
+                    }
                     string brewBase = CartItem.CoffeeInCup > 0
                         ? $"Cà phê {CartItem.CoffeeInCup}g/30g"
                         : $"Trà {CartItem.TeaInCup}g/50g";

@@ -114,7 +114,7 @@ namespace GanhHangRong.NPC
 
             foreach (var seat in seatList)
             {
-                if (!seat.IsOccupied && !seat.IsPlayerOnly)
+                if (!seat.IsOccupied && !seat.IsPlayerOnly && seat.PlacedCupObj == null)
                 {
                     emptySeat = seat;
                     break;

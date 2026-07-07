@@ -161,7 +161,11 @@ namespace GanhHangRong.UI
             {
                 if (Interaction.CartItem.IsHoldingCup)
                 {
-                    if (Interaction.CartItem.HasRuinedDrink)
+                    if (Interaction.CartItem.IsHoldingDirtyCup)
+                    {
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly cũ dơ, hãy đem rửa tái sử dụng!)";
+                    }
+                    else if (Interaction.CartItem.HasRuinedDrink)
                     {
                         cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly trà hỏng, hãy đem rửa!)";
                     }
