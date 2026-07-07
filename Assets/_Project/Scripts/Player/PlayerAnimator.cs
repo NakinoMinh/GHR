@@ -41,8 +41,7 @@ namespace GanhHangRong.Player
         [SerializeField] private Vector3 leftHandOffset = new Vector3(0f, 8f, -6f);
 
         [Header("Chế Độ Cầm Ly")]
-        [Tooltip("true = Dùng procedural bone rotation (mặc định, luôn hoạt động). false = Dùng Animator HoldCupLayer (cần chạy GHR > Thiết lập Animator trước).")]
-        [SerializeField] private bool useProceduralHold = true;
+        [SerializeField] private bool useProceduralHold = false;
 
         private PlayerState currentState = PlayerState.Idle;
         private Vector3 originalPosition;
@@ -94,9 +93,10 @@ namespace GanhHangRong.Player
             // Tìm các bone tay phải để xoay cầm ly nước
             FindArmBones();
             
-            if (rightArmBone != null) rightArmBaseRot = rightArmBone.localRotation;
-            if (rightForeArmBone != null) rightForeArmBaseRot = rightForeArmBone.localRotation;
-            if (rightHandBone != null) rightHandBaseRot = rightHandBone.localRotation;
+            // Fix lỗi kẹt tay: không đọc localRotation hiện tại vì có thể bị cache góc gập 90 độ lúc Save Scene/Play Mode
+            if (rightArmBone != null) rightArmBaseRot = Quaternion.Euler(75f, 11f, 17f);
+            if (rightForeArmBone != null) rightForeArmBaseRot = Quaternion.identity; // Duỗi thẳng
+            if (rightHandBone != null) rightHandBaseRot = Quaternion.identity; // Bàn tay duỗi tự nhiên
         }
 
         private void Update()
@@ -128,7 +128,7 @@ namespace GanhHangRong.Player
                     animator.SetFloat("Speed", currentSpeed);
 
                 // Cập nhật trạng thái bưng ly vào Animator
-                bool isHolding = Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea;
+                bool isHolding = Interaction.CartItem.IsHoldingCup;
                 if (HasParameter("IsHoldingCup"))
                 {
                     animator.SetBool("IsHoldingCup", isHolding);
@@ -254,7 +254,7 @@ namespace GanhHangRong.Player
         {
             if (animator == null || rightArmBone == null || leftArmBone == null) return;
 
-            bool isHoldingCup = Interaction.CartItem.IsHoldingCup || Interaction.CartItem.HasPreparedTea;
+            bool isHoldingCup = Interaction.CartItem.IsHoldingCup;
 
             // Hạ tay xuống khi đứng nghỉ (tránh A-pose)
             if (currentState == PlayerState.Idle)
@@ -263,6 +263,10 @@ namespace GanhHangRong.Player
                 {
                     if (rightForeArmBone != null && leftForeArmBone != null)
                     {
+                        // Reset cẳng tay và bàn tay về tư thế thẳng đứng tự nhiên (giải quyết lỗi kẹt tay gập 90 độ)
+                        rightForeArmBone.localRotation = rightForeArmBaseRot;
+                        if (rightHandBone != null) rightHandBone.localRotation = rightHandBaseRot;
+
                         // Lấy hướng thực tế của xương cánh tay (từ bắp tay đến cùi chỏ)
                         Vector3 rArmDir = (rightForeArmBone.position - rightArmBone.position).normalized;
                         Vector3 lArmDir = (leftForeArmBone.position - leftArmBone.position).normalized;
@@ -295,28 +299,10 @@ namespace GanhHangRong.Player
                         rightForeArmBone.localRotation = rightForeArmBaseRot;
                         if (rightHandBone != null) rightHandBone.localRotation = rightHandBaseRot;
 
-                        // 1. Bắp tay: chĩa XUỐNG và HƠI RA TRƯỚC
-                        Vector3 rArmDir = (rightForeArmBone.position - rightArmBone.position).normalized;
-                        Vector3 rArmTarget = (-transform.up * 0.78f + transform.forward * 0.12f + transform.right * 0.08f).normalized;
-                        rightArmBone.rotation = Quaternion.FromToRotation(rArmDir, rArmTarget) * rightArmBone.rotation;
-
-                        // 2. Cẳng tay: gập góc ~90 độ ra trước mặt, tạo dáng bưng ly
-                        if (rightHandBone != null)
-                        {
-                            Vector3 rForeDir = (rightHandBone.position - rightForeArmBone.position).normalized;
-                            Vector3 rForeTarget = (transform.forward * 0.62f + transform.up * 0.12f - transform.right * 0.34f).normalized;
-                            rightForeArmBone.rotation = Quaternion.FromToRotation(rForeDir, rForeTarget) * rightForeArmBone.rotation;
-                        }
-                    }
-
-                    // Cổ tay phải: xoay lòng bàn tay hướng vào ngực (tránh bị trẹo tay)
-                    if (rightHandBone != null)
-                    {
-                        // Hướng các ngón tay ra trước
-                        Vector3 rFingers = (transform.forward * 0.78f - transform.right * 0.22f + transform.up * 0.04f).normalized;
-                        // Hướng trục Y của xương tay (chỉa vào ngực = -right) để ngón cái chỉa lên trời
-                        Vector3 rYAxis = -transform.right;
-                        rightHandBone.rotation = Quaternion.LookRotation(rFingers, rYAxis);
+                        // Sử dụng góc xoay chuẩn tối ưu cho Meshy AI rig để ôm ly tự nhiên trước ngực, lòng bàn tay hướng vào ly
+                        if (rightArmBone != null) rightArmBone.localEulerAngles = new Vector3(85.24f, 88.36f, 98.37f);
+                        if (rightForeArmBone != null) rightForeArmBone.localEulerAngles = new Vector3(6.48f, 12.85f, 87.18f);
+                        if (rightHandBone != null) rightHandBone.localEulerAngles = new Vector3(285.62f, 158.36f, 206.57f);
                     }
 
                     // ============================================================

@@ -18,6 +18,24 @@ namespace GanhHangRong.Interaction
         private GameObject placedCupObj;
         public GameObject PlacedCupObj { get => placedCupObj; set => placedCupObj = value; }
 
+        private NPC.NPCController currentNPC;
+        public NPC.NPCController CurrentNPC => currentNPC;
+
+        public NPC.NPCController GetOccupyingNPC()
+        {
+            if (currentNPC != null && currentNPC.TargetSeat == this) return currentNPC;
+            var npcs = FindObjectsByType<NPC.NPCController>(FindObjectsInactive.Exclude);
+            foreach (var npc in npcs)
+            {
+                if (npc.TargetSeat == this)
+                {
+                    currentNPC = npc;
+                    break;
+                }
+            }
+            return currentNPC;
+        }
+
         private const float TargetChairHeight = 0.43f;
         private const float TargetTableHeight = 0.70f;
         private const float FallbackSeatSurfaceHeight = 0.44f;
@@ -36,10 +54,23 @@ namespace GanhHangRong.Interaction
         {
             if (isOccupied)
             {
-                if (CartItem.HasPreparedTea)
+                var npc = GetOccupyingNPC();
+                if (npc != null && (npc.CurrentState == NPCState.SittingDown || npc.CurrentState == NPCState.Ordering))
                 {
                     canInteract = true;
-                    promptText = "Nhấn F để đặt ly trà đá xuống bàn";
+                    promptText = "Nhấn E để hỏi chuyện khách";
+                }
+                else if (npc != null && npc.CurrentState == NPCState.Waiting)
+                {
+                    canInteract = true;
+                    if (CartItem.HasPreparedTea)
+                    {
+                        promptText = "Nhấn F để phục vụ nước | Nhấn E để trò chuyện";
+                    }
+                    else
+                    {
+                        promptText = "Nhấn E để trò chuyện với khách";
+                    }
                 }
                 else
                 {
@@ -49,9 +80,25 @@ namespace GanhHangRong.Interaction
             }
             else
             {
-                // Ghế trống không cho phép người chơi tương tác nghỉ ngơi nữa
-                canInteract = false;
-                promptText = string.Empty;
+                if (placedCupObj != null)
+                {
+                    if (CartItem.IsHoldingCup || CartItem.HasPreparedTea)
+                    {
+                        canInteract = false;
+                        promptText = string.Empty;
+                    }
+                    else
+                    {
+                        canInteract = true;
+                        promptText = "Nhấn F để dọn ly dơ đi rửa";
+                    }
+                }
+                else
+                {
+                    // Ghế trống không cho phép người chơi tương tác nghỉ ngơi nữa
+                    canInteract = false;
+                    promptText = string.Empty;
+                }
             }
         }
 
@@ -71,20 +118,15 @@ namespace GanhHangRong.Interaction
         public void OccupySeat(NPC.NPCController npc)
         {
             isOccupied = true;
+            currentNPC = npc;
             canInteract = true;
         }
 
         public void FreeSeat()
         {
             isOccupied = false;
+            currentNPC = null;
             canInteract = false;
-            
-            // Dọn ly nước tĩnh trên bàn khi khách đứng dậy rời đi
-            if (placedCupObj != null)
-            {
-                Destroy(placedCupObj);
-                placedCupObj = null;
-            }
             promptText = string.Empty;
         }
 
@@ -96,6 +138,25 @@ namespace GanhHangRong.Interaction
             }
 
             return transform.position.y + FallbackSeatSurfaceHeight;
+        }
+
+        public float GetTableSurfaceY()
+        {
+            Vector3 fwdPos = transform.position + transform.forward * 0.5f;
+            var colliders = Physics.OverlapSphere(new Vector3(fwdPos.x, GetSeatSurfaceY(), fwdPos.z), 1.5f);
+            float maxColY = -999f;
+            foreach (var col in colliders)
+            {
+                if (col != null && col.name.Contains("Table") && col.bounds.max.y > maxColY)
+                {
+                    maxColY = col.bounds.max.y;
+                }
+            }
+            if (maxColY > -990f)
+            {
+                return maxColY;
+            }
+            return GetSeatSurfaceY() + 0.485f;
         }
 
         public float GetSeatBaseY()
@@ -172,25 +233,42 @@ namespace GanhHangRong.Interaction
 
         protected override void OnInteract(Player.PlayerController player)
         {
-            if (!isOccupied || !CartItem.HasPreparedTea) return;
-
-            // Tìm NPC đang ngồi trên chiếc ghế này
-            NPC.NPCController seatNPC = null;
-            var npcs = FindObjectsByType<NPC.NPCController>(FindObjectsInactive.Exclude);
-            foreach (var npc in npcs)
+            if (!isOccupied && placedCupObj != null)
             {
-                if (npc.TargetSeat == this)
+                if (CartItem.IsHoldingCup || CartItem.HasPreparedTea)
                 {
-                    seatNPC = npc;
-                    break;
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Tay đang cầm vật khác, hãy cất hoặc dùng hết trước khi dọn ly!");
+                    return;
                 }
+
+                Destroy(placedCupObj);
+                placedCupObj = null;
+                canInteract = false;
+                promptText = string.Empty;
+
+                CartItem.PickUpDirtyCupFromTable(player);
+                return;
             }
 
+            if (!isOccupied) return;
+
+            var seatNPC = GetOccupyingNPC();
             if (seatNPC == null) return;
+
+            if (seatNPC.CurrentState == NPCState.SittingDown || seatNPC.CurrentState == NPCState.Ordering)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Hãy trò chuyện hỏi món khách trước rồi mới phục vụ nước!");
+                return;
+            }
 
             if (seatNPC.CurrentState != NPCState.Waiting)
             {
-                EventManager.TriggerDialogueLine("Khách hàng", "Cảm ơn em, để lát nữa nhé.");
+                return;
+            }
+
+            if (!CartItem.HasPreparedTea)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có món nước trên tay! Hãy ra xe đẩy để lấy nước phục vụ khách.");
                 return;
             }
 
@@ -199,7 +277,7 @@ namespace GanhHangRong.Interaction
 
             // 2. Đặt ly trà đá tĩnh lên bàn ảo phía trước khách
             Vector3 tablePos = transform.position + transform.forward * 0.5f;
-            tablePos.y = GetSeatSurfaceY() + 0.3f;
+            tablePos.y = GetTableSurfaceY();
             placedCupObj = CartItem.CreateStaticTeaCupModel(tablePos);
 
             // 3. Bỏ ly trà trên tay Hoàng Hôn
@@ -214,6 +292,23 @@ namespace GanhHangRong.Interaction
             }
 
             EventManager.TriggerDialogueLine("Hoàng Hôn", "Trà đá của quý khách đây ạ. Chúc quý khách ngon miệng!");
+        }
+
+        protected override void OnInteractE(Player.PlayerController player)
+        {
+            if (!isOccupied) return;
+
+            var seatNPC = GetOccupyingNPC();
+            if (seatNPC == null) return;
+
+            if (seatNPC.CurrentState == NPCState.SittingDown || seatNPC.CurrentState == NPCState.Ordering)
+            {
+                seatNPC.StartOrderingDialogue(player);
+            }
+            else if (seatNPC.CurrentState == NPCState.Waiting)
+            {
+                EventManager.TriggerDialogueLine("Khách hàng", "Đang chờ nước nè, có nước chưa em?");
+            }
         }
     }
 }

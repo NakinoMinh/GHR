@@ -341,6 +341,11 @@ namespace GanhHangRong.Interaction
 
                 if (CartItem.IsHoldingCup)
                 {
+                    if (CartItem.IsHoldingDirtyCup)
+                    {
+                        EventManager.TriggerDialogueLine("Hoàng Hôn", "Bạn đang cầm ly dơ! Hãy mang đến bồn rửa ly để rửa tái sử dụng trước.");
+                        return;
+                    }
                     string brewBase = CartItem.CoffeeInCup > 0
                         ? $"Cà phê {CartItem.CoffeeInCup}g/30g"
                         : $"Trà {CartItem.TeaInCup}g/50g";
@@ -389,7 +394,7 @@ namespace GanhHangRong.Interaction
                 if (closestWaiting.TargetSeat != null)
                 {
                     Vector3 tablePos = closestWaiting.TargetSeat.transform.position + closestWaiting.TargetSeat.transform.forward * 0.5f;
-                    tablePos.y = closestWaiting.TargetSeat.GetSeatSurfaceY() + 0.3f;
+                    tablePos.y = closestWaiting.TargetSeat.GetTableSurfaceY();
                     GameObject placedOrder = CartItem.CreateStaticPreparedOrderModel(CartItem.PreparedDrinkId, tablePos);
                     closestWaiting.TargetSeat.PlacedCupObj = placedOrder;
                 }

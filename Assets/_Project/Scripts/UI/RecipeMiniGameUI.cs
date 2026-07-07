@@ -182,6 +182,16 @@ namespace GanhHangRong.UI
             }
         }
 
+        public void UndoStep()
+        {
+            if (!isActive) return;
+            if (currentStepIndex > 0)
+            {
+                currentStepIndex--;
+                UpdateStepsUI();
+            }
+        }
+
         private void UpdateStepsUI(bool isRuined = false)
         {
             string display = "";

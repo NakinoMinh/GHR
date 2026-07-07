@@ -24,7 +24,7 @@ namespace GanhHangRong.Editor
         public static void SetupPlayerAnimator()
         {
             string controllerPath = "Assets/_Project/Animations/Player/PlayerAnimController.controller";
-            string animFbxPath = "Assets/Animations/cammottay.fbx";
+            string animFbxPath = "Assets/Animations/holdLy.fbx";
             string cupFbxPath = "Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.fbx";
             string remappedClipPath = "Assets/_Project/Animations/Player/HoldCup_Remapped.anim";
 
@@ -187,15 +187,38 @@ namespace GanhHangRong.Editor
             // Xóa toàn bộ curves cũ
             newClip.ClearCurves();
 
-            // Copy và remap EditorCurveBindings
+            // Copy và remap EditorCurveBindings (chỉ lấy phần tay phải cầm ly: RightShoulder, RightArm, RightForeArm, RightHand và ngón tay)
             EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(source);
             foreach (var binding in bindings)
             {
+                if (!binding.path.Contains("RightShoulder") && !binding.path.Contains("RightArm") && !binding.path.Contains("RightForeArm") && !binding.path.Contains("RightHand"))
+                {
+                    continue;
+                }
+
                 AnimationCurve curve = AnimationUtility.GetEditorCurve(source, binding);
-                
-                // Remap path: xóa prefix "mixamorig:" khỏi mỗi segment
                 string remappedPath = RemapBonePath(binding.path);
                 
+                // Chỉnh lại góc xoay chuẩn trên Meshy AI rig cho 3 xương tay chính để lòng bàn tay hướng vào ly thay vì bị ngửa phẳng ra
+                if (binding.propertyName.StartsWith("m_LocalRotation"))
+                {
+                    Quaternion targetQ = Quaternion.identity;
+                    bool overrideRot = false;
+                    if (remappedPath.EndsWith("RightArm")) { targetQ = Quaternion.Euler(85.24f, 88.36f, 98.37f); overrideRot = true; }
+                    else if (remappedPath.EndsWith("RightForeArm")) { targetQ = Quaternion.Euler(6.48f, 12.85f, 87.18f); overrideRot = true; }
+                    else if (remappedPath.EndsWith("RightHand")) { targetQ = Quaternion.Euler(285.62f, 158.36f, 206.57f); overrideRot = true; }
+
+                    if (overrideRot)
+                    {
+                        float val = 0f;
+                        if (binding.propertyName == "m_LocalRotation.x") val = targetQ.x;
+                        else if (binding.propertyName == "m_LocalRotation.y") val = targetQ.y;
+                        else if (binding.propertyName == "m_LocalRotation.z") val = targetQ.z;
+                        else if (binding.propertyName == "m_LocalRotation.w") val = targetQ.w;
+                        curve = AnimationCurve.Constant(0f, source.length, val);
+                    }
+                }
+
                 EditorCurveBinding newBinding = new EditorCurveBinding
                 {
                     path = remappedPath,
@@ -210,8 +233,12 @@ namespace GanhHangRong.Editor
             EditorCurveBinding[] objectBindings = AnimationUtility.GetObjectReferenceCurveBindings(source);
             foreach (var binding in objectBindings)
             {
+                if (!binding.path.Contains("RightShoulder") && !binding.path.Contains("RightArm") && !binding.path.Contains("RightForeArm") && !binding.path.Contains("RightHand"))
+                {
+                    continue;
+                }
+
                 ObjectReferenceKeyframe[] keyframes = AnimationUtility.GetObjectReferenceCurve(source, binding);
-                
                 string remappedPath = RemapBonePath(binding.path);
                 
                 EditorCurveBinding newBinding = new EditorCurveBinding

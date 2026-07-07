@@ -27,13 +27,16 @@ namespace GanhHangRong.Interaction
             if (needsWash)
             {
                 canInteract = !isWashing;
-                if (CartItem.IsHoldingCup)
+                if (CartItem.IsHoldingCup || CartItem.HasPreparedTea)
                 {
-                    promptText = "Nhấn Z để rửa ly pha sai (+1 ly sạch)";
-                }
-                else if (CartItem.HasPreparedTea)
-                {
-                    promptText = "Nhấn Z để đổ bỏ ly pha sai (+1 ly sạch)";
+                    if (CartItem.IsHoldingDirtyCup)
+                    {
+                        promptText = "Nhấn Z để rửa ly dơ (+1 ly sạch)";
+                    }
+                    else
+                    {
+                        promptText = "Nhấn Z để rửa ly dơ (+1 ly sạch)";
+                    }
                 }
             }
             else
@@ -45,7 +48,14 @@ namespace GanhHangRong.Interaction
 
         protected override void OnInteract(Player.PlayerController player)
         {
-            EventManager.TriggerDialogueLine("Hoàng Hôn", "Mang ly tới bồn rửa rồi nhấn Z để rửa ly.");
+            if (CartItem.IsHoldingDirtyCup)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Mang ly dơ tới bồn rửa rồi nhấn Z để rửa sạch tái sử dụng.");
+            }
+            else
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Mang ly dơ tới bồn rửa rồi nhấn Z để rửa sạch.");
+            }
         }
 
         protected override void OnInteractZ(Player.PlayerController player)
@@ -57,7 +67,7 @@ namespace GanhHangRong.Interaction
 
             if (!CartItem.HasCupToWash)
             {
-                EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có ly nào cần rửa.");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có ly dơ nào cần rửa.");
                 return;
             }
 
@@ -68,6 +78,7 @@ namespace GanhHangRong.Interaction
         {
             isWashing = true;
             canInteract = false;
+            bool wasDirty = CartItem.IsHoldingDirtyCup;
             EventManager.TriggerInteractionPromptShow("Đang rửa ly...");
 
             yield return new WaitForSeconds(washDuration);
@@ -83,7 +94,14 @@ namespace GanhHangRong.Interaction
 
             isWashing = false;
             canInteract = CartItem.HasCupToWash;
-            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã rửa sạch ly và đặt lại lên mặt bàn xe đẩy.");
+            if (wasDirty)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã rửa sạch ly dơ và đặt lại lên mặt bàn xe đẩy để tái sử dụng.");
+            }
+            else
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã rửa sạch ly dơ và đặt lại lên mặt bàn xe đẩy.");
+            }
         }
     }
 }
