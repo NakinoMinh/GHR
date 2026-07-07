@@ -48330,7 +48330,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1001 &340380085
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -52873,7 +52873,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &367330557
 GameObject:
   m_ObjectHideFlags: 0
@@ -57067,7 +57067,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &405117578
 GameObject:
   m_ObjectHideFlags: 0
@@ -120757,7 +120757,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &947724172
 GameObject:
   m_ObjectHideFlags: 0
@@ -123211,7 +123211,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &966961857
 GameObject:
   m_ObjectHideFlags: 0
@@ -132008,6 +132008,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 535948344}
     m_Modifications:
+    - target: {fileID: -7060781831547999486, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7020795
+      objectReference: {fileID: 0}
+    - target: {fileID: -7060781831547999486, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.7055266
+      objectReference: {fileID: 0}
+    - target: {fileID: -7060781831547999486, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.032323364
+      objectReference: {fileID: 0}
+    - target: {fileID: -7060781831547999486, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.09094999
+      objectReference: {fileID: 0}
     - target: {fileID: -4748361991329772099, guid: aca226cc473c7434084517e04aee3420, type: 3}
       propertyPath: m_Controller
       value: 
@@ -132051,6 +132067,38 @@ PrefabInstance:
     - target: {fileID: -3910990755373119420, guid: aca226cc473c7434084517e04aee3420, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3408562800971826576, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7229533
+      objectReference: {fileID: 0}
+    - target: {fileID: -3408562800971826576, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.11771154
+      objectReference: {fileID: 0}
+    - target: {fileID: -3408562800971826576, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.042196196
+      objectReference: {fileID: 0}
+    - target: {fileID: -3408562800971826576, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.6794866
+      objectReference: {fileID: 0}
+    - target: {fileID: 3620078299735996277, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.035728257
+      objectReference: {fileID: 0}
+    - target: {fileID: 3620078299735996277, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.035728265
+      objectReference: {fileID: 0}
+    - target: {fileID: 3620078299735996277, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7062034
+      objectReference: {fileID: 0}
+    - target: {fileID: 3620078299735996277, guid: aca226cc473c7434084517e04aee3420, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.7062039
       objectReference: {fileID: 0}
     - target: {fileID: 8771091787928289351, guid: aca226cc473c7434084517e04aee3420, type: 3}
       propertyPath: m_Name
@@ -134712,7 +134760,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1001 &1071983945
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -146873,7 +146921,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1001 &1190595166
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -155069,7 +155117,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &1283538642
 GameObject:
   m_ObjectHideFlags: 0
@@ -169813,7 +169861,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1001 &1378509198
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -214955,7 +215003,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &1761099377
 GameObject:
   m_ObjectHideFlags: 0
@@ -222752,7 +222800,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &1837182373
 GameObject:
   m_ObjectHideFlags: 0
@@ -231535,7 +231583,7 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.9, b: 0.5, a: 1}
   teaCupHeldPrefab: {fileID: 919132149155446097, guid: dc407ebe535bed54f95d2369a0a99c5d, type: 3}
   heldLocalPosition: {x: 0.015, y: 0.045, z: 0.015}
-  heldLocalRotation: {x: 84, y: -8, z: 12}
+  heldLocalRotation: {x: 0, y: 0, z: 90}
 --- !u!1 &1899170489
 GameObject:
   m_ObjectHideFlags: 0

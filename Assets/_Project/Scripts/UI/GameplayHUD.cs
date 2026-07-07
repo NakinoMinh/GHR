@@ -163,18 +163,22 @@ namespace GanhHangRong.UI
                 {
                     if (Interaction.CartItem.IsHoldingDirtyCup)
                     {
-                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly cũ dơ, hãy đem rửa tái sử dụng!)";
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly dơ, hãy đem rửa tái sử dụng!)";
                     }
                     else if (Interaction.CartItem.HasRuinedDrink)
                     {
-                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly trà hỏng, hãy đem rửa!)";
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly dơ - pha hỏng, hãy đem rửa!)";
+                    }
+                    else if (Interaction.CartItem.IsCupClean)
+                    {
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang cầm ly sạch)";
                     }
                     else
                     {
                         string brewBase = Interaction.CartItem.CoffeeInCup > 0
                             ? $"Cà phê {Interaction.CartItem.CoffeeInCup}g"
                             : $"Trà {Interaction.CartItem.TeaInCup}g";
-                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Đang pha: {brewBase}, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
+                        cupCountText.text = $"LY: {playerStats.CupSupply}\n(Ly dơ đang pha: {brewBase}, Nước {Mathf.RoundToInt(Interaction.CartItem.WaterInCup * 1000f)}ml, Đá {Interaction.CartItem.IceInCup}%)";
                     }
                 }
                 else if (Interaction.CartItem.HasPreparedTea)

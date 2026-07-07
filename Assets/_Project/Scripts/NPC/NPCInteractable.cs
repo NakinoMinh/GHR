@@ -26,15 +26,14 @@ namespace GanhHangRong.NPC
             }
             else if (controller.CurrentState == Core.NPCState.Waiting)
             {
+                canInteract = true;
                 if (Interaction.CartItem.HasPreparedTea)
                 {
-                    canInteract = true;
-                    promptText = "Nhấn F để đặt ly trà đá xuống bàn";
+                    promptText = "Nhấn F để phục vụ nước | Nhấn E để trò chuyện";
                 }
                 else
                 {
-                    canInteract = false;
-                    promptText = string.Empty;
+                    promptText = "Nhấn E để trò chuyện với khách";
                 }
             }
             else
@@ -57,6 +56,11 @@ namespace GanhHangRong.NPC
             }
             else if (controller != null && controller.CurrentState == Core.NPCState.Waiting)
             {
+                if (!Interaction.CartItem.HasPreparedTea)
+                {
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có món nước trên tay! Hãy ra xe đẩy để lấy nước phục vụ khách.");
+                    return;
+                }
                 if (controller.TargetSeat != null)
                 {
                     controller.TargetSeat.Interact(player);

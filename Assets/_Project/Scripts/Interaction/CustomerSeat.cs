@@ -62,15 +62,14 @@ namespace GanhHangRong.Interaction
                 }
                 else if (npc != null && npc.CurrentState == NPCState.Waiting)
                 {
+                    canInteract = true;
                     if (CartItem.HasPreparedTea)
                     {
-                        canInteract = true;
-                        promptText = "Nhấn F để đặt ly trà đá xuống bàn";
+                        promptText = "Nhấn F để phục vụ nước | Nhấn E để trò chuyện";
                     }
                     else
                     {
-                        canInteract = false;
-                        promptText = string.Empty;
+                        promptText = "Nhấn E để trò chuyện với khách";
                     }
                 }
                 else
@@ -91,7 +90,7 @@ namespace GanhHangRong.Interaction
                     else
                     {
                         canInteract = true;
-                        promptText = "Nhấn F để dọn ly cũ đi rửa";
+                        promptText = "Nhấn F để dọn ly dơ đi rửa";
                     }
                 }
                 else
@@ -139,6 +138,25 @@ namespace GanhHangRong.Interaction
             }
 
             return transform.position.y + FallbackSeatSurfaceHeight;
+        }
+
+        public float GetTableSurfaceY()
+        {
+            Vector3 fwdPos = transform.position + transform.forward * 0.5f;
+            var colliders = Physics.OverlapSphere(new Vector3(fwdPos.x, GetSeatSurfaceY(), fwdPos.z), 1.5f);
+            float maxColY = -999f;
+            foreach (var col in colliders)
+            {
+                if (col != null && col.name.Contains("Table") && col.bounds.max.y > maxColY)
+                {
+                    maxColY = col.bounds.max.y;
+                }
+            }
+            if (maxColY > -990f)
+            {
+                return maxColY;
+            }
+            return GetSeatSurfaceY() + 0.485f;
         }
 
         public float GetSeatBaseY()
@@ -243,8 +261,14 @@ namespace GanhHangRong.Interaction
                 return;
             }
 
-            if (seatNPC.CurrentState != NPCState.Waiting || !CartItem.HasPreparedTea)
+            if (seatNPC.CurrentState != NPCState.Waiting)
             {
+                return;
+            }
+
+            if (!CartItem.HasPreparedTea)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có món nước trên tay! Hãy ra xe đẩy để lấy nước phục vụ khách.");
                 return;
             }
 
@@ -253,7 +277,7 @@ namespace GanhHangRong.Interaction
 
             // 2. Đặt ly trà đá tĩnh lên bàn ảo phía trước khách
             Vector3 tablePos = transform.position + transform.forward * 0.5f;
-            tablePos.y = GetSeatSurfaceY() + 0.3f;
+            tablePos.y = GetTableSurfaceY();
             placedCupObj = CartItem.CreateStaticTeaCupModel(tablePos);
 
             // 3. Bỏ ly trà trên tay Hoàng Hôn

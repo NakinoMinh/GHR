@@ -34,6 +34,7 @@ namespace GanhHangRong.Player
         private bool isPushingCart = false;
         private bool isRunning = false;
         private Interaction.Interactable nearestInteractable;
+        private float lastDialogueEndTime = -10f;
 
         public PlayerState CurrentState => currentState;
         public bool FacingRight => transform.forward.x >= 0;
@@ -171,9 +172,15 @@ namespace GanhHangRong.Player
             CheckInteraction();
             if (currentState != PlayerState.Interacting)
             {
-                // Nhấn F hoặc Click Chuột Trái để tương tác phụ/hành động
-                bool interactPressed = (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) ||
-                                       (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
+                // Chờ 0.3s sau khi tắt hội thoại mới nhận input tương tác, tránh click chuột/phím từ hội thoại bị cấn
+                if (Time.time - lastDialogueEndTime < 0.3f)
+                {
+                    UpdatePlayerState();
+                    return;
+                }
+
+                // Nhấn F để tương tác phụ/hành động (bỏ click chuột trái tránh vô tình phục vụ khi click chuột)
+                bool interactPressed = (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame);
 
                 if (interactPressed)
                 {
@@ -404,6 +411,7 @@ namespace GanhHangRong.Player
         {
             if (currentState == PlayerState.Interacting) return;
             EnableMovement();
+            lastDialogueEndTime = Time.time;
         }
 
         public void UpdateCursorState()

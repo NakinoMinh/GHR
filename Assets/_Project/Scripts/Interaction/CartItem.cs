@@ -39,7 +39,7 @@ namespace GanhHangRong.Interaction
         [Tooltip("Vị trí của ly khi cầm trên tay (Local Position)")]
         [SerializeField] private Vector3 heldLocalPosition = new Vector3(0.015f, 0.045f, 0.015f);
         [Tooltip("Góc xoay của ly khi cầm trên tay (Local Rotation)")]
-        [SerializeField] private Vector3 heldLocalRotation = new Vector3(84f, -8f, 12f);
+        [SerializeField] private Vector3 heldLocalRotation = new Vector3(0f, 0f, 90f);
 
         // State
         private bool isHighlighted = false;
@@ -74,7 +74,9 @@ namespace GanhHangRong.Interaction
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
         public static bool IsHoldingDirtyCup { get; private set; } = false;
-        public static bool HasCupToWash => isHoldingCup || hasPreparedTea;
+        public static bool IsCupClean => isHoldingCup && !IsHoldingDirtyCup && teaInCup == 0 && coffeeInCup == 0 && waterInCup <= 0.001f && iceInCup <= 0.001f && !hasPreparedTea && !HasRuinedDrink;
+        public static bool IsCupDirty => (isHoldingCup && !IsCupClean) || hasPreparedTea;
+        public static bool HasCupToWash => IsCupDirty;
 
         private static int teaInCup = 0;
         public static int TeaInCup => teaInCup;
@@ -154,8 +156,8 @@ namespace GanhHangRong.Interaction
             waterInCup = 0f;
             iceInCup = 0f;
 
-            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã dọn ly cũ trên bàn. Hãy mang đến bồn rửa ly để tái sử dụng!");
-            Debug.Log("[CartItem] Dọn ly trên bàn -> Cầm ly cũ đi rửa");
+            EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã dọn ly dơ trên bàn. Hãy mang đến bồn rửa ly để rửa sạch tái sử dụng!");
+            Debug.Log("[CartItem] Dọn ly trên bàn -> Cầm ly dơ đi rửa");
 
             AttachEmptyCupToPlayer(player);
         }
@@ -175,7 +177,7 @@ namespace GanhHangRong.Interaction
         }
 
         public CartItemType ItemType => itemType;
-        public string ItemName => itemName;
+        public string ItemName => itemType == CartItemType.WaterCup ? "Ly sạch" : itemName;
         public string ItemDescription => itemDescription;
         public bool IsHighlighted => isHighlighted;
 
@@ -663,7 +665,7 @@ private void EnsureInteractionCollider()
             if (attachPoint != null)
             {
                 Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
-                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(0f, 0f, 90f);
                 AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
@@ -742,7 +744,7 @@ private void EnsureInteractionCollider()
             if (attachPoint != null)
             {
                 Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
-                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(84f, -8f, 12f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(0f, 0f, 90f);
                 AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
@@ -760,6 +762,10 @@ private void EnsureInteractionCollider()
 
         private static void AttachCupToHand(GameObject cupGO, Transform hand, Vector3 targetWorldScale, Vector3 localPosition, Vector3 localRotation)
         {
+            if (Mathf.Abs(localRotation.x - 84f) < 10f || Mathf.Abs(localRotation.z - 12f) < 10f)
+            {
+                localRotation = new Vector3(0f, 0f, 90f);
+            }
             cupGO.transform.SetParent(hand, false);
 
             Vector3 parentScale = hand.lossyScale;
@@ -791,35 +797,72 @@ private void EnsureInteractionCollider()
             return ChapterOrderCatalog.GetOrderName(drinkId);
         }
 
+        private static GameObject cachedTeaCupPrefab;
+
         public static GameObject CreateStaticTeaCupModel(Vector3 worldPosition)
         {
-            if (activeInstance != null && activeInstance.teaCupHeldPrefab == null)
+            CartItem[] items = Object.FindObjectsByType<CartItem>(FindObjectsSortMode.None);
+            CartItem cupTemplate = null;
+            foreach (var item in items)
             {
-                activeInstance.teaCupHeldPrefab = Resources.Load<GameObject>("lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture");
-#if UNITY_EDITOR
-                if (activeInstance.teaCupHeldPrefab == null)
+                if (item != null && item.itemType == CartItemType.WaterCup)
                 {
-                    activeInstance.teaCupHeldPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.fbx");
+                    cupTemplate = item;
+                    break;
                 }
-#endif
             }
 
             GameObject cupGO;
-            if (activeInstance != null && activeInstance.teaCupHeldPrefab != null)
+            if (cupTemplate != null)
             {
-                cupGO = Instantiate(activeInstance.teaCupHeldPrefab);
+                cupGO = Instantiate(cupTemplate.gameObject);
+                CartItem ci = cupGO.GetComponent<CartItem>();
+                if (ci != null) Destroy(ci);
+                foreach (var col in cupGO.GetComponentsInChildren<Collider>()) Destroy(col);
+                cupGO.transform.position = worldPosition;
+                cupGO.transform.rotation = Quaternion.identity;
+                cupGO.transform.localScale = cupTemplate.transform.lossyScale;
             }
             else
             {
-                cupGO = CreateFallbackTeaCupModel();
+                GameObject prefab = null;
+                if (activeInstance != null) prefab = activeInstance.teaCupHeldPrefab;
+                if (prefab == null) prefab = cachedTeaCupPrefab;
+                if (prefab == null)
+                {
+                    prefab = Resources.Load<GameObject>("lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture");
+#if UNITY_EDITOR
+                    if (prefab == null)
+                    {
+                        prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.fbx");
+                    }
+#endif
+                    cachedTeaCupPrefab = prefab;
+                    if (activeInstance != null && activeInstance.teaCupHeldPrefab == null)
+                    {
+                        activeInstance.teaCupHeldPrefab = prefab;
+                    }
+                }
+
+                if (prefab != null)
+                {
+                    cupGO = Instantiate(prefab);
+                    cupGO.transform.position = worldPosition;
+                    cupGO.transform.rotation = Quaternion.identity;
+                    cupGO.transform.localScale = Vector3.one * 7.34f;
+                }
+                else
+                {
+                    cupGO = CreateFallbackTeaCupModel();
+                    cupGO.transform.position = worldPosition;
+                    cupGO.transform.rotation = Quaternion.identity;
+                    cupGO.transform.localScale = Vector3.one * 0.12f;
+                    ApplyHeldCupMaterials(cupGO, true);
+                }
             }
 
-            cupGO.transform.position = worldPosition;
-            cupGO.transform.rotation = Quaternion.identity;
-            cupGO.transform.localScale = Vector3.one * 0.12f;
             cupGO.name = "PlacedTeaCup";
-            ApplyHeldCupMaterials(cupGO, true);
-
+            AlignMeshBottomToPosition(cupGO, worldPosition);
             return cupGO;
         }
 
@@ -835,7 +878,28 @@ private void EnsureInteractionCollider()
             food.transform.rotation = Quaternion.identity;
             food.transform.localScale = Vector3.one * 0.42f;
             food.name = "Placed_" + ChapterOrderCatalog.GetOrderName(orderId);
+            AlignMeshBottomToPosition(food, worldPosition);
             return food;
+        }
+
+        public static void AlignMeshBottomToPosition(GameObject go, Vector3 worldPosition)
+        {
+            if (go == null) return;
+            go.transform.position = worldPosition;
+            var rends = go.GetComponentsInChildren<Renderer>(true);
+            if (rends.Length > 0)
+            {
+                float minBoundsY = float.MaxValue;
+                foreach (var r in rends)
+                {
+                    if (r != null && r.bounds.min.y < minBoundsY) minBoundsY = r.bounds.min.y;
+                }
+                if (minBoundsY < float.MaxValue)
+                {
+                    float diff = worldPosition.y - minBoundsY;
+                    go.transform.position += new Vector3(0f, diff, 0f);
+                }
+            }
         }
 
         public static GameObject ReturnCleanCupToCart()
@@ -852,9 +916,8 @@ private void EnsureInteractionCollider()
                 : (cartTransform != null ? cartTransform.position + Vector3.up * 0.85f : Vector3.up);
 
             Vector3 worldPosition = basePos
-                + right * (0.12f * (slot % 3))
-                + forward * (0.10f * (slot / 3))
-                + Vector3.up * 0.03f;
+                + right * (0.12f * ((slot + 2) % 3))
+                + forward * (0.11f * ((slot + 2) / 3));
 
             string cupName = $"ReturnedCleanCup_{slot + 1}";
             GameObject previousCup = GameObject.Find(cupName);
@@ -863,12 +926,53 @@ private void EnsureInteractionCollider()
                 Destroy(previousCup);
             }
 
-            GameObject cupGO = CreateFallbackEmptyCupModel();
-            cupGO.name = cupName;
-            ApplyHeldCupMaterials(cupGO, false);
-            cupGO.transform.position = worldPosition;
-            cupGO.transform.rotation = anchor != null ? anchor.rotation : Quaternion.identity;
-            cupGO.transform.localScale = Vector3.one * 0.12f;
+            GameObject cupGO;
+            if (anchor != null)
+            {
+                cupGO = Instantiate(anchor.gameObject);
+                cupGO.name = cupName;
+                CartItem ci = cupGO.GetComponent<CartItem>();
+                if (ci != null) Destroy(ci);
+                foreach (var col in cupGO.GetComponentsInChildren<Collider>()) Destroy(col);
+                cupGO.transform.position = new Vector3(worldPosition.x, anchor.position.y, worldPosition.z);
+                cupGO.transform.rotation = anchor.rotation;
+                cupGO.transform.localScale = anchor.lossyScale;
+            }
+            else
+            {
+                GameObject prefab = null;
+                if (activeInstance != null) prefab = activeInstance.teaCupHeldPrefab;
+                if (prefab == null) prefab = cachedTeaCupPrefab;
+                if (prefab == null)
+                {
+                    prefab = Resources.Load<GameObject>("lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture");
+#if UNITY_EDITOR
+                    if (prefab == null)
+                    {
+                        prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Resources/lytrada/Meshy_AI_Cold_beer_in_a_glass__0604062641_texture.fbx");
+                    }
+#endif
+                    cachedTeaCupPrefab = prefab;
+                }
+
+                if (prefab != null)
+                {
+                    cupGO = Instantiate(prefab);
+                    cupGO.name = cupName;
+                    cupGO.transform.position = worldPosition;
+                    cupGO.transform.rotation = Quaternion.identity;
+                    cupGO.transform.localScale = Vector3.one * 7.34f;
+                }
+                else
+                {
+                    cupGO = CreateFallbackEmptyCupModel();
+                    cupGO.name = cupName;
+                    ApplyHeldCupMaterials(cupGO, false);
+                    cupGO.transform.position = worldPosition;
+                    cupGO.transform.rotation = Quaternion.identity;
+                    cupGO.transform.localScale = Vector3.one * 0.12f;
+                }
+            }
 
             if (cartTransform != null)
             {
@@ -1393,10 +1497,23 @@ private void EnsureInteractionCollider()
             {
                 if (IsHoldingDirtyCup)
                 {
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Bạn đang cầm ly cũ dơ! Hãy mang đến bồn rửa ly trước khi lấy ly mới.");
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Bạn đang cầm ly dơ! Hãy mang đến bồn rửa ly trước khi lấy ly mới.");
                     return;
                 }
-                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Bạn đang cầm sẵn một chiếc ly. (Trà: {teaInCup}g, Nước: {Mathf.RoundToInt(waterInCup * 1000f)}ml, Đá: {iceInCup}%)");
+                if (IsCupClean)
+                {
+                    ResetCupState();
+                    stats.AddSupplies(0, 0, 1);
+                    ShowResourceDelta($"+1 cốc (còn {stats.CupSupply})");
+                    EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã đặt ly trống trở lại xe đẩy. (+1 cốc, còn {stats.CupSupply})");
+                    Debug.Log("[CartItem] Trả ly trống chưa thêm nguyên liệu về chỗ cũ trên xe đẩy");
+                    if (UI.RecipeMiniGameUI.Instance != null)
+                    {
+                        UI.RecipeMiniGameUI.Instance.UndoStep();
+                    }
+                    return;
+                }
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Ly đã thêm nguyên liệu không thể đặt lại vào chỗ cũ! Hãy mang tới bồn rửa ly để rửa mới có thể bỏ vào chỗ cũ.");
                 return;
             }
 
