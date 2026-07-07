@@ -8,25 +8,28 @@ namespace GanhHangRong.Editor
     [InitializeOnLoad]
     public class SetupSittingAnimation
     {
+        private const string ControllerPath = "Assets/_Project/Animations/Player/PlayerAnimController.controller";
+        private const int MaxSetupAttempts = 5;
+        private static int setupAttempts;
+
         static SetupSittingAnimation()
         {
             // Tự động chạy khi script được compile xong trong Unity
             // Dùng EditorApplication.delayCall để chạy an toàn sau khi database load xong
-            EditorApplication.delayCall += SetupSitting;
+            EditorApplication.delayCall += SetupSittingDelayed;
         }
 
         [MenuItem("Gánh Hàng Rong/Cấu hình animation Ngồi (Sitting)", false, 101)]
         public static void SetupSitting()
         {
-            string controllerPath = "Assets/_Project/Animations/Player/PlayerAnimController.controller";
             string fbxPath = "Assets/Animations/Mixamo/Sitting Idle.fbx";
             string retargetedClipPath = "Assets/_Project/Animations/Player/Sitting_Idle_Retargeted.anim";
 
             // 1. Load Animator Controller
-            AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+            AnimatorController controller = LoadPlayerAnimatorController();
             if (controller == null)
             {
-                Debug.LogError($"[SetupSittingAnimation] Không tìm thấy Animator Controller tại: {controllerPath}");
+                Debug.LogError($"[SetupSittingAnimation] Không tìm thấy Animator Controller tại: {ControllerPath}");
                 return;
             }
 
@@ -232,6 +235,50 @@ namespace GanhHangRong.Editor
 
             // Thêm thư mục gốc xương của GLB model (Armature)
             return "Armature/" + string.Join("/", segments);
+        }
+
+        private static void SetupSittingDelayed()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                QueueRetry();
+                return;
+            }
+
+            setupAttempts = 0;
+            SetupSitting();
+        }
+
+        private static void QueueRetry()
+        {
+            setupAttempts++;
+            if (setupAttempts > MaxSetupAttempts)
+            {
+                Debug.LogError($"[SetupSittingAnimation] AssetDatabase chưa sẵn sàng sau {MaxSetupAttempts} lần thử. Hãy chạy lại menu Gánh Hàng Rong/Cấu hình animation Ngồi (Sitting).");
+                setupAttempts = 0;
+                return;
+            }
+
+            EditorApplication.delayCall += SetupSittingDelayed;
+        }
+
+        private static AnimatorController LoadPlayerAnimatorController()
+        {
+            AssetDatabase.ImportAsset(ControllerPath, ImportAssetOptions.ForceSynchronousImport);
+
+            AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
+            if (controller != null)
+                return controller;
+
+            string[] guids = AssetDatabase.FindAssets("PlayerAnimController t:AnimatorController");
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid).Replace('\\', '/');
+                if (path == ControllerPath)
+                    return AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            }
+
+            return null;
         }
     }
 }

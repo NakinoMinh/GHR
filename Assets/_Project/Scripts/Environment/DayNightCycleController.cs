@@ -158,16 +158,17 @@ namespace GanhHangRong.Environment
                 Material material = Application.isPlaying ? renderer.material : renderer.sharedMaterial;
                 if (material != null)
                 {
-                    material.color = color;
+                    Color visualColor = visual == sunVisual ? GetSunVisualColor(color) : color;
+                    material.color = visualColor;
                     if (material.HasProperty("_BaseColor"))
                     {
-                        material.SetColor("_BaseColor", color);
+                        material.SetColor("_BaseColor", visualColor);
                     }
 
                     if (material.HasProperty("_EmissionColor"))
                     {
                         material.EnableKeyword("_EMISSION");
-                        material.SetColor("_EmissionColor", color * Mathf.Max(0.6f, intensity * 1.4f));
+                        material.SetColor("_EmissionColor", visualColor * Mathf.Max(1.2f, intensity * 2.4f));
                     }
                 }
             }
@@ -493,6 +494,11 @@ namespace GanhHangRong.Environment
             return material;
         }
 
+        private static Color GetSunVisualColor(Color lightingColor)
+        {
+            return Color.Lerp(lightingColor, new Color(1f, 0.82f, 0.28f, 1f), 0.65f);
+        }
+
         private static AnimationCurve CreateSunCurve()
         {
             return new AnimationCurve(
@@ -534,9 +540,9 @@ namespace GanhHangRong.Environment
             gradient.SetKeys(
                 new[]
                 {
-                    new GradientColorKey(new Color(1f, 0.58f, 0.34f), 0.23f),
-                    new GradientColorKey(new Color(1f, 0.93f, 0.78f), 0.5f),
-                    new GradientColorKey(new Color(1f, 0.52f, 0.25f), 0.72f)
+                    new GradientColorKey(new Color(1f, 0.66f, 0.32f), 0.23f),
+                    new GradientColorKey(new Color(1f, 0.95f, 0.72f), 0.5f),
+                    new GradientColorKey(new Color(1f, 0.72f, 0.28f), 0.72f)
                 },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
             return gradient;
