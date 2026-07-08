@@ -1,6 +1,6 @@
-using UnityEngine;
-using GanhHangRong.Interaction;
 using GanhHangRong.Core;
+using GanhHangRong.Interaction;
+using UnityEngine;
 
 namespace GanhHangRong.NPC
 {

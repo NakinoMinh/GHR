@@ -122,6 +122,10 @@ namespace GanhHangRong.UI
             }
 
             currentShop = shopData;
+            if (currentShop != null && (currentShop.name.Contains("tap_hoa") || currentShop.DisplayName.Contains("Tạp Hóa")))
+            {
+                Systems.ShopRuntimeSetup.EnsureTapHoaItems(currentShop);
+            }
             isOpen = true;
             SetPanelVisible(true);
             SetMessage(string.Empty);
@@ -221,7 +225,7 @@ namespace GanhHangRong.UI
             int totalPrice = unitPrice * safeQuantity;
             if (!playerInventory.SpendMoney(totalPrice))
             {
-                SetMessage("Không đủ tiền.");
+                SetMessage("Số tiền hàng lớn hơn tiền hiện có, không thể mua!");
                 return false;
             }
 
@@ -286,6 +290,24 @@ namespace GanhHangRong.UI
                 Debug.LogWarning("ShopUIController thiếu ItemListContent hoặc ItemUIPrefab.", this);
                 SetMessage("Thiếu cấu hình danh sách hàng.");
                 return;
+            }
+
+            UnityEngine.UI.ContentSizeFitter csf = itemListContent.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+            if (csf != null) csf.horizontalFit = UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained;
+
+            RectTransform contentRt = itemListContent.GetComponent<RectTransform>();
+            if (contentRt != null)
+            {
+                contentRt.anchorMin = new Vector2(0, 1);
+                contentRt.anchorMax = new Vector2(1, 1);
+                contentRt.sizeDelta = new Vector2(0, contentRt.sizeDelta.y);
+            }
+
+            UnityEngine.UI.VerticalLayoutGroup vlg = itemListContent.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            if (vlg != null)
+            {
+                vlg.childControlWidth = true;
+                vlg.childForceExpandWidth = true;
             }
 
             foreach (ShopStockItem stockItem in currentShop.itemsForSale)

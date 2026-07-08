@@ -62,6 +62,7 @@ namespace GanhHangRong.Interaction
 
         private static float bottleWater = 30f;
         public static float BottleWater => bottleWater;
+        public static void AddBottleWater(float amount) { bottleWater += amount; }
 
         private static float kettleWater = 1.2f;
         public static float KettleWater => kettleWater;

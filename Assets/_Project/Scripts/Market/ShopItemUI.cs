@@ -52,6 +52,34 @@ namespace GanhHangRong.UI
             controller = owner;
             stockItem = stock;
             selectedQuantity = 1;
+            
+            // Anchor right-side elements to the right edge so they never get cut off
+            if (buyButton != null)
+            {
+                RectTransform rt = buyButton.GetComponent<RectTransform>();
+                if (rt != null) { rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.anchoredPosition = new Vector2(-60, 0); }
+            }
+            if (increaseButton != null)
+            {
+                RectTransform rt = increaseButton.GetComponent<RectTransform>();
+                if (rt != null) { rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.anchoredPosition = new Vector2(-150, 0); }
+            }
+            if (selectedQuantityText != null)
+            {
+                RectTransform rt = selectedQuantityText.rectTransform;
+                if (rt != null) { rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.anchoredPosition = new Vector2(-200, 0); }
+            }
+            if (decreaseButton != null)
+            {
+                RectTransform rt = decreaseButton.GetComponent<RectTransform>();
+                if (rt != null) { rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.anchoredPosition = new Vector2(-250, 0); }
+            }
+            if (ownedAmountText != null)
+            {
+                RectTransform rt = ownedAmountText.rectTransform;
+                if (rt != null) { rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.anchoredPosition = new Vector2(-330, 0); }
+            }
+
             RefreshState();
         }
 
@@ -115,19 +143,22 @@ namespace GanhHangRong.UI
             SetText(nameText, item.DisplayName);
             SetText(priceText, $"{stockItem.GetPrice():N0} VND");
             SetText(selectedQuantityText, $"x{selectedQuantity}");
-            SetText(ownedAmountText, $"Đang có: {ownedAmount}");
+            SetText(ownedAmountText, $"Có: {ownedAmount}");
 
             if (ownedBook)
             {
                 SetText(statusText, "Đã sở hữu");
+                if (statusText != null) statusText.raycastTarget = false;
             }
             else if (isBook)
             {
                 SetText(statusText, "Sách công thức");
+                if (statusText != null) statusText.raycastTarget = false;
             }
             else
             {
                 SetText(statusText, string.Empty);
+                if (statusText != null) statusText.raycastTarget = false;
             }
 
             SetInteractable(buyButton, !ownedBook);

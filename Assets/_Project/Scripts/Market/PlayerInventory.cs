@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using GanhHangRong.Core;
+using GanhHangRong.Player;
 
 namespace GanhHangRong.Economy
 {
@@ -96,6 +97,42 @@ namespace GanhHangRong.Economy
             stack.itemId = item.Id;
             stack.amount += amount;
             InventoryChanged?.Invoke();
+            SyncSuppliesAndFurniture(item, amount);
+        }
+
+        private void SyncSuppliesAndFurniture(ItemData item, int amount)
+        {
+            if (item == null) return;
+            string id = item.Id.ToLowerInvariant();
+            PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+
+            if (id == "hu_ca_phe" || id == "ca_phe")
+            {
+                if (stats != null) stats.AddCoffee(150 * amount);
+            }
+            else if (id == "tra" || id == "hu_tra")
+            {
+                if (stats != null) stats.AddSupplies(100 * amount, 0, 0);
+            }
+            else if (id == "nuoc_sach" || id == "nuoc" || id == "binh_nuoc")
+            {
+                Interaction.CartItem.AddBottleWater(30f * amount);
+            }
+            else if (id == "duong" || id == "hu_duong")
+            {
+                if (stats != null) stats.AddSupplies(0, 200 * amount, 0);
+            }
+            else if (id == "ly_nuoc_sach" || id == "ly_nuoc" || id == "ly_cups")
+            {
+                if (stats != null) stats.AddSupplies(0, 0, 10 * amount);
+            }
+            else if (id == "ban_doi" || id == "ban_bon" || id == "ghe_nhua" || id.StartsWith("ban_") || id.StartsWith("ghe_"))
+            {
+                if (Interaction.FurniturePlacementManager.Instance != null)
+                {
+                    Interaction.FurniturePlacementManager.Instance.EnterPlacementMode(item.Id);
+                }
+            }
         }
 
         public bool RemoveItem(ItemData item, int amount)
@@ -124,6 +161,17 @@ namespace GanhHangRong.Economy
                 items.Remove(stack);
             }
 
+            InventoryChanged?.Invoke();
+            return true;
+        }
+
+        public bool RemoveItem(string itemId, int amount)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || amount <= 0) return false;
+            InventoryItemStack stack = FindStack(itemId);
+            if (stack == null || stack.amount < amount) return false;
+            stack.amount -= amount;
+            if (stack.amount <= 0) items.Remove(stack);
             InventoryChanged?.Invoke();
             return true;
         }

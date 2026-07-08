@@ -171,14 +171,14 @@ namespace GanhHangRong.Player
 
         public void AddSupplies(int tea, int sugar, int cups)
         {
-            teaSupply = Mathf.Min(1000, teaSupply + tea);
-            sugarSupply = Mathf.Min(2000, sugarSupply + sugar);
+            teaSupply = Mathf.Min(99999, teaSupply + tea);
+            sugarSupply = Mathf.Min(99999, sugarSupply + sugar);
             cupSupply += cups;
         }
 
         public void AddCoffee(int coffee)
         {
-            coffeeSupply = Mathf.Min(1500, coffeeSupply + coffee);
+            coffeeSupply = Mathf.Min(99999, coffeeSupply + coffee);
         }
 
         public void RecordCustomerServed()
