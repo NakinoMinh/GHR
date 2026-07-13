@@ -363,7 +363,7 @@ namespace GanhHangRong.Environment
                 cloudMaterial = CreateCelestialMaterial("SoftWhiteCloud_Material", new Color(1f, 0.96f, 0.88f, 0.88f));
             }
 
-            int numClouds = 20;
+            int numClouds = 60;
             for (int i = 0; i < numClouds; i++)
             {
                 Transform cloud = cloudRoot.Find("Cloud_" + (i + 1).ToString("00"));
@@ -378,9 +378,11 @@ namespace GanhHangRong.Environment
                 // Tọa độ ngẫu nhiên lan tỏa trên bầu trời
                 // Dùng Pseudo-random dựa vào i để vị trí cố định mỗi lần play
                 Random.InitState(i * 12345);
-                float xOffset = Random.Range(-400f, 400f);
+                float angle = Random.Range(0f, Mathf.PI * 2f);
+                float radius = Random.Range(200f, 900f);
+                float xOffset = Mathf.Cos(angle) * radius;
+                float zOffset = Mathf.Sin(angle) * radius;
                 float yOffset = Random.Range(100f, 250f);
-                float zOffset = Random.Range(300f, 700f);
                 
                 cloud.position = visualCenter + new Vector3(xOffset, yOffset, zOffset);
                 cloud.localRotation = Quaternion.Euler(0f, Random.Range(-40f, 40f), 0f);
@@ -406,7 +408,7 @@ namespace GanhHangRong.Environment
                 puff.name = "Puff_" + (i + 1).ToString("00");
                 puff.transform.SetParent(cloud, false);
                 puff.transform.localPosition = offsets[i] * 18f;
-                puff.transform.localScale = new Vector3(34f + i * 7f, 15f + (i % 2) * 8f, 12f);
+                puff.transform.localScale = new Vector3(15f + i * 3f, 6f + (i % 2) * 3f, 5f);
 
                 Collider collider = puff.GetComponent<Collider>();
                 if (collider != null)
@@ -423,7 +425,7 @@ namespace GanhHangRong.Environment
                 }
             }
 
-            cloud.localScale = Vector3.one * (1f + index * 0.12f);
+            cloud.localScale = Vector3.one * (0.6f + (index % 10) * 0.15f);
         }
 
         private void UpdateClouds(float normalizedTime)
