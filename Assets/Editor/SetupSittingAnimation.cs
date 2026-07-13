@@ -5,19 +5,11 @@ using System.IO;
 
 namespace GanhHangRong.Editor
 {
-    [InitializeOnLoad]
     public class SetupSittingAnimation
     {
         private const string ControllerPath = "Assets/_Project/Animations/Player/PlayerAnimController.controller";
         private const int MaxSetupAttempts = 5;
         private static int setupAttempts;
-
-        static SetupSittingAnimation()
-        {
-            // Tự động chạy khi script được compile xong trong Unity
-            // Dùng EditorApplication.delayCall để chạy an toàn sau khi database load xong
-            EditorApplication.delayCall += SetupSittingDelayed;
-        }
 
         [MenuItem("Gánh Hàng Rong/Cấu hình animation Ngồi (Sitting)", false, 101)]
         public static void SetupSitting()

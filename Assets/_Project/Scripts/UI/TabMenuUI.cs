@@ -25,9 +25,13 @@ namespace GanhHangRong.UI
         private Button tabBtnMenu;
         private Button tabBtnRecipe;
         private Button tabBtnContact;
+        private Button tabBtnCart;
         private TextMeshProUGUI tabTxtMenu;
         private TextMeshProUGUI tabTxtRecipe;
         private TextMeshProUGUI tabTxtContact;
+        private TextMeshProUGUI tabTxtCart;
+        private GameObject tabCartContent;
+        private GameObject cartTabContainer;
 
         // --- Serving Menu UI References ---
         private List<MenuItem> servingMenu = new List<MenuItem>();
@@ -220,6 +224,7 @@ namespace GanhHangRong.UI
             SwitchTab(0);
             RefreshServingMenuUI();
             RefreshInventoryCardsUI();
+            RefreshCartTabUI();
         }
 
         public void CloseMenu()
@@ -278,6 +283,7 @@ namespace GanhHangRong.UI
             tabMenuContent = BuildMenuTabContent(contentArea.gameObject);
             tabRecipeContent = BuildRecipeTabContent(contentArea.gameObject);
             tabContactContent = BuildContactTabContent(contentArea.gameObject);
+            tabCartContent = BuildCartTabContent(contentArea.gameObject);
 
             SwitchTab(0);
         }
@@ -305,6 +311,7 @@ namespace GanhHangRong.UI
             tabBtnMenu = CreatePillTabButton(tabArea.gameObject, "MENU", () => SwitchTab(0), out tabTxtMenu);
             tabBtnRecipe = CreatePillTabButton(tabArea.gameObject, "📖 CÔNG THỨC", () => SwitchTab(1), out tabTxtRecipe);
             tabBtnContact = CreatePillTabButton(tabArea.gameObject, "📱 ĐIỆN THOẠI", () => SwitchTab(2), out tabTxtContact);
+            tabBtnCart = CreatePillTabButton(tabArea.gameObject, "🛒 GIỎ HÀNG", () => SwitchTab(3), out tabTxtCart);
         }
 
         private Button CreatePillTabButton(GameObject parent, string label, UnityEngine.Events.UnityAction action, out TextMeshProUGUI txtRef)
@@ -325,10 +332,21 @@ namespace GanhHangRong.UI
             if (tabMenuContent != null) tabMenuContent.SetActive(index == 0);
             if (tabRecipeContent != null) tabRecipeContent.SetActive(index == 1);
             if (tabContactContent != null) tabContactContent.SetActive(index == 2);
+            if (tabCartContent != null) tabCartContent.SetActive(index == 3);
 
             UpdateTabVisual(tabBtnMenu, tabTxtMenu, index == 0);
             UpdateTabVisual(tabBtnRecipe, tabTxtRecipe, index == 1);
             UpdateTabVisual(tabBtnContact, tabTxtContact, index == 2);
+            UpdateTabVisual(tabBtnCart, tabTxtCart, index == 3);
+
+            if (index == 2)
+            {
+                RefreshIceVendorCard();
+            }
+            if (index == 3)
+            {
+                RefreshCartTabUI();
+            }
         }
 
         private void UpdateTabVisual(Button btn, TextMeshProUGUI txt, bool isActive)
@@ -569,6 +587,13 @@ namespace GanhHangRong.UI
             return panel;
         }
 
+        // ── Ice Vendor dialogue overlay references ──
+        private GameObject iceVendorDialogueOverlay;
+        private TextMeshProUGUI iceVendorDialogueTxt;
+        private Button iceVendorCallBtn;
+        private TextMeshProUGUI iceVendorIceTxt;
+        private int iceDialogueStep = 0;
+
         private GameObject BuildContactTabContent(GameObject parent)
         {
             var panel = new GameObject("ContactTabContent");
@@ -595,12 +620,156 @@ namespace GanhHangRong.UI
             contentGO.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = cRT; scroll.viewport = viewport;
 
+            // ─── Ông Ba Bán Đá (Special card) ───
+            BuildIceVendorCard(contentGO);
+
             BuildContactEntry(contentGO, "📞", "Chị Ba", "0912 345 678", "Cung cấp nguyên liệu trà, cà phê mỗi sáng");
             BuildContactEntry(contentGO, "📞", "Nhà Cung Cấp Trà", "0987 654 321", "Giao trà lá tươi, giá sỉ ưu đãi");
             BuildContactEntry(contentGO, "🔧", "Thợ Sửa Xe", "0901 222 333", "Sửa chữa gánh hàng rong khi bị hỏng");
             BuildContactEntry(contentGO, "🏥", "Trạm Y Tế Phường", "0909 111 222", "Khám sức khoẻ và phục hồi thể lực khi mệt");
             BuildContactEntry(contentGO, "👮", "Công An Phường", "0908 888 999", "Hỗ trợ an ninh đường phố và trật tự đô thị");
+
+            // Dialogue overlay (hidden by default)
+            BuildIceVendorDialogue(panel);
+
             return panel;
+        }
+
+        private void BuildIceVendorCard(GameObject parent)
+        {
+            // Background xanh lam nhạt đặc biệt cho ông Ba
+            Color cardBg = new Color(0.88f, 0.95f, 1.00f, 1f);
+            Color iceBlueDark = new Color(0.10f, 0.45f, 0.80f, 1f);
+            Color iceBlueLight = new Color(0.20f, 0.60f, 0.95f, 1f);
+
+            var card = MakeRoundedPanel(parent, "Contact_OngBa", cardBg, 20, 0, 0, 1, 1);
+            var le = card.AddComponent<LayoutElement>();
+            le.minHeight = 130; le.preferredHeight = 130;
+            var shadow = card.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0, 0, 0, 0.18f); shadow.effectDistance = new Vector2(0, -4);
+
+            // Icon đá
+            MakeText(card, "🧊", 44, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.01f, 0.15f, 0.13f, 0.88f);
+
+            // Tên + số
+            MakeText(card, "Ông Ba Bán Đá", 20, iceBlueDark, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.62f, 0.60f, 0.92f);
+            MakeText(card, "0918 123 456", 17, iceBlueLight, TextAlignmentOptions.Left, FontStyles.Bold, 0.60f, 0.62f, 0.98f, 0.92f);
+            MakeText(card, "Giao đá nhanh — 5.000đ/thùng (100%)", 14, new Color(0.3f, 0.3f, 0.4f, 1f), TextAlignmentOptions.Left, FontStyles.Italic, 0.15f, 0.42f, 0.99f, 0.60f);
+
+            // Thanh đá hiện tại
+            iceVendorIceTxt = MakeText(card, "Đá: ...%", 15, iceBlueDark, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.22f, 0.60f, 0.40f);
+
+            // Nút GỌI
+            var btnGO = MakeRoundedPanel(card, "CallBtn_OngBa", iceBlueLight, 20, 0.63f, 0.10f, 0.97f, 0.45f);
+            MakeText(btnGO, "📞 Gọi (5.000đ)", 15, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            iceVendorCallBtn = btnGO.AddComponent<Button>();
+            iceVendorCallBtn.targetGraphic = btnGO.GetComponent<Image>();
+            iceVendorCallBtn.onClick.AddListener(OnCallOngBa);
+        }
+
+        private void BuildIceVendorDialogue(GameObject parent)
+        {
+            // Full-panel overlay mờ
+            iceVendorDialogueOverlay = MakeRoundedPanel(parent, "IceVendorDialogue", new Color(0.05f, 0.10f, 0.20f, 0.92f), 24, 0.10f, 0.25f, 0.90f, 0.75f);
+
+            MakeText(iceVendorDialogueOverlay, "🧊 Ông Ba Bán Đá", 22, new Color(0.5f, 0.85f, 1f, 1f), TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.72f, 1f, 0.95f);
+            iceVendorDialogueTxt = MakeText(iceVendorDialogueOverlay, "", 18, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.04f, 0.35f, 0.96f, 0.70f);
+            iceVendorDialogueTxt.enableWordWrapping = true;
+
+            var okBtnGO = MakeRoundedPanel(iceVendorDialogueOverlay, "OkBtn", new Color(0.20f, 0.60f, 0.95f, 1f), 16, 0.30f, 0.06f, 0.70f, 0.30f);
+            MakeText(okBtnGO, "OK", 20, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            okBtnGO.AddComponent<Button>().onClick.AddListener(OnIceVendorDialogueNext);
+
+            iceVendorDialogueOverlay.SetActive(false);
+        }
+
+        private void OnCallOngBa()
+        {
+            // Kiểm tra điều kiện
+            var stats = FindAnyObjectByType<Player.PlayerStats>();
+            if (stats == null) return;
+
+            float icePct = stats.IceLevel / Core.Constants.ICE_MAX * 100f;
+            if (icePct > 5f)
+            {
+                ShowIceVendorLine($"Đá còn {icePct:F0}%, chưa cần gọi tôi đâu!");
+                return;
+            }
+
+            if (Systems.IceVendorManager.Instance != null && Systems.IceVendorManager.Instance.IsDelivering)
+            {
+                ShowIceVendorLine("Tôi đang trên đường rồi, chờ tôi chút nhé!");
+                return;
+            }
+
+            if (!stats.CanAfford(5000))
+            {
+                ShowIceVendorLine("Trời ơi, anh không đủ 5.000đ à? Tôi bận lắm đó!");
+                return;
+            }
+
+            // Bắt đầu hội thoại
+            iceDialogueStep = 0;
+            ShowIceVendorLine("Ờ, anh cần đá hả? Tôi đang chạy trên đường rồi, chờ tôi chút xíu nhé!");
+        }
+
+        private void OnIceVendorDialogueNext()
+        {
+            iceDialogueStep++;
+            switch (iceDialogueStep)
+            {
+                case 1:
+                    // Gọi ông Ba thật sự
+                    bool success = Systems.IceVendorManager.Instance != null &&
+                                   Systems.IceVendorManager.Instance.CallIceVendor();
+                    if (success)
+                        ShowIceVendorLine("Ổng đang trên đường rồi! Vài phút nữa tới chỗ anh đó, đợi chút!");
+                    else
+                        ShowIceVendorLine("Ủa... có vẻ có lỗi gì rồi, thử lại sau nhé!");
+                    break;
+                case 2:
+                    iceVendorDialogueOverlay.SetActive(false);
+                    break;
+                default:
+                    iceVendorDialogueOverlay.SetActive(false);
+                    break;
+            }
+        }
+
+        private void ShowIceVendorLine(string text)
+        {
+            if (iceVendorDialogueOverlay == null) return;
+            iceVendorDialogueOverlay.SetActive(true);
+            if (iceVendorDialogueTxt != null) iceVendorDialogueTxt.text = text;
+        }
+
+        private void RefreshIceVendorCard()
+        {
+            if (iceVendorIceTxt == null || iceVendorCallBtn == null) return;
+
+            var stats = FindAnyObjectByType<Player.PlayerStats>();
+            if (stats == null) return;
+
+            float icePct = stats.IceLevel / Core.Constants.ICE_MAX * 100f;
+            iceVendorIceTxt.text = $"Đá hiện tại: {icePct:F0}%";
+
+            bool isDelivering = Systems.IceVendorManager.Instance != null &&
+                                Systems.IceVendorManager.Instance.IsDelivering;
+            bool canCall = icePct <= 5f && !isDelivering && stats.CanAfford(5000);
+
+            Color iceBlue = new Color(0.20f, 0.60f, 0.95f, 1f);
+            Color disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+            var img = iceVendorCallBtn.GetComponent<Image>();
+            if (img != null) img.color = canCall ? iceBlue : disabledColor;
+            iceVendorCallBtn.interactable = canCall;
+
+            if (iceVendorDialogueTxt != null && iceVendorDialogueOverlay != null &&
+                !iceVendorDialogueOverlay.activeSelf)
+            {
+                // Hiển thị trạng thái ông Ba đang giao
+                if (isDelivering)
+                    iceVendorIceTxt.text += " — Ông Ba đang trên đường! 🚴";
+            }
         }
 
         private void BuildContactEntry(GameObject parent, string icon, string name, string phone, string desc)
@@ -676,6 +845,164 @@ namespace GanhHangRong.UI
             tmp.richText = true;
             tmp.raycastTarget = false;
             return tmp;
+        }
+
+        // ================================================================
+        //  TAB 4: GIỎ HÀNG — Quản lý hiển thị nguyên liệu & đồ đã mua
+        // ================================================================
+        private GameObject BuildCartTabContent(GameObject parent)
+        {
+            var panel = new GameObject("CartTabContent");
+            panel.transform.SetParent(parent.transform, false);
+            StretchFull(panel.AddComponent<RectTransform>());
+
+            var scrollArea = MakeRect(panel, "ScrollArea");
+            SetAnchors(scrollArea, 0.02f, 0.02f, 0.98f, 0.98f);
+            var scroll = scrollArea.gameObject.AddComponent<ScrollRect>();
+            scroll.vertical = true; scroll.horizontal = false;
+
+            var viewport = MakeRect(scrollArea.gameObject, "Viewport");
+            StretchFull(viewport);
+            viewport.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+            viewport.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+
+            cartTabContainer = MakeRect(viewport.gameObject, "Content").gameObject;
+            var cRT = cartTabContainer.GetComponent<RectTransform>();
+            cRT.anchorMin = new Vector2(0, 1); cRT.anchorMax = new Vector2(1, 1);
+            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero;
+
+            var vlg = cartTabContainer.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 16; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(20, 20, 20, 20);
+            cartTabContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = cRT; scroll.viewport = viewport;
+
+            return panel;
+        }
+
+        private void RefreshCartTabUI()
+        {
+            if (cartTabContainer == null) return;
+
+            // Xóa sạch card cũ
+            for (int i = cartTabContainer.transform.childCount - 1; i >= 0; i--)
+            {
+                Destroy(cartTabContainer.transform.GetChild(i).gameObject);
+            }
+
+            Player.PlayerStats stats = FindAnyObjectByType<Player.PlayerStats>();
+
+            // 1. Tiêu đề: NGUYÊN LIỆU TRÊN XE ĐẨY
+            var titleGO = new GameObject("Title_Cart");
+            titleGO.transform.SetParent(cartTabContainer.transform, false);
+            var leTitle = titleGO.AddComponent<LayoutElement>();
+            leTitle.minHeight = 35; leTitle.preferredHeight = 35;
+            MakeText(titleGO, "📦 NGUYÊN LIỆU TRÊN XE ĐẨY", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
+
+            if (stats != null)
+            {
+                BuildIngredientCartCard("hu_tra", "Hũ Trà Lài", $"{stats.TeaSupply} g");
+                BuildIngredientCartCard("hu_duong", "Hũ Đường Cát", $"{stats.SugarSupply} g");
+                BuildIngredientCartCard("hu_tra", "Hũ Cà Phê Phố Cổ", $"{stats.CoffeeSupply} g");
+                BuildIngredientCartCard("ly_cups", "Lốc Ly Nhựa Sạch", $"{stats.CupSupply} cái");
+                BuildIngredientCartCard("ice_box", "Bình Nước Đun Sôi", $"{GanhHangRong.Interaction.CartItem.BottleWater:F1} L");
+            }
+
+            // Dãn cách
+            var spacer = new GameObject("Spacer");
+            spacer.transform.SetParent(cartTabContainer.transform, false);
+            var leSpacer = spacer.AddComponent<LayoutElement>();
+            leSpacer.minHeight = 20; leSpacer.preferredHeight = 20;
+
+            // 2. Tiêu đề: VẬT PHẨM ĐÃ MUA (GIỎ HÀNG)
+            var title2GO = new GameObject("Title_Bought");
+            title2GO.transform.SetParent(cartTabContainer.transform, false);
+            var leTitle2 = title2GO.AddComponent<LayoutElement>();
+            leTitle2.minHeight = 35; leTitle2.preferredHeight = 35;
+            MakeText(title2GO, "🛒 VẬT PHẨM ĐÃ MUA (GIỎ HÀNG)", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
+
+            if (GanhHangRong.Economy.PlayerInventory.Instance != null && GanhHangRong.Economy.PlayerInventory.Instance.Items != null)
+            {
+                int count = 0;
+                foreach (var stack in GanhHangRong.Economy.PlayerInventory.Instance.Items)
+                {
+                    if (stack == null || stack.item == null || stack.amount <= 0) continue;
+                    BuildInventoryCartCard(stack);
+                    count++;
+                }
+
+                if (count == 0)
+                {
+                    var emptyGO = new GameObject("Empty_Cart");
+                    emptyGO.transform.SetParent(cartTabContainer.transform, false);
+                    var leEmpty = emptyGO.AddComponent<LayoutElement>();
+                    leEmpty.minHeight = 60; leEmpty.preferredHeight = 60;
+                    MakeText(emptyGO, "Chưa mua vật phẩm nào từ cửa hàng.", 18, Color.gray, TextAlignmentOptions.Center, FontStyles.Italic, 0f, 0f, 1f, 1f);
+                }
+            }
+        }
+
+        private void BuildIngredientCartCard(string spriteName, string displayName, string amountStr)
+        {
+            var card = MakeRoundedPanel(cartTabContainer, "Ingredient_" + displayName, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+            var le = card.AddComponent<LayoutElement>();
+            le.minHeight = 80; le.preferredHeight = 80;
+            var shadow = card.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0, 0, 0, 0.15f); shadow.effectDistance = new Vector2(0, -3);
+
+            // Icon Image
+            var iconGO = MakeRect(card, "Icon");
+            SetAnchors(iconGO, 0.02f, 0.1f, 0.12f, 0.9f);
+            var img = iconGO.gameObject.AddComponent<Image>();
+            img.preserveAspect = true;
+
+            // Load Sprite
+#if UNITY_EDITOR
+            string[] guids = UnityEditor.AssetDatabase.FindAssets(spriteName + " t:Sprite");
+            if (guids != null && guids.Length > 0)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                img.sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+#endif
+            if (img.sprite == null)
+            {
+                Sprite[] allSprites = Resources.FindObjectsOfTypeAll<Sprite>();
+                foreach (Sprite s in allSprites)
+                {
+                    if (s != null && s.name.Equals(spriteName, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        img.sprite = s;
+                        break;
+                    }
+                }
+            }
+
+            MakeText(card, displayName, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.5f, 0.6f, 0.9f);
+            MakeText(card, "Còn lại trên xe:", 14, Color.gray, TextAlignmentOptions.Left, FontStyles.Normal, 0.15f, 0.15f, 0.6f, 0.5f);
+            MakeText(card, amountStr, 22, COL_TAB_ACTIVE, TextAlignmentOptions.Right, FontStyles.Bold, 0.6f, 0.15f, 0.96f, 0.85f);
+        }
+
+        private void BuildInventoryCartCard(GanhHangRong.Economy.InventoryItemStack stack)
+        {
+            var card = MakeRoundedPanel(cartTabContainer, "Item_" + stack.item.DisplayName, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+            var le = card.AddComponent<LayoutElement>();
+            le.minHeight = 80; le.preferredHeight = 80;
+            var shadow = card.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0, 0, 0, 0.15f); shadow.effectDistance = new Vector2(0, -3);
+
+            // Icon Image
+            var iconGO = MakeRect(card, "Icon");
+            SetAnchors(iconGO, 0.02f, 0.1f, 0.12f, 0.9f);
+            var img = iconGO.gameObject.AddComponent<Image>();
+            img.preserveAspect = true;
+            if (stack.item.icon != null)
+            {
+                img.sprite = stack.item.icon;
+            }
+
+            MakeText(card, stack.item.DisplayName, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.5f, 0.6f, 0.9f);
+            MakeText(card, stack.item.description, 13, Color.gray, TextAlignmentOptions.Left, FontStyles.Normal, 0.15f, 0.15f, 0.6f, 0.5f);
+            MakeText(card, $"x{stack.amount}", 22, COL_TAB_ACTIVE, TextAlignmentOptions.Right, FontStyles.Bold, 0.6f, 0.15f, 0.96f, 0.85f);
         }
     }
 }

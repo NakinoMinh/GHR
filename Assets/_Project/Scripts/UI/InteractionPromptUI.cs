@@ -30,11 +30,7 @@ namespace GanhHangRong.UI
             if (promptText == null) return;
 
             promptText.fontSize = Mathf.Max(promptText.fontSize, 34f);
-            promptText.fontStyle = FontStyles.Bold;
             promptText.color = Color.white;
-            promptText.outlineWidth = 0.14f;
-            promptText.outlineColor = new Color(0f, 0f, 0f, 0.95f);
-            promptText.extraPadding = true;
             promptText.enableWordWrapping = true;
             promptText.textWrappingMode = TextWrappingModes.Normal;
         }
@@ -76,11 +72,24 @@ namespace GanhHangRong.UI
                 }
                 else if (isFirstPerson)
                 {
-                    // Giữ vị trí cố định ở phần dưới màn hình (anchored ở center-bottom) để tránh bay nhảy khi xoay camera
-                    var rect = GetComponent<RectTransform>();
-                    if (rect != null)
+                    // Khi đang ở chế độ góc nhìn thứ nhất của xe đẩy
+                    if (UnityEngine.InputSystem.Mouse.current != null)
                     {
-                        rect.anchoredPosition = new Vector2(0f, 100f);
+                        if (Cursor.lockState == CursorLockMode.Locked)
+                        {
+                            // Nếu đang giữ chuột (xoay camera), đặt prompt ở giữa màn hình như trước
+                            var rect = GetComponent<RectTransform>();
+                            if (rect != null)
+                            {
+                                rect.anchoredPosition = new Vector2(0f, 100f);
+                            }
+                        }
+                        else
+                        {
+                            // Nếu thả chuột (chọn vật phẩm), prompt đi theo con trỏ chuột
+                            Vector2 mousePos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+                            transform.position = new Vector3(mousePos.x, mousePos.y + 60f, 0f);
+                        }
                     }
                 }
             }

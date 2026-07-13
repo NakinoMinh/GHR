@@ -179,10 +179,11 @@ namespace GanhHangRong.Player
                     return;
                 }
 
-                // Nhấn F để tương tác phụ/hành động (bỏ click chuột trái tránh vô tình phục vụ khi click chuột)
+                // Nhấn F hoặc Click chuột trái (chỉ với cửa) để tương tác
+                bool leftClickPressed = (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
                 bool interactPressed = (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame);
 
-                if (interactPressed)
+                if (interactPressed || (leftClickPressed && nearestInteractable is GanhHangRong.Interaction.InteractiveDoor))
                 {
                     if (nearestInteractable != null)
                     {

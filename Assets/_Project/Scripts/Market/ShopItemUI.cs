@@ -1,11 +1,12 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using GanhHangRong.Economy;
 
 namespace GanhHangRong.UI
 {
-    public class ShopItemUI : MonoBehaviour
+    public class ShopItemUI : MonoBehaviour, IPointerClickHandler
     {
         [Header("Display")]
         [SerializeField] private Image iconImage;
@@ -25,25 +26,25 @@ namespace GanhHangRong.UI
 
         private ShopUIController controller;
         private ShopStockItem stockItem;
-        private int selectedQuantity = 1;
 
         private ItemData Item => stockItem != null ? stockItem.item : null;
+
+        private const string VietnameseChars = "AĂÂÁẮẤÀẰẦẢẲẨÃẴẪẠẶẬEÊÉẾÈỀẺỂẼỄẸỆIÍÌỈĨỊOÔƠÓỐỚÒỒỜỎỔỞÕỖỠỌỘỢUƯÚỨÙỪỦỬŨỮỤỰYÝỲỶỸỴaăâáắấàằầảẩãẵẫạặậeêéếèềẻểẽễẹệiíìỉĩịoôơóốớòồờỏổởõỗỡọộợuưúứùừủửũữụựyýỳỷỹỵđĐ";
 
         private void Awake()
         {
             if (increaseButton != null)
             {
-                increaseButton.onClick.AddListener(IncreaseQuantity);
+                increaseButton.onClick.RemoveAllListeners();
+                increaseButton.onClick.AddListener(AddToCart);
             }
 
-            if (decreaseButton != null)
+            // Đảm bảo click vào cả thẻ item cũng thêm vào giỏ hàng
+            Button rootBtn = GetComponent<Button>();
+            if (rootBtn != null)
             {
-                decreaseButton.onClick.AddListener(DecreaseQuantity);
-            }
-
-            if (buyButton != null)
-            {
-                buyButton.onClick.AddListener(Buy);
+                rootBtn.onClick.RemoveAllListeners();
+                rootBtn.onClick.AddListener(AddToCart);
             }
         }
 
@@ -51,31 +52,101 @@ namespace GanhHangRong.UI
         {
             controller = owner;
             stockItem = stock;
-            selectedQuantity = 1;
-            RefreshState();
-        }
 
-        public void IncreaseQuantity()
-        {
-            if (Item != null && Item.IsBook)
+            // Nếu prefab chưa có nút +, tự động tạo một nút "+ Mua" bên phải
+            if (increaseButton == null)
             {
-                selectedQuantity = 1;
-            }
-            else
-            {
-                selectedQuantity = Mathf.Clamp(selectedQuantity + 1, 1, Mathf.Max(1, maxQuantity));
+                Transform existingBtn = transform.Find("AddButton_Runtime");
+                if (existingBtn == null)
+                {
+                    GameObject btnGO = new GameObject("AddButton_Runtime", typeof(RectTransform));
+                    btnGO.transform.SetParent(transform, false);
+                    RectTransform rt = btnGO.GetComponent<RectTransform>();
+                    rt.anchorMin = new Vector2(1, 0.5f);
+                    rt.anchorMax = new Vector2(1, 0.5f);
+                    rt.sizeDelta = new Vector2(70, 32);
+                    rt.anchoredPosition = new Vector2(-45, 0);
+
+                    Image img = btnGO.AddComponent<Image>();
+                    img.color = new Color(0.15f, 0.55f, 0.25f);
+
+                    Button btn = btnGO.AddComponent<Button>();
+                    btn.onClick.AddListener(AddToCart);
+                    increaseButton = btn;
+
+                    GameObject txtGO = new GameObject("Text", typeof(RectTransform));
+                    txtGO.transform.SetParent(btnGO.transform, false);
+                    RectTransform txtRt = txtGO.GetComponent<RectTransform>();
+                    txtRt.anchorMin = Vector2.zero;
+                    txtRt.anchorMax = Vector2.one;
+                    txtRt.offsetMin = Vector2.zero;
+                    txtRt.offsetMax = Vector2.zero;
+
+                    TextMeshProUGUI tmpTxt = txtGO.AddComponent<TextMeshProUGUI>();
+                    tmpTxt.text = "+ Mua";
+                    tmpTxt.fontSize = 16;
+                    tmpTxt.alignment = TextAlignmentOptions.Center;
+                    tmpTxt.color = Color.white;
+                }
             }
 
             RefreshState();
         }
 
-        public void DecreaseQuantity()
+        public void RefreshState()
         {
-            selectedQuantity = Mathf.Max(1, selectedQuantity - 1);
-            RefreshState();
+            if (stockItem == null || stockItem.item == null) return;
+
+            ItemData item = stockItem.item;
+            bool isBook = item.IsBook;
+            bool ownedBook = controller != null && controller.IsRecipeBookOwned(item);
+
+            TextMeshProUGUI[] tmps = GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var t in tmps)
+            {
+                if (t != null && t.font != null)
+                {
+                    t.font.atlasPopulationMode = TMPro.AtlasPopulationMode.Dynamic;
+                }
+            }
+
+            if (iconImage != null && item.icon != null)
+            {
+                iconImage.sprite = item.icon;
+            }
+
+            if (nameText != null)
+            {
+                nameText.text = item.DisplayName;
+            }
+
+            if (priceText != null)
+            {
+                int price = Mathf.Max(0, stockItem.GetPrice());
+                priceText.text = $"{price:N0} VND";
+            }
+
+            if (ownedAmountText != null)
+            {
+                int owned = controller != null ? controller.GetOwnedAmount(item) : 0;
+                ownedAmountText.text = $"Còn: {owned}";
+            }
+
+            // Hide old single-item checkout controls
+            if (selectedQuantityText != null) selectedQuantityText.gameObject.SetActive(false);
+            if (decreaseButton != null) decreaseButton.gameObject.SetActive(false);
+            if (buyButton != null) buyButton.gameObject.SetActive(false);
+            if (statusText != null) statusText.gameObject.SetActive(false);
+
+            SetInteractable(increaseButton, !ownedBook);
         }
 
-        public void Buy()
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            AddToCart();
+        }
+
+        public void AddToCart()
         {
             if (controller == null)
             {
@@ -83,82 +154,14 @@ namespace GanhHangRong.UI
                 return;
             }
 
-            controller.TryBuyItem(stockItem, selectedQuantity);
+            controller.AddToCart(stockItem, 1);
         }
 
-        public void RefreshState()
+        private void SetInteractable(Button btn, bool interactable)
         {
-            ItemData item = Item;
-            if (item == null)
+            if (btn != null)
             {
-                SetText(nameText, "Item chưa cấu hình");
-                SetText(priceText, "0 VND");
-                SetText(selectedQuantityText, "x1");
-                SetText(ownedAmountText, "Đang có: 0");
-                SetText(statusText, "Thiếu ItemData");
-                SetInteractable(buyButton, false);
-                SetInteractable(increaseButton, false);
-                SetInteractable(decreaseButton, false);
-                return;
-            }
-
-            bool isBook = item.IsBook;
-            bool ownedBook = isBook && controller != null && controller.IsRecipeBookOwned(item);
-            int ownedAmount = controller != null ? controller.GetOwnedAmount(item) : 0;
-
-            if (isBook)
-            {
-                selectedQuantity = 1;
-            }
-
-            SetIcon(item.icon);
-            SetText(nameText, item.DisplayName);
-            SetText(priceText, $"{stockItem.GetPrice():N0} VND");
-            SetText(selectedQuantityText, $"x{selectedQuantity}");
-            SetText(ownedAmountText, $"Đang có: {ownedAmount}");
-
-            if (ownedBook)
-            {
-                SetText(statusText, "Đã sở hữu");
-            }
-            else if (isBook)
-            {
-                SetText(statusText, "Sách công thức");
-            }
-            else
-            {
-                SetText(statusText, string.Empty);
-            }
-
-            SetInteractable(buyButton, !ownedBook);
-            SetInteractable(increaseButton, !isBook);
-            SetInteractable(decreaseButton, !isBook && selectedQuantity > 1);
-        }
-
-        private void SetIcon(Sprite icon)
-        {
-            if (iconImage == null)
-            {
-                return;
-            }
-
-            iconImage.sprite = icon;
-            iconImage.enabled = icon != null;
-        }
-
-        private static void SetText(TextMeshProUGUI text, string value)
-        {
-            if (text != null)
-            {
-                text.text = value;
-            }
-        }
-
-        private static void SetInteractable(Button button, bool interactable)
-        {
-            if (button != null)
-            {
-                button.interactable = interactable;
+                btn.interactable = interactable;
             }
         }
     }

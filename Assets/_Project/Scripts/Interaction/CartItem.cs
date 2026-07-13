@@ -62,6 +62,7 @@ namespace GanhHangRong.Interaction
 
         private static float bottleWater = 30f;
         public static float BottleWater => bottleWater;
+        public static void AddBottleWater(float amount) { bottleWater += amount; }
 
         private static float kettleWater = 1.2f;
         public static float KettleWater => kettleWater;
@@ -262,6 +263,48 @@ private void EnsureInteractionCollider()
         private void Update()
         {
             // Đã tắt hiệu ứng nhấp nhô (bobbing) và phóng to (scaling) khi hover theo yêu cầu để vật phẩm đứng yên cố định
+
+            // Ẩn/Hiện vật phẩm tùy theo lượng nguyên liệu còn lại trong kho của PlayerStats
+            Player.PlayerStats stats = FindAnyObjectByType<Player.PlayerStats>();
+            if (stats != null)
+            {
+                bool hasSupply = true;
+                if (itemType == CartItemType.TeaTin)
+                {
+                    hasSupply = stats.TeaSupply > 0;
+                }
+                else if (itemType == CartItemType.SugarJar)
+                {
+                    hasSupply = stats.SugarSupply > 0;
+                }
+                else if (itemType == CartItemType.Coffee)
+                {
+                    hasSupply = stats.CoffeeSupply > 0;
+                }
+                else if (itemType == CartItemType.WaterCup)
+                {
+                    hasSupply = stats.CupSupply > 0;
+                }
+
+                // Cập nhật trạng thái hiển thị của các mesh Renderers
+                if (renderers != null)
+                {
+                    for (int i = 0; i < renderers.Length; i++)
+                    {
+                        if (renderers[i] != null && renderers[i].enabled != hasSupply)
+                        {
+                            renderers[i].enabled = hasSupply;
+                        }
+                    }
+                }
+
+                // Cập nhật collider để ngăn tương tác khi không có đồ
+                BoxCollider box = GetComponent<BoxCollider>();
+                if (box != null && box.enabled != hasSupply)
+                {
+                    box.enabled = hasSupply;
+                }
+            }
         }
 
         /// <summary>
@@ -1361,7 +1404,11 @@ private void EnsureInteractionCollider()
             GameObject steamFx = CreateSteamParticles(kettleT);
 
             // Đun nước trong 10 giây
-            yield return new WaitForSeconds(10f);
+            for (int i = 10; i > 0; i--)
+            {
+                ShowResourceDelta($"Đang đun sôi... {i}s");
+                yield return new WaitForSeconds(1f);
+            }
 
             // Hủy hiệu ứng hơi nước
             if (steamFx != null)

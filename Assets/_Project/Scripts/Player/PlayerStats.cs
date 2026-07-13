@@ -79,6 +79,12 @@ namespace GanhHangRong.Player
         // ═══════════════════════════════════════════
         public bool CanAfford(int amount) => money >= amount;
 
+        public void SyncMoneyFromInventory(int newMoney)
+        {
+            money = newMoney;
+            EventManager.TriggerMoneyChanged(money);
+        }
+
         public void AddMoney(int amount)
         {
             money += amount;
@@ -86,6 +92,11 @@ namespace GanhHangRong.Player
             totalMoneyEarned += amount;
             EventManager.TriggerMoneyChanged(money);
             EventManager.TriggerMoneyEarned(amount);
+
+            if (GanhHangRong.Economy.PlayerInventory.Instance != null)
+            {
+                GanhHangRong.Economy.PlayerInventory.Instance.TriggerMoneyChangedEvent(money);
+            }
         }
 
         public bool SpendMoney(int amount)
@@ -94,6 +105,11 @@ namespace GanhHangRong.Player
             money -= amount;
             EventManager.TriggerMoneyChanged(money);
             EventManager.TriggerMoneySpent(amount);
+
+            if (GanhHangRong.Economy.PlayerInventory.Instance != null)
+            {
+                GanhHangRong.Economy.PlayerInventory.Instance.TriggerMoneyChangedEvent(money);
+            }
             return true;
         }
 
@@ -171,14 +187,14 @@ namespace GanhHangRong.Player
 
         public void AddSupplies(int tea, int sugar, int cups)
         {
-            teaSupply = Mathf.Min(1000, teaSupply + tea);
-            sugarSupply = Mathf.Min(2000, sugarSupply + sugar);
+            teaSupply = Mathf.Min(99999, teaSupply + tea);
+            sugarSupply = Mathf.Min(99999, sugarSupply + sugar);
             cupSupply += cups;
         }
 
         public void AddCoffee(int coffee)
         {
-            coffeeSupply = Mathf.Min(1500, coffeeSupply + coffee);
+            coffeeSupply = Mathf.Min(99999, coffeeSupply + coffee);
         }
 
         public void RecordCustomerServed()
@@ -202,6 +218,11 @@ namespace GanhHangRong.Player
             EventManager.TriggerMoneyChanged(money);
             EventManager.TriggerFatigueChanged(fatigue);
             EventManager.TriggerIceLevelChanged(iceLevel);
+
+            if (GanhHangRong.Economy.PlayerInventory.Instance != null)
+            {
+                GanhHangRong.Economy.PlayerInventory.Instance.TriggerMoneyChangedEvent(money);
+            }
         }
 
         private void ResetDailyStats()

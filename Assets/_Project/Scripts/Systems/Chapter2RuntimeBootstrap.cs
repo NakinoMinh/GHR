@@ -354,15 +354,13 @@ namespace GanhHangRong.Systems
             bg.color = new Color(0.65f, 0.05f, 0.03f, 0.9f);
 
             CanvasGroup group = rect.gameObject.AddComponent<CanvasGroup>();
-            TextMeshProUGUI text = CreateUIText("PromptText", rect, 34, FontStyles.Bold, TextAlignmentOptions.Center);
+            TextMeshProUGUI text = CreateUIText("PromptText", rect, 34, FontStyles.Normal, TextAlignmentOptions.Center);
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = new Vector2(16f, 8f);
             text.rectTransform.offsetMax = new Vector2(-16f, -8f);
             text.textWrappingMode = TextWrappingModes.Normal;
             text.color = Color.white;
-            text.outlineWidth = 0.14f;
-            text.outlineColor = new Color(0f, 0f, 0f, 0.95f);
             text.extraPadding = true;
 
             InteractionPromptUI prompt = rect.gameObject.AddComponent<InteractionPromptUI>();

@@ -15,8 +15,8 @@ namespace GanhHangRong.Environment
     public class TimeOfDayManager : MonoBehaviour
     {
         [Header("Thoi gian bat dau")]
-        [SerializeField, Range(0, 23)] private int startHour = 17;
-        [SerializeField, Range(0, 59)] private int startMinute;
+        [SerializeField, Range(0, 23)] private int startHour = 7;
+        [SerializeField, Range(0, 59)] private int startMinute = 0;
         [SerializeField, Min(1)] private int startDay = 1;
 
         [Header("Toc do thoi gian")]

@@ -30,7 +30,7 @@ namespace GanhHangRong.Environment
         [Header("Cuong do anh sang")]
         [SerializeField] private AnimationCurve sunIntensityCurve = CreateSunCurve();
         [SerializeField] private AnimationCurve moonIntensityCurve = CreateMoonCurve();
-        [SerializeField, Min(0f)] private float maxSunIntensity = 1.25f;
+        [SerializeField, Min(0f)] private float maxSunIntensity = 3.5f; // Nắng gắt
         [SerializeField, Min(0f)] private float maxMoonIntensity = 0.22f;
 
         [Header("Mau sac theo ngay dem")]
@@ -99,6 +99,13 @@ namespace GanhHangRong.Environment
         public void ApplyLighting(float normalizedTime)
         {
             normalizedTime = Mathf.Repeat(normalizedTime, 1f);
+
+            // Turn off the skybox's default sun disk so ONLY our 3D RealisticSun is shown
+            Material skyboxMat = RenderSettings.skybox;
+            if (skyboxMat != null && skyboxMat.HasProperty("_SunSize"))
+            {
+                skyboxMat.SetFloat("_SunSize", 0f);
+            }
 
             float sunValue = Mathf.Clamp01(sunIntensityCurve.Evaluate(normalizedTime)) * maxSunIntensity;
             float moonValue = Mathf.Clamp01(moonIntensityCurve.Evaluate(normalizedTime)) * maxMoonIntensity;
@@ -296,7 +303,7 @@ namespace GanhHangRong.Environment
                 Renderer renderer = maskObject.GetComponent<Renderer>();
                 if (renderer != null)
                 {
-                    moonShadowMaterial = CreateCelestialMaterial("CrescentShadow_Material", new Color(0.05f, 0.08f, 0.16f, 1f));
+                    moonShadowMaterial = CreateCelestialMaterial("CrescentShadow_Material", Color.black, "Custom/UnlitNoFog");
                     renderer.sharedMaterial = moonShadowMaterial;
                     renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     renderer.receiveShadows = false;
@@ -335,11 +342,6 @@ namespace GanhHangRong.Environment
                     {
                         material.SetColor("_BaseColor", skyColor);
                     }
-
-                    if (material.HasProperty("_EmissionColor"))
-                    {
-                        material.SetColor("_EmissionColor", skyColor * 0.8f);
-                    }
                 }
             }
 
@@ -361,15 +363,8 @@ namespace GanhHangRong.Environment
                 cloudMaterial = CreateCelestialMaterial("SoftWhiteCloud_Material", new Color(1f, 0.96f, 0.88f, 0.88f));
             }
 
-            Vector3[] positions =
-            {
-                visualCenter + new Vector3(-170f, 135f, 420f),
-                visualCenter + new Vector3(40f, 165f, 480f),
-                visualCenter + new Vector3(220f, 130f, 360f),
-                visualCenter + new Vector3(-60f, 210f, 520f)
-            };
-
-            for (int i = 0; i < positions.Length; i++)
+            int numClouds = 60;
+            for (int i = 0; i < numClouds; i++)
             {
                 Transform cloud = cloudRoot.Find("Cloud_" + (i + 1).ToString("00"));
                 if (cloud == null)
@@ -380,8 +375,20 @@ namespace GanhHangRong.Environment
                     BuildCloudCluster(cloud, i);
                 }
 
-                cloud.position = positions[i];
-                cloud.localRotation = Quaternion.Euler(0f, -18f + i * 9f, 0f);
+                // Tọa độ ngẫu nhiên lan tỏa trên bầu trời
+                // Dùng Pseudo-random dựa vào i để vị trí cố định mỗi lần play
+                Random.InitState(i * 12345);
+                float angle = Random.Range(0f, Mathf.PI * 2f);
+                float radius = Random.Range(200f, 900f);
+                float xOffset = Mathf.Cos(angle) * radius;
+                float zOffset = Mathf.Sin(angle) * radius;
+                float yOffset = Random.Range(100f, 250f);
+                
+                cloud.position = visualCenter + new Vector3(xOffset, yOffset, zOffset);
+                cloud.localRotation = Quaternion.Euler(0f, Random.Range(-40f, 40f), 0f);
+                
+                // Reset random state về mặc định
+                Random.InitState((int)System.DateTime.Now.Ticks);
             }
         }
 
@@ -401,7 +408,7 @@ namespace GanhHangRong.Environment
                 puff.name = "Puff_" + (i + 1).ToString("00");
                 puff.transform.SetParent(cloud, false);
                 puff.transform.localPosition = offsets[i] * 18f;
-                puff.transform.localScale = new Vector3(34f + i * 7f, 15f + (i % 2) * 8f, 12f);
+                puff.transform.localScale = new Vector3(15f + i * 3f, 6f + (i % 2) * 3f, 5f);
 
                 Collider collider = puff.GetComponent<Collider>();
                 if (collider != null)
@@ -418,7 +425,7 @@ namespace GanhHangRong.Environment
                 }
             }
 
-            cloud.localScale = Vector3.one * (1f + index * 0.12f);
+            cloud.localScale = Vector3.one * (0.6f + (index % 10) * 0.15f);
         }
 
         private void UpdateClouds(float normalizedTime)
@@ -469,9 +476,17 @@ namespace GanhHangRong.Environment
             }
         }
 
-        private Material CreateCelestialMaterial(string materialName, Color color)
+        private Material CreateCelestialMaterial(string materialName, Color color, string shaderName = null)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            Shader shader = null;
+            if (!string.IsNullOrEmpty(shaderName))
+            {
+                shader = Shader.Find(shaderName);
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
             if (shader == null)
             {
                 shader = Shader.Find("Unlit/Color");
