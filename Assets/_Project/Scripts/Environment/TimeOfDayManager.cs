@@ -152,15 +152,15 @@ namespace GanhHangRong.Environment
             switch (period)
             {
                 case TimePeriod.EarlyMorning:
-                    return "Sang";
+                    return "Sáng";
                 case TimePeriod.Noon:
-                    return "Trua";
+                    return "Trưa";
                 case TimePeriod.Afternoon:
-                    return "Chieu";
+                    return "Chiều";
                 case TimePeriod.Evening:
-                    return "Toi";
+                    return "Tối";
                 default:
-                    return "Dem";
+                    return "Đêm";
             }
         }
     }
