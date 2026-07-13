@@ -24,7 +24,7 @@ namespace GanhHangRong.Systems
             CreateOrUpdateItem("hu_ca_phe", "Hũ Cà Phê Phố Cổ", "Cà phê bột rang xay thơm lừng. Mua 1 hũ (+150g cà phê) để pha chế.", 15000, "hu_tra");
             CreateOrUpdateItem("tra", "Hũ Trà Thượng Hạng", "Trà lài đậm vị truyền thống. Mua 1 hũ (+100g trà) để nấu trà sữa/trà đá.", 5000, "hu_tra");
             CreateOrUpdateItem("nuoc_sach", "Bình Nước Sài Gòn Aquwa", "Nước sạch tinh khiết 30L. Mua để nạp đầy nước cho bình lọc đun trà.", 3000, "ice_box");
-            CreateOrUpdateItem("duong", "Hũ Đường Tinh Luyện", "Đường ngọt thanh dịu. Mua 1 hũ (+200g đường) dùng cho pha chế.", 2000, "hu_duong");
+            CreateOrUpdateItem("duong", "Hũ Đường", "Đường ngọt thanh dịu. Mua 1 hũ (+200g đường) dùng cho pha chế.", 2000, "hu_duong");
             CreateOrUpdateItem("ly_nuoc_sach", "Lốc 10 Ly Nước Sạch", "Ly nhựa sạch dùng một lần/tái sử dụng. Mua 1 lốc (+10 ly sạch).", 2000, "ly_cups");
             CreateOrUpdateItem("ban_doi", "Bộ Bàn Đôi (2 Ghế)", "Bộ bàn trà nhỏ kèm 2 ghế nhựa đẩu. Mua về bấm ĐẶT BÀN để bố trí cho khách ngồi!", 20000, "mat_ban_inox");
             CreateOrUpdateItem("ban_bon", "Bộ Bàn Lớn (4 Ghế)", "Bộ bàn trà lớn kèm 4 ghế nhựa đẩu cho nhóm khách đông. Bấm ĐẶT BÀN để bố trí!", 35000, "mat_ban_inox");
@@ -112,6 +112,25 @@ namespace GanhHangRong.Systems
 
         private static Sprite FindSpriteByName(string spriteName)
         {
+#if UNITY_EDITOR
+            string[] guids = UnityEditor.AssetDatabase.FindAssets(spriteName + " t:Sprite");
+            if (guids == null || guids.Length == 0)
+            {
+                guids = UnityEditor.AssetDatabase.FindAssets(spriteName + " t:Texture2D");
+            }
+            if (guids != null && guids.Length > 0)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                Sprite sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sprite != null) return sprite;
+
+                Texture2D tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (tex != null)
+                {
+                    return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                }
+            }
+#endif
             Sprite[] allSprites = Resources.FindObjectsOfTypeAll<Sprite>();
             foreach (Sprite s in allSprites)
             {

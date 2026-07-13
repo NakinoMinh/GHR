@@ -272,6 +272,13 @@ namespace GanhHangRong.Interaction
                 return;
             }
 
+            if (seatNPC.OrderedDrinkId != CartItem.PreparedDrinkId)
+            {
+                EventManager.TriggerDialogueLine("Khách hàng", "😐 Đây không phải món tôi yêu cầu!");
+                seatNPC.ReactToWrongDrink();
+                return;
+            }
+
             // 1. Kích hoạt trạng thái uống nước của khách
             seatNPC.ServeDrink();
 

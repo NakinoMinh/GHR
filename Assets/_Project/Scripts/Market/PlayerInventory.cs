@@ -208,6 +208,12 @@ namespace GanhHangRong.Economy
             return GetItemAmount(itemId) >= Mathf.Max(1, amount);
         }
 
+        public void TriggerMoneyChangedEvent(int newMoney)
+        {
+            currentMoney = newMoney;
+            MoneyChanged?.Invoke(currentMoney);
+        }
+
         public bool SpendMoney(int amount)
         {
             if (amount <= 0)
@@ -224,6 +230,14 @@ namespace GanhHangRong.Economy
             MoneyChanged?.Invoke(currentMoney);
             EventManager.TriggerMoneySpent(amount);
             EventManager.TriggerMoneyChanged(currentMoney);
+
+            // Đồng bộ sang PlayerStats
+            PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+            if (stats != null)
+            {
+                stats.SyncMoneyFromInventory(currentMoney);
+            }
+
             return true;
         }
 
@@ -238,6 +252,13 @@ namespace GanhHangRong.Economy
             MoneyChanged?.Invoke(currentMoney);
             EventManager.TriggerMoneyEarned(amount);
             EventManager.TriggerMoneyChanged(currentMoney);
+
+            // Đồng bộ sang PlayerStats
+            PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+            if (stats != null)
+            {
+                stats.SyncMoneyFromInventory(currentMoney);
+            }
         }
 
         public void SaveData()
@@ -270,6 +291,11 @@ namespace GanhHangRong.Economy
             if (!PlayerPrefs.HasKey(SaveKey))
             {
                 currentMoney = startingMoney;
+                PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+                if (stats != null)
+                {
+                    currentMoney = stats.Money;
+                }
                 MoneyChanged?.Invoke(currentMoney);
                 EventManager.TriggerMoneyChanged(currentMoney);
                 return;
@@ -280,12 +306,23 @@ namespace GanhHangRong.Economy
             {
                 Debug.LogWarning("Không đọc được save túi đồ. Dùng dữ liệu mặc định.", this);
                 currentMoney = startingMoney;
+                PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+                if (stats != null)
+                {
+                    currentMoney = stats.Money;
+                }
                 return;
             }
 
             Dictionary<string, ItemData> knownItems = BuildKnownItemLookup();
             items.Clear();
             currentMoney = Mathf.Max(0, saveData.money);
+
+            PlayerStats activeStats = FindAnyObjectByType<PlayerStats>();
+            if (activeStats != null)
+            {
+                currentMoney = activeStats.Money;
+            }
 
             foreach (InventorySaveEntry entry in saveData.items)
             {

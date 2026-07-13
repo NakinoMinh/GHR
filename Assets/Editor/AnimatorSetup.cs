@@ -11,15 +11,8 @@ namespace GanhHangRong.Editor
     /// Tự động remap bone paths từ Mixamo (mixamorig:X) sang tên bone của model Meshy AI (X).
     /// Đồng thời tự động gán mô hình ly nước fbx vào các CartItem trong scene.
     /// </summary>
-    [InitializeOnLoad]
     public class AnimatorSetup
     {
-        static AnimatorSetup()
-        {
-            // Chạy tự động sau khi Unity compile xong
-            EditorApplication.delayCall += SetupPlayerAnimator;
-        }
-
         [MenuItem("GHR/Thiết lập Animator & Mô hình")]
         public static void SetupPlayerAnimator()
         {
@@ -133,33 +126,49 @@ namespace GanhHangRong.Editor
                 holdLayer = controller.layers[holdLayerIndex];
             }
 
-            // 6. Thiết lập State Machine trong HoldCupLayer
+            // 6. Kiểm tra nếu đã có đủ state thì chỉ cập nhật motion, tránh xóa sub-asset gây Broken PPtr
             var stateMachine = holdLayer.stateMachine;
-            
-            // Dọn sạch các State cũ trong Layer này
-            var states = stateMachine.states;
-            for (int i = states.Length - 1; i >= 0; i--)
+            bool hasEmpty = false;
+            bool hasHoldCup = false;
+            foreach (var s in stateMachine.states)
             {
-                stateMachine.RemoveState(states[i].state);
+                if (s.state != null && s.state.name == "Empty") hasEmpty = true;
+                if (s.state != null && s.state.name == "HoldCup")
+                {
+                    s.state.motion = remappedClip;
+                    hasHoldCup = true;
+                }
             }
 
-            // Tạo các State mới
-            AnimatorState emptyState = stateMachine.AddState("Empty", new Vector3(200, 0, 0));
-            AnimatorState holdCupState = stateMachine.AddState("HoldCup", new Vector3(200, 120, 0));
-            holdCupState.motion = remappedClip; // Dùng clip đã remap thay vì clip gốc
+            if (!hasEmpty || !hasHoldCup)
+            {
+                var states = stateMachine.states;
+                for (int i = states.Length - 1; i >= 0; i--)
+                {
+                    if (states[i].state != null)
+                    {
+                        var st = states[i].state;
+                        stateMachine.RemoveState(st);
+                        Undo.DestroyObjectImmediate(st);
+                    }
+                }
 
-            stateMachine.defaultState = emptyState;
+                AnimatorState emptyState = stateMachine.AddState("Empty", new Vector3(200, 0, 0));
+                AnimatorState holdCupState = stateMachine.AddState("HoldCup", new Vector3(200, 120, 0));
+                holdCupState.motion = remappedClip;
 
-            // Tạo transitions
-            var transToHold = emptyState.AddTransition(holdCupState);
-            transToHold.AddCondition(AnimatorConditionMode.If, 0, "IsHoldingCup");
-            transToHold.duration = 0.15f;
-            transToHold.hasExitTime = false;
+                stateMachine.defaultState = emptyState;
 
-            var transToEmpty = holdCupState.AddTransition(emptyState);
-            transToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsHoldingCup");
-            transToEmpty.duration = 0.15f;
-            transToEmpty.hasExitTime = false;
+                var transToHold = emptyState.AddTransition(holdCupState);
+                transToHold.AddCondition(AnimatorConditionMode.If, 0, "IsHoldingCup");
+                transToHold.duration = 0.15f;
+                transToHold.hasExitTime = false;
+
+                var transToEmpty = holdCupState.AddTransition(emptyState);
+                transToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsHoldingCup");
+                transToEmpty.duration = 0.15f;
+                transToEmpty.hasExitTime = false;
+            }
 
             // Đảm bảo Blending Mode là Override và xóa mask (null = toàn bộ body)
             var layers = controller.layers;

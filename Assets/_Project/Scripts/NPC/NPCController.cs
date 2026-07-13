@@ -30,6 +30,7 @@ namespace GanhHangRong.NPC
         private float drinkTimer = 0f;
         private float drinkDuration;
         private bool isServed = false;
+        private string customLeaveMessage = null;
         
         private GameObject speechBubble;
         private TextMeshPro bubbleText;
@@ -235,7 +236,7 @@ namespace GanhHangRong.NPC
                     break;
                     
                 case NPCState.LeavingSad:
-                    ShowSpeechBubble("Tệ quá!", Color.red);
+                    ShowSpeechBubble(customLeaveMessage != null ? customLeaveMessage : "Tệ quá!", Color.red);
                     transform.position = new Vector3(transform.position.x, startY, transform.position.z); // Trả lại độ cao mặt đất
                     ChangeState(NPCState.LeavingSeat);
                     break;
@@ -486,6 +487,20 @@ namespace GanhHangRong.NPC
         {
             currentState = newState;
             ApplyVisualPoseForState();
+        }
+
+        public void ReactToWrongDrink()
+        {
+            if (currentState == NPCState.Waiting)
+            {
+                // Trừ điểm kiên nhẫn bằng cách tăng timer (ví dụ 40% thời gian)
+                waitTimer += maxWaitTime * 0.4f;
+                
+                if (waitTimer >= maxWaitTime)
+                {
+                    customLeaveMessage = "Thôi khỏi, tôi đi quán khác.";
+                }
+            }
         }
 
         public void ServeDrink()

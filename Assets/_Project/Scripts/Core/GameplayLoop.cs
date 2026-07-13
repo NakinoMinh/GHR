@@ -80,7 +80,7 @@ namespace GanhHangRong.Systems
             GameManager.Instance.ResumeGame();
             if (dayNightCycle != null)
             {
-                dayNightCycle.SkipToHour(17f); // Nhảy đến chiều tối ngày hôm sau
+                dayNightCycle.SkipToHour(6f); // Nhảy đến 6h sáng ngày hôm sau
                 int skippedCalendarDays = Mathf.Max(1, dayNightCycle.ConsumeCalendarDayOffset());
                 for (int i = 0; i < skippedCalendarDays; i++)
                 {
