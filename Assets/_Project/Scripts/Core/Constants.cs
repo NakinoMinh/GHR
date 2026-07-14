@@ -90,6 +90,8 @@ namespace GanhHangRong.Core
         public const int CHAPTER1_REQUIRED_DAYS = 3;
         public const int CHAPTER1_TARGET_CUSTOMERS = 12;
         public const int CHAPTER1_TARGET_MONEY = 85000;
+        public const string GAMEPLAY_SCENE_NAME = "Chapter1";
+        public const string GAMEPLAY_SCENE_PATH = "Assets/_Project/Scenes/Chapter1/Chapter1.unity";
         public const string CHAPTER2_SCENE_NAME = "Chapter2";
         public const string CHAPTER2_SCENE_PATH = "Assets/_Project/Scenes/Chapter2/Chapter2.unity";
 
@@ -126,7 +128,7 @@ namespace GanhHangRong.Core
         // SAVE
         // ═══════════════════════════════════════════
         public const string SAVE_FILE_NAME = "ganh_hang_rong_save.json";
-        public const int SAVE_VERSION = 1;
+        public const int SAVE_VERSION = 2;
 
         // ═══════════════════════════════════════════
         // AUDIO

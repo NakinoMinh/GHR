@@ -157,6 +157,8 @@ namespace GanhHangRong.Systems
                 return false;
             }
 
+            EventManager.TriggerDeliveryFeePaid(deliveryCost);
+
             // Tìm xe đẩy
             var cart = FindAnyObjectByType<Interaction.TeaCart>();
             if (cart == null)

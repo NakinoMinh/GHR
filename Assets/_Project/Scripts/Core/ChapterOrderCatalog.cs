@@ -69,7 +69,16 @@ namespace GanhHangRong.Core
         public static int GetRandomOrderId(int chapter)
         {
             OrderInfo[] orders = chapter >= 2 ? Chapter2Orders : Chapter1Orders;
-            
+            return GetRandomOrderFrom(orders);
+        }
+
+        public static int GetRandomDailyDrinkId()
+        {
+            return GetRandomOrderFrom(Chapter1Orders);
+        }
+
+        private static int GetRandomOrderFrom(OrderInfo[] orders)
+        {
             var activeIds = UI.TabMenuUI.GetActiveServingOrderIds();
             if (activeIds != null && activeIds.Count > 0)
             {

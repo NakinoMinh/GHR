@@ -34,6 +34,7 @@ namespace GanhHangRong.NPC
         
         private GameObject speechBubble;
         private TextMeshPro bubbleText;
+        private Camera cachedMainCamera;
 
         private int orderedDrink = 0; // 0: Trà đá, 1: Cà phê
         private NPCInteractable interactable;
@@ -258,6 +259,22 @@ namespace GanhHangRong.NPC
         private void LateUpdate()
         {
             ApplyVisualPoseForState();
+            FaceSpeechBubbleToCamera();
+        }
+
+        private void FaceSpeechBubbleToCamera()
+        {
+            if (speechBubble == null || !speechBubble.activeSelf) return;
+
+            if (cachedMainCamera == null || !cachedMainCamera.isActiveAndEnabled)
+            {
+                cachedMainCamera = Camera.main;
+            }
+
+            if (cachedMainCamera == null) return;
+
+            Transform cameraTransform = cachedMainCamera.transform;
+            speechBubble.transform.rotation = Quaternion.LookRotation(cameraTransform.forward, cameraTransform.up);
         }
 
         private void ApplyVisualPoseForState()
@@ -529,6 +546,7 @@ namespace GanhHangRong.NPC
             {
                 playerStats.AddMoney(total);
                 playerStats.RecordCustomerServed();
+                EventManager.TriggerSaleCompleted(orderedDrink, total);
             }
         }
 
@@ -541,9 +559,8 @@ namespace GanhHangRong.NPC
             var cam = FindAnyObjectByType<Player.CinematicCamera>();
             if (cam != null) cam.FocusOnNPC(transform, player.transform);
 
-            // Random món theo chapter hiện tại.
-            int chapter = GameManager.HasInstance ? GameManager.Instance.CurrentChapter : 1;
-            orderedDrink = ChapterOrderCatalog.GetRandomOrderId(chapter);
+            // Chọn món trong thực đơn đã chốt cho ngày hiện tại.
+            orderedDrink = ChapterOrderCatalog.GetRandomDailyDrinkId();
             string drinkName = GetDrinkName(orderedDrink);
             string text = $"Cho tui một ly {drinkName} nha!";
             if (ChapterOrderCatalog.IsChapter2Order(orderedDrink))

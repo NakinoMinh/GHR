@@ -26,6 +26,9 @@ namespace GanhHangRong.Interaction
         private Player.PlayerController interactingPlayer;
         private Renderer[] hiddenPlayerRenderers;
         private Transform dynamicCameraViewPoint;
+        private bool hasStableCameraViewPose;
+        private Vector3 stableCameraViewLocalPosition;
+        private Quaternion stableCameraViewLocalRotation;
         private Vector3 playerPositionBeforeInteraction;
         private Quaternion playerRotationBeforeInteraction;
         private bool hasSavedPlayerTransform;
@@ -44,6 +47,14 @@ namespace GanhHangRong.Interaction
 
             ScaleCartForStreetPresence();
             promptText = "Nhấn F để tương tác xe đẩy";
+        }
+
+        private void Update()
+        {
+            if (!isPlayerInteracting && Systems.BusinessDayController.HasInstance)
+            {
+                promptText = Systems.BusinessDayController.Instance.GetCartPrompt("Nhấn F để tương tác xe đẩy");
+            }
         }
 
         private void OnDisable()
@@ -98,8 +109,17 @@ namespace GanhHangRong.Interaction
                 return;
             }
 
+            if (Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.TryHandleCartInteractionOverride())
+            {
+                return;
+            }
+
             var dayNight = FindAnyObjectByType<Economy.DayNightCycle>();
-            bool isNight = dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
+            bool isNight = Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.IsManagingGameLoop
+                    ? Systems.BusinessDayController.Instance.CanServeCustomers
+                    : dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
 
             if (needsRepair)
             {
@@ -155,7 +175,10 @@ namespace GanhHangRong.Interaction
             }
 
             var dayNight = FindAnyObjectByType<Economy.DayNightCycle>();
-            bool isNight = dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
+            bool isNight = Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.IsManagingGameLoop
+                    ? Systems.BusinessDayController.Instance.CanServeCustomers
+                    : dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
             if (isNight)
             {
                 promptText = "Nhìn từ mặt bàn | Click vật phẩm | Space phục vụ | F thoát";
@@ -184,6 +207,13 @@ namespace GanhHangRong.Interaction
             }
             cartForward.Normalize();
 
+            if (hasStableCameraViewPose)
+            {
+                dynamicCameraViewPoint.localPosition = stableCameraViewLocalPosition;
+                dynamicCameraViewPoint.localRotation = stableCameraViewLocalRotation;
+                return dynamicCameraViewPoint;
+            }
+
             if (!TryGetVisualBounds(out Bounds bounds))
             {
                 Transform fallback = (cameraViewPoint != null) ? cameraViewPoint : cartOrbitCenter;
@@ -191,11 +221,13 @@ namespace GanhHangRong.Interaction
                 {
                     dynamicCameraViewPoint.position = fallback.position;
                     dynamicCameraViewPoint.rotation = fallback.rotation;
+                    CacheStableCameraViewPose();
                     return dynamicCameraViewPoint;
                 }
 
                 dynamicCameraViewPoint.position = transform.position - cartForward * 1.6f + Vector3.up * 1.25f;
                 dynamicCameraViewPoint.rotation = Quaternion.LookRotation(cartForward, Vector3.up);
+                CacheStableCameraViewPose();
                 return dynamicCameraViewPoint;
             }
 
@@ -208,7 +240,17 @@ namespace GanhHangRong.Interaction
             Vector3 lookTarget = tableCenter + Vector3.up * CartCameraLookHeightAboveTable + cartForward * 0.35f;
             dynamicCameraViewPoint.position = cameraPosition;
             dynamicCameraViewPoint.rotation = Quaternion.LookRotation(lookTarget - cameraPosition, Vector3.up);
+            CacheStableCameraViewPose();
             return dynamicCameraViewPoint;
+        }
+
+        private void CacheStableCameraViewPose()
+        {
+            if (dynamicCameraViewPoint == null) return;
+
+            stableCameraViewLocalPosition = dynamicCameraViewPoint.localPosition;
+            stableCameraViewLocalRotation = dynamicCameraViewPoint.localRotation;
+            hasStableCameraViewPose = true;
         }
 
         private bool TryGetVisualBounds(out Bounds bounds)
@@ -313,7 +355,10 @@ namespace GanhHangRong.Interaction
         public void ServeFromFirstPerson(Player.PlayerController player)
         {
             var dayNight = FindAnyObjectByType<Economy.DayNightCycle>();
-            bool isNight = dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
+            bool isNight = Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.IsManagingGameLoop
+                    ? Systems.BusinessDayController.Instance.CanServeCustomers
+                    : dayNight != null && dayNight.CurrentTimeOfDay == TimeOfDay.Night;
 
             if (isNight)
             {
@@ -321,7 +366,7 @@ namespace GanhHangRong.Interaction
             }
             else
             {
-                EventManager.TriggerDialogueLine("Hoàng Hôn", "Trời chưa tối, chưa có khách hàng để phục vụ.");
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Quán chưa mở cửa, chưa thể phục vụ khách.");
             }
         }
 
@@ -332,13 +377,6 @@ namespace GanhHangRong.Interaction
 
             if (!stats.HasSuppliesForTea())
             {
-                int chapter = GameManager.HasInstance ? GameManager.Instance.CurrentChapter : 1;
-                if (chapter >= 2 && !CartItem.IsHoldingCup)
-                {
-                    EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có món nào được chuẩn bị! Hãy nhấp vào món trên xe hàng rồi nhấn Space để phục vụ.");
-                    return;
-                }
-
                 if (CartItem.IsHoldingCup)
                 {
                     if (CartItem.IsHoldingDirtyCup)

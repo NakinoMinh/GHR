@@ -190,7 +190,7 @@ namespace GanhHangRong.UI
         private IEnumerator ContinueGame()
         {
             isTransitioning = true;
-            AsyncOperation load = SceneManager.LoadSceneAsync("Chapter1");
+            AsyncOperation load = SceneManager.LoadSceneAsync(Constants.GAMEPLAY_SCENE_NAME);
             while (!load.isDone) yield return null;
             yield return null;
             if (GanhHangRong.Systems.SaveManager.Instance != null)
@@ -249,12 +249,12 @@ namespace GanhHangRong.UI
 
             if (chapterText != null)
             {
-                chapterText.text = "Chương 1: Xe Trà Đá Ven Bến Tàu";
+                chapterText.text = "XE TRÀ ĐÁ VEN BẾN TÀU";
                 yield return StartCoroutine(FadeText(chapterText, 0f, 1f, 1.5f));
             }
 
             yield return new WaitForSeconds(2.5f);
-            SceneManager.LoadScene("Chapter1");
+            SceneManager.LoadScene(Constants.GAMEPLAY_SCENE_NAME);
         }
 
         private void PlayMenuMusic()

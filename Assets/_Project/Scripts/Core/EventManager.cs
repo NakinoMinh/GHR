@@ -18,10 +18,12 @@ namespace GanhHangRong.Core
         public static event Action<TimeOfDay> OnTimeOfDayChanged;
         public static event Action<float> OnHourChanged;
         public static event Action OnNewDay;
+        public static event Action<BusinessDayPhase> OnBusinessDayPhaseChanged;
 
         public static void TriggerTimeOfDayChanged(TimeOfDay time) => OnTimeOfDayChanged?.Invoke(time);
         public static void TriggerHourChanged(float hour) => OnHourChanged?.Invoke(hour);
         public static void TriggerNewDay() => OnNewDay?.Invoke();
+        public static void TriggerBusinessDayPhaseChanged(BusinessDayPhase phase) => OnBusinessDayPhaseChanged?.Invoke(phase);
 
         // THỜI TIẾT
         public static event Action<WeatherType> OnWeatherChanged;
@@ -34,10 +36,14 @@ namespace GanhHangRong.Core
         public static event Action<int> OnMoneyChanged;
         public static event Action<int> OnMoneyEarned;
         public static event Action<int> OnMoneySpent;
+        public static event Action<int, int> OnSaleCompleted;
+        public static event Action<int> OnDeliveryFeePaid;
 
         public static void TriggerMoneyChanged(int m) => OnMoneyChanged?.Invoke(m);
         public static void TriggerMoneyEarned(int a) => OnMoneyEarned?.Invoke(a);
         public static void TriggerMoneySpent(int a) => OnMoneySpent?.Invoke(a);
+        public static void TriggerSaleCompleted(int orderId, int amount) => OnSaleCompleted?.Invoke(orderId, amount);
+        public static void TriggerDeliveryFeePaid(int amount) => OnDeliveryFeePaid?.Invoke(amount);
 
         // KHÁCH HÀNG
         public static event Action<NPCType> OnCustomerArrived;
@@ -93,8 +99,10 @@ namespace GanhHangRong.Core
         {
             OnGamePhaseChanged = null; OnGamePaused = null; OnGameResumed = null;
             OnTimeOfDayChanged = null; OnHourChanged = null; OnNewDay = null;
+            OnBusinessDayPhaseChanged = null;
             OnWeatherChanged = null; OnRainIntensityChanged = null;
             OnMoneyChanged = null; OnMoneyEarned = null; OnMoneySpent = null;
+            OnSaleCompleted = null; OnDeliveryFeePaid = null;
             OnCustomerArrived = null; OnCustomerServed = null;
             OnCustomerLeftHappy = null; OnCustomerLeftSad = null;
             OnCustomerOrderPlaced = null; OnCustomerOrderCleared = null;

@@ -19,6 +19,20 @@ namespace GanhHangRong.Systems
                 data.chapter1Completed = GameManager.Instance.Chapter1Completed;
             }
 
+            var businessDay = FindAnyObjectByType<BusinessDayController>();
+            var dayNight = FindAnyObjectByType<Economy.DayNightCycle>();
+            if (businessDay != null)
+            {
+                data.businessDayPhase = (int)businessDay.CurrentPhase;
+                data.lateReturnPenalty = businessDay.HasLateReturnPenalty;
+            }
+            if (dayNight != null)
+            {
+                data.currentHour = dayNight.CurrentHour;
+            }
+            data.servingMenuSaved = UI.TabMenuUI.HasSavedServingMenu;
+            data.activeServingOrderIds = UI.TabMenuUI.ExportActiveServingOrderIds();
+
             var playerStats = FindAnyObjectByType<Player.PlayerStats>();
             if (playerStats != null)
             {
@@ -57,6 +71,14 @@ namespace GanhHangRong.Systems
                 string json = File.ReadAllText(SavePath);
                 SaveData data = JsonUtility.FromJson<SaveData>(json);
 
+                if (data.version < 2)
+                {
+                    data.currentHour = 6f;
+                    data.businessDayPhase = (int)BusinessDayPhase.PreOpen;
+                    data.servingMenuSaved = false;
+                    data.activeServingOrderIds = new[] { 0, 1 };
+                }
+
                 if (data.version != Constants.SAVE_VERSION)
                     Debug.LogWarning("[SaveManager] Save version mismatch.");
 
@@ -88,6 +110,17 @@ namespace GanhHangRong.Systems
                     data.cupSupply,
                     data.totalCustomersServed,
                     data.totalMoneyEarned);
+            }
+
+            UI.TabMenuUI.RestoreActiveServingOrderIds(data.activeServingOrderIds, data.servingMenuSaved);
+
+            var businessDay = FindAnyObjectByType<BusinessDayController>();
+            if (businessDay != null && businessDay.IsManagingGameLoop)
+            {
+                BusinessDayPhase phase = System.Enum.IsDefined(typeof(BusinessDayPhase), data.businessDayPhase)
+                    ? (BusinessDayPhase)data.businessDayPhase
+                    : BusinessDayPhase.PreOpen;
+                businessDay.RestoreState(data.currentHour, phase, data.lateReturnPenalty);
             }
         }
     }

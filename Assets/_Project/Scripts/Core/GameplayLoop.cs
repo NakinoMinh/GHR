@@ -31,6 +31,11 @@ namespace GanhHangRong.Systems
 
         private void HandleTimeChanged(TimeOfDay timeOfDay)
         {
+            if (BusinessDayController.HasInstance && BusinessDayController.Instance.IsManagingGameLoop)
+            {
+                return;
+            }
+
             switch (timeOfDay)
             {
                 case TimeOfDay.Evening:
@@ -76,6 +81,12 @@ namespace GanhHangRong.Systems
 
         public void EndDaySummary()
         {
+            if (BusinessDayController.HasInstance && BusinessDayController.Instance.IsManagingGameLoop)
+            {
+                BusinessDayController.Instance.StartNextDayFromSummary();
+                return;
+            }
+
             hasShownSummary = false;
             GameManager.Instance.ResumeGame();
             if (dayNightCycle != null)
