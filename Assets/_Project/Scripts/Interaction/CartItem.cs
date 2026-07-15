@@ -1,4 +1,5 @@
 using UnityEngine;
+using GanhHangRong.Audio;
 using GanhHangRong.Core;
 
 namespace GanhHangRong.Interaction
@@ -55,6 +56,8 @@ namespace GanhHangRong.Interaction
         
         private static bool isBoilingWater = false;
         public static bool IsBoilingWater => isBoilingWater;
+        private static bool isKettleHeating = false;
+        public static bool IsKettleHeating => isKettleHeating;
         private static bool isWaterBoiled = false;
         public static bool IsWaterBoiled => isWaterBoiled;
 
@@ -115,6 +118,7 @@ namespace GanhHangRong.Interaction
         public static void ResetBrewingState()
         {
             isBoilingWater = false;
+            isKettleHeating = false;
             isWaterBoiled = false;
             bottleWater = 30f;
             kettleWater = maxKettleWater;
@@ -159,6 +163,7 @@ namespace GanhHangRong.Interaction
 
             EventManager.TriggerDialogueLine("Hoàng Hôn", "Đã dọn ly dơ trên bàn. Hãy mang đến bồn rửa ly để rửa sạch tái sử dụng!");
             Debug.Log("[CartItem] Dọn ly trên bàn -> Cầm ly dơ đi rửa");
+            GameplaySfxManager.Play(GameplaySfxCue.CupPickup);
 
             AttachEmptyCupToPlayer(player);
         }
@@ -433,6 +438,7 @@ private void EnsureInteractionCollider()
                 waterInCup += 0.2f;
                 ShowResourceDelta($"-200ml nước ấm (ấm còn {kettleWater:F1}L)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã rót 200ml nước sôi vào ly. (-200ml nước ấm, còn {kettleWater:F1}L trong ấm)");
+                GameplaySfxManager.Play(GameplaySfxCue.PourWater);
 
                 if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Nước Sôi");
                 CheckBrewingCompletion(player);
@@ -500,6 +506,7 @@ private void EnsureInteractionCollider()
             teaInCup += 50;
             ShowResourceDelta($"-50g trà (còn {stats.TeaSupply}g)");
             EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 50g trà vào ly. (-50g trà, còn {stats.TeaSupply}g)");
+            GameplaySfxManager.Play(GameplaySfxCue.AddIngredient);
 
             if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Trà");
             CheckBrewingCompletion(player);
@@ -537,6 +544,7 @@ private void EnsureInteractionCollider()
                 stats.AddSupplies(0, -10, 0); // Consume 10g sugar
                 ShowResourceDelta($"-10g đường (còn {stats.SugarSupply}g)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 10g đường vào ly. (-10g đường, còn {stats.SugarSupply}g)");
+                GameplaySfxManager.Play(GameplaySfxCue.AddIngredient);
                 
                 if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Đường");
                 CheckBrewingCompletion(player);
@@ -590,6 +598,7 @@ private void EnsureInteractionCollider()
                 coffeeInCup += 30;
                 ShowResourceDelta($"-30g cà phê (còn {stats.CoffeeSupply}g)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã cho 30g cà phê vào ly. (-30g cà phê, còn {stats.CoffeeSupply}g)");
+                GameplaySfxManager.Play(GameplaySfxCue.AddIngredient);
                 CheckBrewingCompletion(player);
                 return;
             }
@@ -631,6 +640,7 @@ private void EnsureInteractionCollider()
                 iceInCup += 5f;
                 ShowResourceDelta($"-5% đá (còn {Mathf.RoundToInt(stats.IceLevel)}%)");
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã thêm 5% đá vào ly. (-5% đá, còn {Mathf.RoundToInt(stats.IceLevel)}%)");
+                GameplaySfxManager.Play(GameplaySfxCue.AddIce);
 
                 if (UI.RecipeMiniGameUI.Instance != null) UI.RecipeMiniGameUI.Instance.OnIngredientAdded("Đá");
                 CheckBrewingCompletion(player);
@@ -664,6 +674,7 @@ private void EnsureInteractionCollider()
                 iceInCup = 0f;
 
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Hoàn thành 1 ly {drinkName}! Nhấn Space để phục vụ hoặc đi đến bàn khách để đặt ly xuống.");
+                GameplaySfxManager.Play(GameplaySfxCue.DrinkReady);
 
                 // Gắn mô hình ly trà đá lên tay phải nhân vật
                 AttachTeaCupToPlayer(player);
@@ -1348,6 +1359,7 @@ private void EnsureInteractionCollider()
         private System.Collections.IEnumerator BoilWaterRoutine(GameObject kettle, GameObject stove, GameObject water)
         {
             isBoilingWater = true;
+            isKettleHeating = false;
             isWaterBoiled = false;
 
             if (activeCoolDownCoroutine != null)
@@ -1368,6 +1380,7 @@ private void EnsureInteractionCollider()
                 {
                     EventManager.TriggerDialogueLine("Hoàng Hôn", "Bình nước Sài Gòn Aquwa đã hết sạch nước rồi! Không thể đun.");
                     isBoilingWater = false;
+                    isKettleHeating = false;
                     yield break;
                 }
 
@@ -1399,6 +1412,8 @@ private void EnsureInteractionCollider()
             Vector3 stovePos = GetKettleBoilPosition(kettle, stove); // Sit the kettle on top of the burner instead of inside it.
             Quaternion stoveRot = Quaternion.identity; // Phẳng ngang
             yield return StartCoroutine(SmoothMove(kettleT, stovePos, stoveRot, 1.5f));
+            isKettleHeating = true;
+            GameplaySfxManager.Play(GameplaySfxCue.StoveIgnite);
 
             // Tạo hiệu ứng hơi nước
             GameObject steamFx = CreateSteamParticles(kettleT);
@@ -1417,7 +1432,9 @@ private void EnsureInteractionCollider()
             }
 
             isWaterBoiled = true;
+            isKettleHeating = false;
             EventManager.TriggerDialogueLine("Hoàng Hôn", "Nước đã sôi sùng sục 100 độ C! Nhấc ấm nước nóng đặt lại chỗ cũ.");
+            GameplaySfxManager.Play(GameplaySfxCue.KettleReady);
 
             // 3. Di chuyển ấm về vị trí ban đầu
             yield return StartCoroutine(SmoothMove(kettleT, kettleOrigPos, kettleOrigRot, 1.5f));
@@ -1554,6 +1571,7 @@ private void EnsureInteractionCollider()
                     ShowResourceDelta($"+1 cốc (còn {stats.CupSupply})");
                     EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã đặt ly trống trở lại xe đẩy. (+1 cốc, còn {stats.CupSupply})");
                     Debug.Log("[CartItem] Trả ly trống chưa thêm nguyên liệu về chỗ cũ trên xe đẩy");
+                    GameplaySfxManager.Play(GameplaySfxCue.CupPlace);
                     if (UI.RecipeMiniGameUI.Instance != null)
                     {
                         UI.RecipeMiniGameUI.Instance.UndoStep();
@@ -1581,6 +1599,7 @@ private void EnsureInteractionCollider()
             ShowResourceDelta($"-1 cốc (còn {stats.CupSupply})");
             EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã lấy 1 ly sạch đặt lên tay. (-1 cốc, còn {stats.CupSupply})");
             Debug.Log("[CartItem] Tương tác ly nước -> Cầm ly pha chế");
+            GameplaySfxManager.Play(GameplaySfxCue.CupPickup);
 
             // Gắn mô hình ly trống lên tay Hoàng Hôn
             AttachEmptyCupToPlayer(player);

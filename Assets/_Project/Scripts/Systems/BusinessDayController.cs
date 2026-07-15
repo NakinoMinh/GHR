@@ -17,7 +17,22 @@ namespace GanhHangRong.Systems
     [DisallowMultipleComponent]
     public class BusinessDayController : MonoBehaviour
     {
-        public static BusinessDayController Instance { get; private set; }
+        private static BusinessDayController instance;
+
+        public static BusinessDayController Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = FindAnyObjectByType<BusinessDayController>();
+                }
+
+                return instance;
+            }
+            private set => instance = value;
+        }
+
         public static bool HasInstance => Instance != null;
 
         [Header("Mốc thời gian")]
@@ -58,6 +73,7 @@ namespace GanhHangRong.Systems
         public bool CanCloseAtClosingPoint => IsManagingGameLoop &&
             currentPhase == BusinessDayPhase.Trading &&
             dayNightCycle != null && dayNightCycle.CurrentHour >= closingHour;
+        public bool HasPendingConfirmation => awaitingOpenConfirmation || awaitingEarlyCloseConfirmation;
         public bool HasLateReturnPenalty => lateReturnPenalty;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -82,7 +98,7 @@ namespace GanhHangRong.Systems
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
+            if (instance != null && instance != this)
             {
                 Destroy(this);
                 return;
@@ -112,7 +128,7 @@ namespace GanhHangRong.Systems
 
         private void OnDestroy()
         {
-            if (Instance == this) Instance = null;
+            if (instance == this) instance = null;
         }
 
         private static bool IsGameplaySceneLoaded(Scene scene)

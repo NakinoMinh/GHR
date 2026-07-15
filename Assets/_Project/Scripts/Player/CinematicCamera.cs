@@ -10,6 +10,11 @@ namespace GanhHangRong.Player
     /// </summary>
     public class CinematicCamera : MonoBehaviour
     {
+        public const string MouseSensitivityPreferenceKey = "GHR_MouseSensitivity";
+        public const float DefaultMouseSensitivity = 2f;
+        public const float MinimumMouseSensitivity = 0.25f;
+        public const float MaximumMouseSensitivity = 5f;
+
         [Header("Mục Tiêu")]
         [SerializeField] private Transform target;
 
@@ -22,7 +27,7 @@ namespace GanhHangRong.Player
         [SerializeField] private Vector3 shoulderOffset = new Vector3(0.7f, 0.15f, 0f);
 
         [Header("Third Person Orbit Settings")]
-        [SerializeField] private float mouseSensitivity = 2f;
+        [SerializeField] private float mouseSensitivity = DefaultMouseSensitivity;
         [SerializeField] private float minPitch = -20f;
         [SerializeField] private float maxPitch = 60f;
         [SerializeField] private float smoothSpeed = 10f;
@@ -83,10 +88,12 @@ namespace GanhHangRong.Player
 
         public bool IsCartOrbitMode => isCartOrbitMode;
         public bool IsCartFirstPersonMode => isCartFirstPersonMode;
+        public float MouseSensitivity => mouseSensitivity;
 
         private void Start()
         {
             cachedCamera = GetComponent<Camera>();
+            SetMouseSensitivity(PlayerPrefs.GetFloat(MouseSensitivityPreferenceKey, mouseSensitivity), false);
 
             if (target != null)
             {
@@ -94,6 +101,15 @@ namespace GanhHangRong.Player
                 yaw = transform.eulerAngles.y;
                 pitch = transform.eulerAngles.x;
                 SnapToTarget();
+            }
+        }
+
+        public void SetMouseSensitivity(float value, bool save = true)
+        {
+            mouseSensitivity = Mathf.Clamp(value, MinimumMouseSensitivity, MaximumMouseSensitivity);
+            if (save)
+            {
+                PlayerPrefs.SetFloat(MouseSensitivityPreferenceKey, mouseSensitivity);
             }
         }
 
@@ -165,8 +181,9 @@ namespace GanhHangRong.Player
                 if (isRightMouseHeld)
                 {
                     Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-                    cartOrbitYaw += mouseDelta.x * cartOrbitSensitivity * 0.1f;
-                    cartOrbitPitch -= mouseDelta.y * cartOrbitSensitivity * 0.1f;
+                    float sensitivityScale = mouseSensitivity / DefaultMouseSensitivity;
+                    cartOrbitYaw += mouseDelta.x * cartOrbitSensitivity * sensitivityScale * 0.1f;
+                    cartOrbitPitch -= mouseDelta.y * cartOrbitSensitivity * sensitivityScale * 0.1f;
                     cartOrbitPitch = Mathf.Clamp(cartOrbitPitch, cartOrbitMinPitch, cartOrbitMaxPitch);
 
                     Cursor.lockState = CursorLockMode.Locked;

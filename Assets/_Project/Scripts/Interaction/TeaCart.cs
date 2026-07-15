@@ -1,4 +1,5 @@
 using UnityEngine;
+using GanhHangRong.Audio;
 using GanhHangRong.Core;
 
 namespace GanhHangRong.Interaction
@@ -366,6 +367,7 @@ namespace GanhHangRong.Interaction
             }
             else
             {
+                GameplaySfxManager.Play(GameplaySfxCue.Error);
                 EventManager.TriggerDialogueLine("Hoàng Hôn", "Quán chưa mở cửa, chưa thể phục vụ khách.");
             }
         }
@@ -377,6 +379,7 @@ namespace GanhHangRong.Interaction
 
             if (!stats.HasSuppliesForTea())
             {
+                GameplaySfxManager.Play(GameplaySfxCue.Error);
                 if (CartItem.IsHoldingCup)
                 {
                     if (CartItem.IsHoldingDirtyCup)
@@ -419,6 +422,7 @@ namespace GanhHangRong.Interaction
                 string preparedDrinkName = CartItem.PreparedDrinkName;
                 if (CartItem.PreparedDrinkId >= 0 && CartItem.PreparedDrinkId != closestWaiting.OrderedDrinkId)
                 {
+                    GameplaySfxManager.Play(GameplaySfxCue.Error);
                     EventManager.TriggerDialogueLine("Hoàng Hôn", $"Khách gọi {closestWaiting.OrderedDrinkName}, nhưng món đang có là {preparedDrinkName}. Chuẩn bị lại đúng món trước đã.");
                     return;
                 }
@@ -439,10 +443,12 @@ namespace GanhHangRong.Interaction
 
                 // Tháo mô hình ly trà đá khỏi tay nhân vật sau khi phục vụ
                 CartItem.DetachTeaCup();
+                GameplaySfxManager.Play(GameplaySfxCue.ServeSuccess);
                 EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã trao {preparedDrinkName} cho khách! Cảm ơn vì đã đến ủng hộ.");
             }
             else
             {
+                GameplaySfxManager.Play(GameplaySfxCue.Error);
                 EventManager.TriggerDialogueLine("Hoàng Hôn", "Chưa có ai gọi món cả.");
             }
         }

@@ -1,13 +1,18 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\PRU293\\FinalProject\\GHR\\",
+  "WorkspaceRootPath": "D:\\G\\GHR\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\pru293\\finalproject\\ghr\\assets\\_project\\scripts\\environment\\environmentsetuphelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\g\\ghr\\assets\\procedural water shader\\how to use.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\procedural water shader\\how to use.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\g\\ghr\\assets\\_project\\scripts\\environment\\environmentsetuphelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\_project\\scripts\\environment\\environmentsetuphelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,10 +27,23 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "How to Use.TXT",
+              "DocumentMoniker": "D:\\G\\GHR\\Assets\\Procedural Water Shader\\How to Use.TXT",
+              "RelativeDocumentMoniker": "Assets\\Procedural Water Shader\\How to Use.TXT",
+              "ToolTip": "D:\\G\\GHR\\Assets\\Procedural Water Shader\\How to Use.TXT",
+              "RelativeToolTip": "Assets\\Procedural Water Shader\\How to Use.TXT",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2026-07-14T19:33:38.088Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "EnvironmentSetupHelper.cs",
-              "DocumentMoniker": "D:\\PRU293\\FinalProject\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "DocumentMoniker": "D:\\G\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
               "RelativeDocumentMoniker": "Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
-              "ToolTip": "D:\\PRU293\\FinalProject\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "ToolTip": "D:\\G\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
               "RelativeToolTip": "Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
               "ViewState": "AgIAAEYAAAAAAAAAAAAswFQAAABKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -34,14 +52,40 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "AgentToolMcpAdapter.cs",
               "DocumentMoniker": "D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
-              "RelativeDocumentMoniker": "..\\..\\..\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
+              "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
               "ToolTip": "D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
-              "RelativeToolTip": "..\\..\\..\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
+              "RelativeToolTip": "Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-08T04:13:13.927Z"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1097,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:3:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:2:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
             }
           ]
         }

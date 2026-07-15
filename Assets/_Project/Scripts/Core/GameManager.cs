@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace GanhHangRong.Core
 {
@@ -29,17 +28,6 @@ namespace GanhHangRong.Core
         {
             Application.targetFrameRate = 60;
             Time.timeScale = 1f;
-        }
-
-        private void Update()
-        {
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                if (currentPhase == GamePhase.Playing)
-                    PauseGame();
-                else if (currentPhase == GamePhase.Paused)
-                    ResumeGame();
-            }
         }
 
         public void SetGamePhase(GamePhase newPhase)

@@ -263,6 +263,7 @@ namespace GanhHangRong.UI
         private void Update()
         {
             if (Keyboard.current == null) return;
+            if (GameplayPauseMenuUI.IsOpen) return;
             if (Keyboard.current.tabKey.wasPressedThisFrame)
             {
                 ToggleMenu();

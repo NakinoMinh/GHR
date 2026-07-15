@@ -1,4 +1,6 @@
+using GanhHangRong.Core;
 using GanhHangRong.Systems;
+using TMPro;
 using UnityEngine;
 
 namespace GanhHangRong.Interaction
@@ -10,22 +12,42 @@ namespace GanhHangRong.Interaction
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [SerializeField] private Renderer indicatorRenderer;
+        [SerializeField] private TMP_Text statusLabel;
         [SerializeField] private Color inactiveColor = new Color(0.28f, 0.16f, 0.08f, 1f);
-        [SerializeField] private Color availableColor = new Color(0.2f, 0.65f, 0.3f, 1f);
+        [SerializeField] private Color openColor = new Color(0.16f, 0.48f, 0.3f, 1f);
+        [SerializeField] private Color closedLabelColor = new Color(1f, 0.84f, 0.56f, 1f);
+        [SerializeField] private Color openLabelColor = new Color(0.9f, 1f, 0.88f, 1f);
 
         private MaterialPropertyBlock propertyBlock;
         private bool wasAvailable;
+        private bool wasOpen;
 
         private void Awake()
         {
             promptText = "Nhấn F để đóng quán";
             if (indicatorRenderer == null)
             {
-                indicatorRenderer = GetComponentInChildren<Renderer>();
+                indicatorRenderer = GetComponent<Renderer>();
+            }
+
+            if (statusLabel == null)
+            {
+                statusLabel = GetComponentInChildren<TMP_Text>(true);
             }
 
             propertyBlock = new MaterialPropertyBlock();
             RefreshState(true);
+        }
+
+        private void OnEnable()
+        {
+            EventManager.OnBusinessDayPhaseChanged += HandleBusinessDayPhaseChanged;
+            RefreshState(true);
+        }
+
+        private void OnDisable()
+        {
+            EventManager.OnBusinessDayPhaseChanged -= HandleBusinessDayPhaseChanged;
         }
 
         private void Update()
@@ -41,13 +63,28 @@ namespace GanhHangRong.Interaction
 
         private void RefreshState(bool force)
         {
+            bool isOpen = BusinessDayController.HasInstance &&
+                BusinessDayController.Instance.IsManagingGameLoop &&
+                BusinessDayController.Instance.CurrentPhase == BusinessDayPhase.Trading;
             bool available = BusinessDayController.HasInstance &&
                 BusinessDayController.Instance.CanCloseAtClosingPoint;
             canInteract = available;
 
-            if (!force && available == wasAvailable) return;
+            if (!force && available == wasAvailable && isOpen == wasOpen) return;
             wasAvailable = available;
-            SetIndicatorColor(available ? availableColor : inactiveColor);
+            wasOpen = isOpen;
+
+            SetIndicatorColor(isOpen ? openColor : inactiveColor);
+            if (statusLabel != null)
+            {
+                statusLabel.text = isOpen ? "MỞ QUÁN" : "ĐÓNG QUÁN";
+                statusLabel.color = isOpen ? openLabelColor : closedLabelColor;
+            }
+        }
+
+        private void HandleBusinessDayPhaseChanged(BusinessDayPhase phase)
+        {
+            RefreshState(true);
         }
 
         private void SetIndicatorColor(Color color)
