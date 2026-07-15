@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace GanhHangRong.UI
-{
+{   //test
     /// <summary>
     /// Quản lý giao diện HUD (Avatar, Thanh năng lượng/stress, Inventory, Thời gian, Tiền).
     /// </summary>

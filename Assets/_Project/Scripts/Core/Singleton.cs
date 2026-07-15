@@ -48,6 +48,9 @@ namespace GanhHangRong.Core
 
         protected virtual void Awake()
         {
+            // Enter Play Mode can keep static fields when domain reload is disabled.
+            _applicationIsQuitting = false;
+
             if (_instance == null)
             {
                 _instance = this as T;
@@ -61,8 +64,29 @@ namespace GanhHangRong.Core
             }
             else if (_instance != this)
             {
-                Debug.LogWarning($"[Singleton] Duplicate {typeof(T).Name} bị hủy trên {gameObject.name}");
-                Destroy(gameObject);
+                MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
+                bool isSharedHost = false;
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] != null && behaviours[i] != this)
+                    {
+                        isSharedHost = true;
+                        break;
+                    }
+                }
+
+                // Scene manager hosts contain several unrelated systems. Removing the
+                // whole host here would silently destroy the rest of the gameplay loop.
+                if (isSharedHost)
+                {
+                    Debug.Log($"[Singleton] Duplicate {typeof(T).Name} bị loại khỏi host dùng chung {gameObject.name}");
+                    Destroy(this);
+                }
+                else
+                {
+                    Debug.LogWarning($"[Singleton] Duplicate {typeof(T).Name} bị hủy trên {gameObject.name}");
+                    Destroy(gameObject);
+                }
             }
         }
 

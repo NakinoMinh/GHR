@@ -17,7 +17,7 @@ namespace GanhHangRong.Systems
 
         private void Start()
         {
-            // 1. Tàu Màu Đỏ (Phu Quoc Express Ferry) - Lane Z=30
+            // 1. Tàu Màu Đỏ (Phu Quoc Express Ferry) - tuyến xa bờ Z=30
             SpawnShip(
                 "Assets/taumaudo/Meshy_AI_Phu_Quoc_Express_Ferr_0712235919_texture.fbx",
                 "Assets/taumaudo/Meshy_AI_Phu_Quoc_Express_Ferr_0712235919_texture.png",
@@ -26,59 +26,59 @@ namespace GanhHangRong.Systems
                 new Vector3(-50f, -1.4f, 30f),
                 new Vector3(60f, -1.4f, 30f),
                 3.5f,
-                18.0f,
+                10f,
                 new Vector3(-90f, -90f, 0f)
             );
 
-            // 2. Thuyền Đánh Cá (Blue Vietnamese Fishing Boat) - Lane Z=22
+            // 2. Thuyền Đánh Cá (Blue Vietnamese Fishing Boat) - tuyến xa bờ Z=65
             SpawnShip(
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.fbx",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.png",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture_normal.png",
                 "ThuyenDanhCa_1",
-                new Vector3(50f, -1.4f, 22f),
-                new Vector3(-40f, -1.4f, 22f),
+                new Vector3(50f, -1.4f, 65f),
+                new Vector3(-40f, -1.4f, 65f),
                 2.0f,
-                10.0f,
+                4.5f,
                 new Vector3(-90f, -90f, 0f)
             );
 
-            // 3. Thuyền Đánh Cá 2 - Lane Z=38
+            // 3. Thuyền Đánh Cá 2 - tuyến xa bờ Z=75
             SpawnShip(
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.fbx",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.png",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture_normal.png",
                 "ThuyenDanhCa_2",
-                new Vector3(-60f, -1.4f, 38f),
-                new Vector3(40f, -1.4f, 38f),
+                new Vector3(-60f, -1.4f, 75f),
+                new Vector3(40f, -1.4f, 75f),
                 2.2f,
-                10.0f,
+                4.5f,
                 new Vector3(-90f, -90f, 0f)
             );
 
-            // 4. Thuyền Đánh Cá 3 - Lane Z=46
+            // 4. Thuyền Đánh Cá 3 - tuyến xa bờ Z=85
             SpawnShip(
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.fbx",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture.png",
                 "Assets/thuyendanhca/Meshy_AI_Blue_Vietnamese_Fishi_0713000008_texture_normal.png",
                 "ThuyenDanhCa_3",
-                new Vector3(70f, -1.4f, 46f),
-                new Vector3(-70f, -1.4f, 46f),
+                new Vector3(70f, -1.4f, 85f),
+                new Vector3(-70f, -1.4f, 85f),
                 1.8f,
-                10.0f,
+                4.5f,
                 new Vector3(-90f, -90f, 0f)
             );
 
-            // 5. Tàu Màu Đỏ 2 - Lane Z=54
+            // 5. Tàu Màu Đỏ 2 - tuyến xa bờ Z=65
             SpawnShip(
                 "Assets/taumaudo/Meshy_AI_Phu_Quoc_Express_Ferr_0712235919_texture.fbx",
                 "Assets/taumaudo/Meshy_AI_Phu_Quoc_Express_Ferr_0712235919_texture.png",
                 "Assets/taumaudo/Meshy_AI_Phu_Quoc_Express_Ferr_0712235919_texture_normal.png",
                 "TauMauDo_2",
-                new Vector3(80f, -1.4f, 54f),
-                new Vector3(-80f, -1.4f, 54f),
+                new Vector3(80f, -1.4f, 65f),
+                new Vector3(-80f, -1.4f, 65f),
                 4.0f,
-                18.0f,
+                10f,
                 new Vector3(-90f, -90f, 0f)
             );
         }

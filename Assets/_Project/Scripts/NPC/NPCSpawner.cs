@@ -11,14 +11,43 @@ namespace GanhHangRong.NPC
     /// </summary>
     public class NPCSpawner : MonoBehaviour
     {
+        [System.Serializable]
+        private struct CustomerTrafficWindow
+        {
+            [Range(0f, 24f)] public float startHour;
+            [Range(0f, 24f)] public float endHour;
+            [Min(0.1f)] public float intervalMultiplier;
+
+            public CustomerTrafficWindow(float startHour, float endHour, float intervalMultiplier)
+            {
+                this.startHour = startHour;
+                this.endHour = endHour;
+                this.intervalMultiplier = intervalMultiplier;
+            }
+        }
+
         [Header("Settings")]
         [SerializeField] private Transform[] spawnPoints;
         [SerializeField] private Transform[] exitPoints;
         [SerializeField] private List<NPCProfile> availableProfiles;
+
+        [Header("Customer traffic by hour")]
+        [SerializeField] private float defaultTrafficMultiplier = 1.05f;
+        [SerializeField] private CustomerTrafficWindow[] trafficSchedule =
+        {
+            new CustomerTrafficWindow(11f, 13f, 0.65f),
+            new CustomerTrafficWindow(14f, 16f, 1.4f),
+            new CustomerTrafficWindow(17f, 20f, 0.65f),
+            new CustomerTrafficWindow(20f, 22f, 0.9f)
+        };
         
         private float spawnTimer = 0f;
         private int currentCustomerCount = 0;
         private Economy.DayNightCycle dayNightCycle;
+        private CustomerSeat[] cachedSeats;
+        private readonly List<CustomerSeat> availableSeatBuffer = new List<CustomerSeat>();
+
+        public int ActiveCustomerCount => currentCustomerCount;
 
         private void OnEnable()
         {
@@ -35,6 +64,7 @@ namespace GanhHangRong.NPC
         private void Start()
         {
             dayNightCycle = FindAnyObjectByType<Economy.DayNightCycle>();
+            CacheSeats();
         }
 
         private void Update()
@@ -43,19 +73,12 @@ namespace GanhHangRong.NPC
                 GameManager.Instance.CurrentPhase != GamePhase.Playing) 
                 return;
 
-            // Chỉ spawn khách vào ban đêm hoặc buổi tối từ 18:00 trở đi
-            if (dayNightCycle == null)
-                dayNightCycle = FindAnyObjectByType<Economy.DayNightCycle>();
-
-            if (dayNightCycle != null)
+            if (!Systems.BusinessDayController.HasInstance ||
+                !Systems.BusinessDayController.Instance.IsManagingGameLoop ||
+                !Systems.BusinessDayController.Instance.ShouldSpawnCustomers)
             {
-                float hour = dayNightCycle.CurrentHour;
-                // Chỉ spawn khách từ 18:00 đến 01:00 sáng hôm sau
-                if (hour < 18f && hour >= 1f)
-                {
-                    spawnTimer = 0f;
-                    return;
-                }
+                spawnTimer = 0f;
+                return;
             }
 
             if (currentCustomerCount >= Constants.MAX_CONCURRENT_CUSTOMERS) return;
@@ -94,36 +117,37 @@ namespace GanhHangRong.NPC
                 case EmotionalLevel.Desperate: interval *= 4f; break;
             }
 
+            if (Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.IsManagingGameLoop && dayNightCycle != null)
+            {
+                interval *= GetTrafficMultiplier(dayNightCycle.CurrentHour);
+            }
+
             return interval;
         }
 
         private void TrySpawnNPC()
         {
-            // Tìm ghế trống
-            var allSeats = FindObjectsByType<CustomerSeat>(FindObjectsInactive.Exclude);
-            CustomerSeat emptySeat = null;
-            
-            List<CustomerSeat> seatList = new List<CustomerSeat>(allSeats);
-            for (int i = 0; i < seatList.Count; i++)
+            if (cachedSeats == null || cachedSeats.Length == 0)
             {
-                int r = Random.Range(i, seatList.Count);
-                var temp = seatList[i];
-                seatList[i] = seatList[r];
-                seatList[r] = temp;
+                CacheSeats();
             }
 
-            foreach (var seat in seatList)
+            availableSeatBuffer.Clear();
+            for (int i = 0; i < cachedSeats.Length; i++)
             {
+                CustomerSeat seat = cachedSeats[i];
+                if (seat == null) continue;
                 if (!seat.IsOccupied && !seat.IsPlayerOnly && seat.PlacedCupObj == null)
                 {
-                    emptySeat = seat;
-                    break;
+                    availableSeatBuffer.Add(seat);
                 }
             }
 
-            if (emptySeat == null) return;
+            if (availableSeatBuffer.Count == 0) return;
             if (exitPoints == null || exitPoints.Length == 0) return;
 
+            CustomerSeat emptySeat = availableSeatBuffer[Random.Range(0, availableSeatBuffer.Count)];
             emptySeat.ReserveSeat();
 
             Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
@@ -141,10 +165,46 @@ namespace GanhHangRong.NPC
             currentCustomerCount++;
         }
 
+        private float GetTrafficMultiplier(float hour)
+        {
+            if (trafficSchedule != null)
+            {
+                for (int i = 0; i < trafficSchedule.Length; i++)
+                {
+                    CustomerTrafficWindow window = trafficSchedule[i];
+                    bool inWindow = window.startHour <= window.endHour
+                        ? hour >= window.startHour && hour < window.endHour
+                        : hour >= window.startHour || hour < window.endHour;
+                    if (inWindow)
+                    {
+                        return Mathf.Max(0.1f, window.intervalMultiplier);
+                    }
+                }
+            }
+
+            return Mathf.Max(0.1f, defaultTrafficMultiplier);
+        }
+
+        private void CacheSeats()
+        {
+            cachedSeats = FindObjectsByType<CustomerSeat>(FindObjectsInactive.Exclude);
+        }
+
         private void OnCustomerRemoved(NPCType type)
         {
             currentCustomerCount--;
             if (currentCustomerCount < 0) currentCustomerCount = 0;
+        }
+
+        public void ClearAllCustomers()
+        {
+            NPCController[] customers = FindObjectsByType<NPCController>(FindObjectsInactive.Exclude);
+            for (int i = 0; i < customers.Length; i++)
+            {
+                if (customers[i] != null) Destroy(customers[i].gameObject);
+            }
+            currentCustomerCount = 0;
+            spawnTimer = 0f;
         }
     }
 }

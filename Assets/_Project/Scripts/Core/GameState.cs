@@ -16,6 +16,20 @@ namespace GanhHangRong.Core
     }
 
     /// <summary>
+    /// Trạng thái vận hành của một ngày kinh doanh.
+    /// Tách khỏi GamePhase để pause, dialogue và cutscene không làm mất tiến trình ngày.
+    /// </summary>
+    public enum BusinessDayPhase
+    {
+        PreOpen,
+        Preparation,
+        Trading,
+        Closing,
+        AfterHours,
+        DaySummary
+    }
+
+    /// <summary>
     /// Pha trong ngày — quyết định gameplay loop.
     /// </summary>
     public enum TimeOfDay

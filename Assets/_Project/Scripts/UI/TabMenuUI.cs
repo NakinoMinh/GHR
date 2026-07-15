@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using TMPro;
 using GanhHangRong.Core;
 using System.Collections.Generic;
@@ -11,6 +12,26 @@ namespace GanhHangRong.UI
 {
     public class TabMenuUI : MonoBehaviour
     {
+        private const int InitialMenuCapacity = 3;
+
+        private static TabMenuUI instance;
+
+        public static TabMenuUI Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = FindAnyObjectByType<TabMenuUI>();
+                }
+
+                return instance;
+            }
+            private set => instance = value;
+        }
+        public static bool IsAnyMenuOpen => Instance != null && Instance.isOpen;
+        public static bool HasSavedServingMenu { get; private set; }
+
         [Header("Runtime State")]
         [SerializeField] private bool isOpen = false;
 
@@ -38,54 +59,73 @@ namespace GanhHangRong.UI
         private GameObject leftServingContainer;
         private TextMeshProUGUI servingCountText;
         private GameObject rightInventoryGrid;
+        private Button businessActionButton;
+        private TextMeshProUGUI businessActionButtonText;
+        private TextMeshProUGUI headerStatusText;
 
         // ================================================================
-        //  BẢNG MÀU CHUẨN KEM VÀNG & XANH LÁ (THEO ẢNH THAM KHẢO)
+        //  BẢNG MÀU SỔ BÁN HÀNG
         // ================================================================
-        private static readonly Color COL_BG_OVERLAY       = new Color(0.10f, 0.08f, 0.06f, 0.75f); // Nền đen mờ ấm
-        private static readonly Color COL_WINDOW_BG        = new Color(0.55f, 0.48f, 0.42f, 1f);    // Khung viền sổ tay nâu xám
-        private static readonly Color COL_TAB_ACTIVE       = new Color(0.18f, 0.63f, 0.26f, 1f);    // Xanh lá nổi bật (#2EA01A)
-        private static readonly Color COL_TAB_INACTIVE     = new Color(0.35f, 0.25f, 0.18f, 1f);    // Nâu gỗ tối
-        private static readonly Color COL_LEFT_PANEL       = new Color(0.28f, 0.18f, 0.12f, 1f);    // Nâu gỗ trầm (Thực đơn phục vụ)
-        private static readonly Color COL_LEFT_CARD        = new Color(0.20f, 0.13f, 0.08f, 1f);    // Nâu tối cho card bên trái
-        private static readonly Color COL_LEFT_CARD_ACTIVE = new Color(0.15f, 0.35f, 0.20f, 1f);    // Viền/Nền xanh khi đang chọn
-        private static readonly Color COL_RIGHT_PANEL      = new Color(0.95f, 0.93f, 0.89f, 1f);    // Kem sáng ấm (Kho món ăn)
-        private static readonly Color COL_RIGHT_CARD       = new Color(1.00f, 1.00f, 1.00f, 1f);    // Trắng sữa cho card bên phải
-        private static readonly Color COL_RIGHT_LOCKED     = new Color(0.85f, 0.85f, 0.85f, 0.9f);  // Xám mờ cho món bị khóa
-        private static readonly Color COL_BTN_SERVE        = new Color(0.18f, 0.63f, 0.26f, 1f);    // Nút + PHỤC VỤ màu xanh
-        private static readonly Color COL_BTN_SELECTED     = new Color(0.35f, 0.45f, 0.38f, 1f);    // Nút khi đã phục vụ rồi
-        private static readonly Color COL_BTN_LOCKED       = new Color(0.60f, 0.60f, 0.60f, 1f);    // Nút Khóa
-        private static readonly Color COL_TEXT_DARK        = new Color(0.20f, 0.15f, 0.10f, 1f);    // Chữ đậm trên nền sáng
-        private static readonly Color COL_TEXT_LIGHT       = new Color(0.98f, 0.95f, 0.90f, 1f);    // Chữ sáng trên nền tối
-        private static readonly Color COL_PRICE_GOLD       = new Color(0.80f, 0.60f, 0.10f, 1f);    // Chữ giá tiền màu vàng đồng
+        private static readonly Color COL_BG_OVERLAY       = new Color(0.05f, 0.06f, 0.055f, 0.82f);
+        private static readonly Color COL_WINDOW_BG        = new Color(0.13f, 0.15f, 0.14f, 1f);
+        private static readonly Color COL_TAB_ACTIVE       = new Color(0.16f, 0.48f, 0.34f, 1f);
+        private static readonly Color COL_TAB_INACTIVE     = new Color(0.23f, 0.25f, 0.24f, 1f);
+        private static readonly Color COL_LEFT_PANEL       = new Color(0.12f, 0.16f, 0.14f, 1f);
+        private static readonly Color COL_LEFT_CARD        = new Color(0.19f, 0.23f, 0.21f, 1f);
+        private static readonly Color COL_LEFT_CARD_ACTIVE = new Color(0.20f, 0.36f, 0.28f, 1f);
+        private static readonly Color COL_RIGHT_PANEL      = new Color(0.91f, 0.92f, 0.90f, 1f);
+        private static readonly Color COL_RIGHT_CARD       = new Color(0.98f, 0.98f, 0.96f, 1f);
+        private static readonly Color COL_RIGHT_LOCKED     = new Color(0.78f, 0.80f, 0.78f, 1f);
+        private static readonly Color COL_BTN_SERVE        = new Color(0.16f, 0.48f, 0.34f, 1f);
+        private static readonly Color COL_BTN_SELECTED     = new Color(0.34f, 0.40f, 0.37f, 1f);
+        private static readonly Color COL_BTN_LOCKED       = new Color(0.47f, 0.49f, 0.48f, 1f);
+        private static readonly Color COL_BTN_DANGER       = new Color(0.70f, 0.28f, 0.20f, 1f);
+        private static readonly Color COL_TEXT_DARK        = new Color(0.10f, 0.13f, 0.12f, 1f);
+        private static readonly Color COL_TEXT_LIGHT       = new Color(0.95f, 0.97f, 0.95f, 1f);
+        private static readonly Color COL_TEXT_MUTED       = new Color(0.48f, 0.52f, 0.50f, 1f);
+        private static readonly Color COL_PRICE_GOLD       = new Color(0.72f, 0.46f, 0.10f, 1f);
+        private static readonly Color COL_IMAGE_WELL       = new Color(0.86f, 0.89f, 0.86f, 1f);
 
         // ======== Dữ liệu các món ========
         private struct MenuItem
         {
             public string name;
             public int price;
-            public string emoji;
+            public string iconKey;
+            public string category;
             public string recipe;
             public bool isUnlocked;
             public int orderId;
-            public MenuItem(string n, int p, string e, string r, bool unlocked = true, int id = -1)
-            { name = n; price = p; emoji = e; recipe = r; isUnlocked = unlocked; orderId = id; }
+            public MenuItem(string n, int p, string icon, string group, string r, bool unlocked = true, int id = -1)
+            { name = n; price = p; iconKey = icon; category = group; recipe = r; isUnlocked = unlocked; orderId = id; }
         }
 
         private static readonly MenuItem[] allItems = new MenuItem[]
         {
-            new MenuItem("Cà Phê Đen Đá", Constants.COFFEE_SELL_PRICE, "☕",
+            new MenuItem("Cà Phê Đen Đá", Constants.COFFEE_SELL_PRICE, "coffee_black_iced", "ĐỒ UỐNG",
                 "Công thức:\n1. Lấy ly sạch\n2. Cho 30g cà phê\n3. Rót 200ml nước sôi\n4. Thêm đá\n5. Phục vụ", true, 1),
-            new MenuItem("Trà Đá Nguyên Chất", Constants.TRA_DA_SELL_PRICE, "🍵",
+            new MenuItem("Trà Đá Nguyên Chất", Constants.TRA_DA_SELL_PRICE, "tea_iced", "ĐỒ UỐNG",
                 "Công thức:\n1. Lấy ly sạch\n2. Cho 50g trà\n3. Rót 200ml nước sôi\n4. Thêm đá\n5. Phục vụ", true, 0),
-            new MenuItem("Nước Chanh Đá", 12000, "🍹", "Mở khóa sau", false, 2),
-            new MenuItem("Nước Mía Tươi", 10000, "🎋", "Mở khóa sau", false, 3),
-            new MenuItem("Trà Sữa Trân Châu", 25000, "🧋", "Mở khóa sau", false, 4),
-            new MenuItem("Cơm Tấm Sườn Bì", 45000, "🍛", "Mở khóa sau", false, 5),
-            new MenuItem("Phở Bò Hà Nội", 40000, "🍜", "Mở khóa sau", false, 6),
-            new MenuItem("Gỏi Cuốn Tôm Thịt", 15000, "🥗", "Mở khóa sau", false, 7),
-            new MenuItem("Dừa Tươi Ướp Lạnh", 20000, "🥥", "Mở khóa sau", false, 8)
+            new MenuItem("Nước Chanh Đá", 12000, "lime_iced", "ĐỒ UỐNG", "Mở khóa sau", false, 2),
+            new MenuItem("Nước Mía Tươi", 10000, "sugarcane_juice", "ĐỒ UỐNG", "Mở khóa sau", false, 3),
+            new MenuItem("Trà Sữa Trân Châu", 25000, "bubble_milk_tea", "ĐỒ UỐNG", "Mở khóa sau", false, 4),
+            new MenuItem("Cơm Tấm Sườn Bì", 45000, "broken_rice", "MÓN ĂN", "Mở khóa sau", false, 5),
+            new MenuItem("Phở Bò Hà Nội", 40000, "pho_beef", "MÓN ĂN", "Mở khóa sau", false, 6),
+            new MenuItem("Gỏi Cuốn Tôm Thịt", 15000, "spring_rolls", "MÓN ĂN", "Mở khóa sau", false, 7),
+            new MenuItem("Dừa Tươi Ướp Lạnh", 20000, "coconut_chilled", "ĐỒ UỐNG", "Mở khóa sau", false, 8)
         };
+
+        private static readonly Dictionary<string, Sprite> itemSpriteCache = new Dictionary<string, Sprite>();
+
+        private static Sprite GetItemSprite(string iconKey)
+        {
+            if (string.IsNullOrEmpty(iconKey)) return null;
+            if (itemSpriteCache.TryGetValue(iconKey, out Sprite cached)) return cached;
+
+            Sprite sprite = Resources.Load<Sprite>("UI/TabMenu/" + iconKey);
+            itemSpriteCache[iconKey] = sprite;
+            return sprite;
+        }
 
         // ================================================================
         //  HỆ THỐNG SPRITE BO GÓC TỰ ĐỘNG (PROCEDURAL ROUNDED SPRITES)
@@ -123,12 +163,26 @@ namespace GanhHangRong.UI
         //  LIFECYCLE & AUTO CREATE
         // ================================================================
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreate()
+        private static void InstallSceneHook()
         {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+
+            TryCreateForGameplayScene();
+        }
+
+        private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            TryCreateForGameplayScene();
+        }
+
+        private static void TryCreateForGameplayScene()
+        {
+            if (FindAnyObjectByType<GanhHangRong.Interaction.TeaCart>(FindObjectsInactive.Include) == null) return;
+
             if (FindAnyObjectByType<TabMenuUI>() == null)
             {
                 var go = new GameObject("TabMenuUI_Auto");
-                DontDestroyOnLoad(go);
                 go.AddComponent<TabMenuUI>();
             }
         }
@@ -147,36 +201,75 @@ namespace GanhHangRong.UI
             return ActiveServingOrderIds;
         }
 
-        private void UpdateActiveServingOrderIds()
+        public static int[] ExportActiveServingOrderIds()
         {
-            isServingInitialized = true;
+            int[] result = new int[GetActiveServingOrderIds().Count];
+            GetActiveServingOrderIds().CopyTo(result);
+            return result;
+        }
+
+        public static void RestoreActiveServingOrderIds(int[] orderIds, bool wasSaved)
+        {
             ActiveServingOrderIds.Clear();
-            foreach (var item in servingMenu)
+            if (orderIds != null)
             {
-                if (item.orderId >= 0) ActiveServingOrderIds.Add(item.orderId);
+                for (int i = 0; i < orderIds.Length; i++)
+                {
+                    if (orderIds[i] >= 0) ActiveServingOrderIds.Add(orderIds[i]);
+                }
+            }
+
+            if (ActiveServingOrderIds.Count == 0)
+            {
+                ActiveServingOrderIds.Add(0);
+                ActiveServingOrderIds.Add(1);
+            }
+
+            isServingInitialized = true;
+            HasSavedServingMenu = wasSaved;
+            if (Instance != null)
+            {
+                Instance.ApplyActiveMenuToDraft();
+                Instance.RefreshServingMenuUI();
+                Instance.RefreshInventoryCardsUI();
+            }
+        }
+
+        public static void MarkMenuNeedsDailySave()
+        {
+            HasSavedServingMenu = false;
+            if (Instance != null && Instance.isOpen)
+            {
+                Instance.UpdateBusinessActionButton();
             }
         }
 
         private void Awake()
         {
+            Instance = this;
             EnsureEventSystem();
-            // Khởi tạo thực đơn mặc định ban đầu là 2 món mở khóa
+
+            GetActiveServingOrderIds();
+            ApplyActiveMenuToDraft();
             if (servingMenu.Count == 0)
             {
                 foreach (var item in allItems)
                     if (item.isUnlocked) servingMenu.Add(item);
             }
-            UpdateActiveServingOrderIds();
 
             BuildFullUI();
             CloseMenu();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void EnsureEventSystem()
         {
             if (EventSystem.current != null || FindAnyObjectByType<EventSystem>() != null) return;
             var esGO = new GameObject("EventSystem_Auto");
-            DontDestroyOnLoad(esGO);
             esGO.AddComponent<EventSystem>();
             esGO.AddComponent<InputSystemUIInputModule>();
         }
@@ -184,6 +277,7 @@ namespace GanhHangRong.UI
         private void Update()
         {
             if (Keyboard.current == null) return;
+            if (GameplayPauseMenuUI.IsOpen) return;
             if (Keyboard.current.tabKey.wasPressedThisFrame)
             {
                 ToggleMenu();
@@ -222,6 +316,7 @@ namespace GanhHangRong.UI
             Cursor.visible = true;
 
             SwitchTab(0);
+            RefreshHeaderStatus();
             RefreshServingMenuUI();
             RefreshInventoryCardsUI();
             RefreshCartTabUI();
@@ -268,8 +363,8 @@ namespace GanhHangRong.UI
             // Nền tối mờ toàn màn hình
             menuRoot = MakePanel(canvasGO, "MenuRoot", COL_BG_OVERLAY, 0f, 0f, 1f, 1f);
             
-            // Khung Sổ Tay chính bo tròn 28px
-            mainWindow = MakeRoundedPanel(menuRoot, "MainWindow", COL_WINDOW_BG, 28, 0.05f, 0.05f, 0.95f, 0.95f);
+            // Bảng vận hành chính, giữ biên đủ rộng cho cả màn hình 16:9 và 16:10.
+            mainWindow = MakeRoundedPanel(menuRoot, "MainWindow", COL_WINDOW_BG, 8, 0.035f, 0.04f, 0.965f, 0.96f);
             var mainShadow = mainWindow.AddComponent<Shadow>();
             mainShadow.effectColor = new Color(0, 0, 0, 0.4f);
             mainShadow.effectDistance = new Vector2(0, -10);
@@ -278,7 +373,7 @@ namespace GanhHangRong.UI
 
             // Container cho các Tab nội dung
             var contentArea = MakeRect(mainWindow, "ContentArea");
-            SetAnchors(contentArea, 0.02f, 0.02f, 0.98f, 0.86f);
+            SetAnchors(contentArea, 0.018f, 0.02f, 0.982f, 0.835f);
 
             tabMenuContent = BuildMenuTabContent(contentArea.gameObject);
             tabRecipeContent = BuildRecipeTabContent(contentArea.gameObject);
@@ -291,36 +386,33 @@ namespace GanhHangRong.UI
         private void BuildTopHeader(GameObject parent)
         {
             var header = MakeRect(parent, "TopHeader");
-            SetAnchors(header, 0.02f, 0.86f, 0.98f, 0.98f);
+            SetAnchors(header, 0.018f, 0.845f, 0.982f, 0.985f);
 
-            // Tiêu đề "MENU CHÍNH" ở giữa
-            MakeText(header.gameObject, "MENU CHÍNH", 32, COL_TEXT_LIGHT, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.55f, 1f, 0.95f);
+            MakeText(header.gameObject, "SỔ BÁN HÀNG", 28, COL_TEXT_LIGHT, TextAlignmentOptions.Left, FontStyles.Bold, 0.01f, 0.50f, 0.34f, 0.93f);
+            headerStatusText = MakeText(header.gameObject, "Đang chuẩn bị  |  08:00", 14,
+                new Color(0.68f, 0.76f, 0.71f, 1f), TextAlignmentOptions.Left, FontStyles.Normal,
+                0.01f, 0.14f, 0.34f, 0.50f);
 
-            // Nút đóng ✕ góc trên phải
-            var closeBtnGO = MakeRoundedPanel(header.gameObject, "CloseBtn", COL_LEFT_CARD, 16, 0.95f, 0.55f, 0.99f, 0.95f);
-            MakeText(closeBtnGO, "✕", 22, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            var closeBtnGO = MakeRoundedPanel(header.gameObject, "CloseBtn", COL_TAB_INACTIVE, 6, 0.955f, 0.28f, 0.992f, 0.78f);
+            MakeText(closeBtnGO, "X", 16, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
             closeBtnGO.AddComponent<Button>().onClick.AddListener(CloseMenu);
 
-            // --- Tab Buttons Area (dạng viên thuốc Pill Buttons) ---
             var tabArea = MakeRect(header.gameObject, "TabArea");
-            SetAnchors(tabArea, 0.05f, 0.02f, 0.95f, 0.48f);
+            SetAnchors(tabArea, 0.36f, 0.20f, 0.94f, 0.80f);
             
             var hlg = tabArea.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 20; hlg.childControlWidth = true; hlg.childControlHeight = true; hlg.childForceExpandWidth = true;
+            hlg.spacing = 10; hlg.childControlWidth = true; hlg.childControlHeight = true; hlg.childForceExpandWidth = true;
 
-            tabBtnMenu = CreatePillTabButton(tabArea.gameObject, "MENU", () => SwitchTab(0), out tabTxtMenu);
-            tabBtnRecipe = CreatePillTabButton(tabArea.gameObject, "📖 CÔNG THỨC", () => SwitchTab(1), out tabTxtRecipe);
-            tabBtnContact = CreatePillTabButton(tabArea.gameObject, "📱 ĐIỆN THOẠI", () => SwitchTab(2), out tabTxtContact);
-            tabBtnCart = CreatePillTabButton(tabArea.gameObject, "🛒 GIỎ HÀNG", () => SwitchTab(3), out tabTxtCart);
+            tabBtnMenu = CreatePillTabButton(tabArea.gameObject, "THỰC ĐƠN", () => SwitchTab(0), out tabTxtMenu);
+            tabBtnRecipe = CreatePillTabButton(tabArea.gameObject, "CÔNG THỨC", () => SwitchTab(1), out tabTxtRecipe);
+            tabBtnContact = CreatePillTabButton(tabArea.gameObject, "LIÊN HỆ", () => SwitchTab(2), out tabTxtContact);
+            tabBtnCart = CreatePillTabButton(tabArea.gameObject, "KHO HÀNG", () => SwitchTab(3), out tabTxtCart);
         }
 
         private Button CreatePillTabButton(GameObject parent, string label, UnityEngine.Events.UnityAction action, out TextMeshProUGUI txtRef)
         {
-            var btnGO = MakeRoundedPanel(parent, "TabBtn_" + label, COL_TAB_INACTIVE, 24, 0, 0, 1, 1);
-            var shadow = btnGO.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, 0.2f); shadow.effectDistance = new Vector2(0, -3);
-            
-            txtRef = MakeText(btnGO, label, 20, COL_TEXT_LIGHT, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            var btnGO = MakeRoundedPanel(parent, "TabBtn_" + label, COL_TAB_INACTIVE, 6, 0, 0, 1, 1);
+            txtRef = MakeText(btnGO, label, 15, COL_TEXT_LIGHT, TextAlignmentOptions.Center, FontStyles.Bold, 0.03f, 0f, 0.97f, 1f);
             var btn = btnGO.AddComponent<Button>();
             btn.targetGraphic = btnGO.GetComponent<Image>();
             btn.onClick.AddListener(action);
@@ -354,7 +446,32 @@ namespace GanhHangRong.UI
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
             if (img != null) img.color = isActive ? COL_TAB_ACTIVE : COL_TAB_INACTIVE;
-            if (txt != null) txt.color = isActive ? Color.white : new Color(0.85f, 0.80f, 0.75f, 1f);
+            if (txt != null) txt.color = isActive ? Color.white : new Color(0.80f, 0.84f, 0.81f, 1f);
+        }
+
+        private void RefreshHeaderStatus()
+        {
+            if (headerStatusText == null) return;
+
+            string phaseLabel = "Tự do";
+            if (Systems.BusinessDayController.HasInstance && Systems.BusinessDayController.Instance.IsManagingGameLoop)
+            {
+                switch (Systems.BusinessDayController.Instance.CurrentPhase)
+                {
+                    case BusinessDayPhase.PreOpen: phaseLabel = "Trước giờ mở"; break;
+                    case BusinessDayPhase.Preparation: phaseLabel = "Đang chuẩn bị"; break;
+                    case BusinessDayPhase.Trading: phaseLabel = "Đang bán hàng"; break;
+                    case BusinessDayPhase.Closing: phaseLabel = "Đang đóng quán"; break;
+                    case BusinessDayPhase.AfterHours: phaseLabel = "Sau giờ bán"; break;
+                    case BusinessDayPhase.DaySummary: phaseLabel = "Tổng kết ngày"; break;
+                }
+            }
+
+            Economy.DayNightCycle cycle = FindAnyObjectByType<Economy.DayNightCycle>();
+            float hour = cycle != null ? cycle.CurrentHour : 0f;
+            int wholeHour = Mathf.FloorToInt(hour) % 24;
+            int minute = Mathf.FloorToInt((hour - Mathf.Floor(hour)) * 60f);
+            headerStatusText.text = $"{phaseLabel}  |  {wholeHour:00}:{minute:00}";
         }
 
         // ================================================================
@@ -366,16 +483,14 @@ namespace GanhHangRong.UI
             panel.transform.SetParent(parent.transform, false);
             StretchFull(panel.AddComponent<RectTransform>());
 
-            // --- Panel Trái (THỰC ĐƠN PHỤC VỤ - 35%) ---
-            var leftPanel = MakeRoundedPanel(panel, "LeftPanel", COL_LEFT_PANEL, 20, 0.01f, 0.01f, 0.35f, 0.99f);
-            var leftShadow = leftPanel.AddComponent<Shadow>();
-            leftShadow.effectColor = new Color(0, 0, 0, 0.25f); leftShadow.effectDistance = new Vector2(0, -4);
-
-            MakeText(leftPanel, "THỰC ĐƠN PHỤC VỤ", 22, COL_TEXT_LIGHT, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.91f, 1f, 0.98f);
-            servingCountText = MakeText(leftPanel, "Hiện tại: 0/5 món", 16, new Color(0.8f, 0.8f, 0.8f, 1f), TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.86f, 1f, 0.91f);
+            var leftPanel = MakeRoundedPanel(panel, "LeftPanel", COL_LEFT_PANEL, 8, 0.005f, 0.005f, 0.35f, 0.995f);
+            MakeText(leftPanel, "THỰC ĐƠN HÔM NAY", 20, COL_TEXT_LIGHT, TextAlignmentOptions.Left, FontStyles.Bold, 0.055f, 0.91f, 0.94f, 0.97f);
+            servingCountText = MakeText(leftPanel, "Đã chọn 0/3 món", 14,
+                new Color(0.66f, 0.73f, 0.68f, 1f), TextAlignmentOptions.Left, FontStyles.Normal,
+                0.055f, 0.855f, 0.94f, 0.91f);
 
             var leftScrollArea = MakeRect(leftPanel, "ScrollArea");
-            SetAnchors(leftScrollArea, 0.04f, 0.02f, 0.96f, 0.85f);
+            SetAnchors(leftScrollArea, 0.045f, 0.145f, 0.955f, 0.84f);
             var leftScroll = leftScrollArea.gameObject.AddComponent<ScrollRect>();
             leftScroll.vertical = true; leftScroll.horizontal = false;
             
@@ -387,29 +502,26 @@ namespace GanhHangRong.UI
             leftServingContainer = MakeRect(leftViewport.gameObject, "Content").gameObject;
             var lRT = leftServingContainer.GetComponent<RectTransform>();
             lRT.anchorMin = new Vector2(0, 1); lRT.anchorMax = new Vector2(1, 1);
-            lRT.pivot = new Vector2(0.5f, 1); lRT.anchoredPosition = Vector2.zero;
+            lRT.pivot = new Vector2(0.5f, 1); lRT.anchoredPosition = Vector2.zero; lRT.sizeDelta = Vector2.zero;
             
             var vlg = leftServingContainer.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 14; vlg.childControlHeight = true; vlg.childControlWidth = true; vlg.childForceExpandHeight = false;
+            vlg.spacing = 10; vlg.childControlHeight = true; vlg.childControlWidth = true; vlg.childForceExpandHeight = false;
             leftServingContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             leftScroll.content = lRT; leftScroll.viewport = leftViewport;
 
-            // --- Panel Phải (KHO MÓN ĂN - 65%) ---
-            var rightPanel = MakeRoundedPanel(panel, "RightPanel", COL_RIGHT_PANEL, 24, 0.37f, 0.01f, 0.99f, 0.99f);
-            var rightShadow = rightPanel.AddComponent<Shadow>();
-            rightShadow.effectColor = new Color(0, 0, 0, 0.25f); rightShadow.effectDistance = new Vector2(0, -4);
+            var actionGO = MakeRoundedPanel(leftPanel, "BusinessActionButton", COL_BTN_SERVE, 6, 0.045f, 0.03f, 0.955f, 0.115f);
+            businessActionButtonText = MakeText(actionGO, "LƯU THỰC ĐƠN", 16, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            businessActionButton = actionGO.AddComponent<Button>();
+            businessActionButton.targetGraphic = actionGO.GetComponent<Image>();
+            businessActionButton.onClick.AddListener(HandleBusinessActionClicked);
 
-            MakeText(rightPanel, "KHO MÓN ĂN", 24, COL_TEXT_DARK, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.91f, 1f, 0.98f);
-            MakeText(rightPanel, "Tất cả món đã học", 15, Color.gray, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.86f, 1f, 0.91f);
-
-            // Trang trí góc trên phải
-            var cfgBtn = MakeRoundedPanel(rightPanel, "CfgBtn", Color.white, 12, 0.88f, 0.89f, 0.93f, 0.96f);
-            MakeText(cfgBtn, "⚙", 18, COL_TEXT_DARK, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0f, 1f, 1f);
-            var filterBtn = MakeRoundedPanel(rightPanel, "FilterBtn", Color.white, 12, 0.94f, 0.89f, 0.98f, 0.96f);
-            MakeText(filterBtn, "▼", 14, COL_TEXT_DARK, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0f, 1f, 1f);
+            var rightPanel = MakeRoundedPanel(panel, "RightPanel", COL_RIGHT_PANEL, 8, 0.365f, 0.005f, 0.995f, 0.995f);
+            MakeText(rightPanel, "DANH SÁCH MÓN", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.035f, 0.91f, 0.60f, 0.97f);
+            MakeText(rightPanel, "Chọn món để đưa vào thực đơn bán hàng", 14, COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Normal, 0.035f, 0.855f, 0.72f, 0.91f);
+            MakeText(rightPanel, "TỐI ĐA 3 MÓN", 13, COL_TAB_ACTIVE, TextAlignmentOptions.Right, FontStyles.Bold, 0.74f, 0.875f, 0.965f, 0.95f);
 
             var rightScrollArea = MakeRect(rightPanel, "ScrollArea");
-            SetAnchors(rightScrollArea, 0.02f, 0.02f, 0.98f, 0.85f);
+            SetAnchors(rightScrollArea, 0.018f, 0.018f, 0.982f, 0.845f);
             var rightScroll = rightScrollArea.gameObject.AddComponent<ScrollRect>();
             rightScroll.vertical = true; rightScroll.horizontal = false;
             
@@ -421,12 +533,12 @@ namespace GanhHangRong.UI
             rightInventoryGrid = MakeRect(rightViewport.gameObject, "Content").gameObject;
             var rRT = rightInventoryGrid.GetComponent<RectTransform>();
             rRT.anchorMin = new Vector2(0, 1); rRT.anchorMax = new Vector2(1, 1);
-            rRT.pivot = new Vector2(0.5f, 1); rRT.anchoredPosition = Vector2.zero;
+            rRT.pivot = new Vector2(0.5f, 1); rRT.anchoredPosition = Vector2.zero; rRT.sizeDelta = Vector2.zero;
             
             var grid = rightInventoryGrid.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 3; grid.cellSize = new Vector2(240, 280);
-            grid.spacing = new Vector2(18, 18); grid.padding = new RectOffset(16, 16, 16, 16);
+            grid.constraintCount = 3; grid.cellSize = new Vector2(300, 250);
+            grid.spacing = new Vector2(12, 12); grid.padding = new RectOffset(12, 12, 12, 12);
             rightInventoryGrid.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             rightScroll.content = rRT; rightScroll.viewport = rightViewport;
 
@@ -447,52 +559,53 @@ namespace GanhHangRong.UI
 
         private void BuildInventoryCard(GameObject parent, MenuItem item)
         {
-            var card = MakeRoundedPanel(parent, "InvCard_" + item.name.Replace(" ", ""), item.isUnlocked ? COL_RIGHT_CARD : COL_RIGHT_LOCKED, 20, 0, 0, 1, 1);
+            bool canEdit = CanEditServingMenu();
+            bool isAlreadyServing = servingMenu.Exists(m => m.name == item.name);
+            Color cardColor = item.isUnlocked ? (isAlreadyServing ? new Color(0.91f, 0.96f, 0.92f, 1f) : COL_RIGHT_CARD) : COL_RIGHT_LOCKED;
+            var card = MakeRoundedPanel(parent, "InvCard_" + item.name.Replace(" ", ""), cardColor, 8, 0, 0, 1, 1);
             var shadow = card.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, 0.12f); shadow.effectDistance = new Vector2(0, -3);
+            shadow.effectColor = new Color(0, 0, 0, 0.10f); shadow.effectDistance = new Vector2(0, -2);
 
-            if (item.isUnlocked)
+            var imageWell = MakeRoundedPanel(card, "ImageWell", COL_IMAGE_WELL, 6, 0.045f, 0.37f, 0.955f, 0.955f);
+            MakeIcon(imageWell, item.iconKey, item.isUnlocked ? Color.white : new Color(0.52f, 0.55f, 0.53f, 0.75f), 0.04f, 0.04f, 0.96f, 0.96f);
+            MakeText(imageWell, item.category, 11, item.isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED,
+                TextAlignmentOptions.TopLeft, FontStyles.Bold, 0.04f, 0.77f, 0.72f, 0.97f);
+            if (!item.isUnlocked)
             {
-                MakeText(card, item.emoji, 65, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.42f, 1f, 0.90f);
-                MakeText(card, "⭐⭐⭐", 14, COL_PRICE_GOLD, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.36f, 1f, 0.46f);
-                MakeText(card, item.name, 18, COL_TEXT_DARK, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.22f, 1f, 0.36f);
-                MakeText(card, $"🟡 {item.price:N0} đ", 16, COL_PRICE_GOLD, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.13f, 1f, 0.24f);
-
-                bool isAlreadyServing = servingMenu.Exists(m => m.name == item.name);
-                Color btnColor = isAlreadyServing ? COL_BTN_SELECTED : COL_BTN_SERVE;
-                string btnText = isAlreadyServing ? "✓ ĐANG PHỤC VỤ" : "+ PHỤC VỤ";
-
-                var btnGO = MakeRoundedPanel(card, "ServeBtn", btnColor, 20, 0.08f, 0.02f, 0.92f, 0.13f);
-                MakeText(btnGO, btnText, 15, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
-                
-                if (!isAlreadyServing)
-                {
-                    var btn = btnGO.AddComponent<Button>();
-                    btn.onClick.AddListener(() => {
-                        if (servingMenu.Count < 5 && !servingMenu.Exists(m => m.name == item.name)) {
-                            servingMenu.Add(item);
-                            RefreshServingMenuUI();
-                            RefreshInventoryCardsUI();
-                        }
-                    });
-                }
+                MakeText(imageWell, "CHƯA MỞ KHÓA", 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0.12f, 0.38f, 0.88f, 0.64f);
             }
-            else
-            {
-                MakeText(card, "🔒", 60, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.40f, 1f, 0.88f);
-                MakeText(card, item.name, 17, new Color(0.4f, 0.4f, 0.4f, 1f), TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.22f, 1f, 0.38f);
-                MakeText(card, $"🟡 {item.price:N0} đ", 15, Color.gray, TextAlignmentOptions.Center, FontStyles.Normal, 0f, 0.13f, 1f, 0.23f);
 
-                var btnGO = MakeRoundedPanel(card, "LockBtn", COL_BTN_LOCKED, 20, 0.08f, 0.02f, 0.92f, 0.13f);
-                MakeText(btnGO, "Khóa", 15, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            Color primaryText = item.isUnlocked ? COL_TEXT_DARK : new Color(0.32f, 0.35f, 0.33f, 1f);
+            MakeText(card, item.name, 16, primaryText, TextAlignmentOptions.Left, FontStyles.Bold, 0.055f, 0.22f, 0.70f, 0.36f);
+            MakeText(card, $"{item.price:N0} đ", 15, item.isUnlocked ? COL_PRICE_GOLD : COL_TEXT_MUTED,
+                TextAlignmentOptions.Right, FontStyles.Bold, 0.68f, 0.22f, 0.945f, 0.36f);
+
+            Color btnColor = !item.isUnlocked ? COL_BTN_LOCKED : (isAlreadyServing || !canEdit ? COL_BTN_SELECTED : COL_BTN_SERVE);
+            string btnText = !item.isUnlocked ? "KHÓA" : (isAlreadyServing ? "ĐÃ CHỌN" : (canEdit ? "THÊM MÓN" : "ĐÃ CHỐT CA"));
+            var btnGO = MakeRoundedPanel(card, "MenuActionBtn", btnColor, 6, 0.05f, 0.035f, 0.95f, 0.19f);
+            MakeText(btnGO, btnText, 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+
+            if (item.isUnlocked && !isAlreadyServing && canEdit)
+            {
+                var btn = btnGO.AddComponent<Button>();
+                btn.targetGraphic = btnGO.GetComponent<Image>();
+                btn.onClick.AddListener(() =>
+                {
+                    if (servingMenu.Count >= InitialMenuCapacity || servingMenu.Exists(m => m.name == item.name)) return;
+                    servingMenu.Add(item);
+                    HasSavedServingMenu = false;
+                    RefreshServingMenuUI();
+                    RefreshInventoryCardsUI();
+                });
             }
         }
 
         private void RefreshServingMenuUI()
         {
-            UpdateActiveServingOrderIds();
             if (servingCountText != null)
-                servingCountText.text = $"Hiện tại: {servingMenu.Count}/5 món";
+                servingCountText.text = $"Đã chọn {servingMenu.Count}/{InitialMenuCapacity} món";
+
+            UpdateBusinessActionButton();
             
             if (leftServingContainer == null) return;
 
@@ -503,43 +616,127 @@ namespace GanhHangRong.UI
             {
                 var emptyRow = MakeRect(leftServingContainer, "EmptyText").gameObject;
                 emptyRow.AddComponent<LayoutElement>().minHeight = 100;
-                MakeText(emptyRow, "Chưa chọn món nào để bán.\nHãy nhấn '+ PHỤC VỤ' bên phải ->", 15, Color.gray, TextAlignmentOptions.Center, FontStyles.Italic, 0f, 0f, 1f, 1f);
+                MakeText(emptyRow, "Chưa có món trong thực đơn.\nChọn món từ danh sách bên phải.", 15,
+                    new Color(0.58f, 0.65f, 0.60f, 1f), TextAlignmentOptions.Center, FontStyles.Normal, 0.05f, 0f, 0.95f, 1f);
                 return;
             }
 
             foreach (var item in servingMenu)
             {
-                var row = MakeRoundedPanel(leftServingContainer, "ServeItem", COL_LEFT_CARD, 16, 0, 0, 1, 1);
-                row.AddComponent<LayoutElement>().minHeight = 110;
-                
-                // Viền sáng bóng bên trong thẻ phục vụ
-                var outline = MakeRoundedPanel(row, "Border", COL_LEFT_CARD_ACTIVE, 16, 0.01f, 0.03f, 0.99f, 0.97f);
-                outline.transform.SetAsFirstSibling();
+                var row = MakeRoundedPanel(leftServingContainer, "ServeItem", COL_LEFT_CARD, 8, 0, 0, 1, 1);
+                row.AddComponent<LayoutElement>().minHeight = 96;
+                MakeIcon(row, item.iconKey, Color.white, 0.025f, 0.12f, 0.23f, 0.88f);
+                MakeText(row, item.name, 16, COL_TEXT_LIGHT, TextAlignmentOptions.Left, FontStyles.Bold, 0.25f, 0.50f, 0.83f, 0.88f);
+                MakeText(row, $"{item.price:N0} đ", 14, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.25f, 0.18f, 0.68f, 0.49f);
 
-                // Emoji món
-                MakeText(row, item.emoji, 50, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.02f, 0.15f, 0.28f, 0.85f);
+                bool canEdit = CanEditServingMenu();
+                var removeBtnGO = MakeRoundedPanel(row, "RemoveBtn", canEdit ? COL_BTN_DANGER : COL_BTN_SELECTED, 6, 0.84f, 0.27f, 0.965f, 0.73f);
+                MakeText(removeBtnGO, canEdit ? "X" : "-", 14, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
                 
-                // Tên món
-                MakeText(row, $"[{item.name}]", 18, COL_TEXT_LIGHT, TextAlignmentOptions.Left, FontStyles.Bold, 0.30f, 0.55f, 0.95f, 0.92f);
-                
-                // Giá tiền kèm icon vàng
-                MakeText(row, $"🟡 {item.price:N0} đ", 15, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.30f, 0.32f, 0.95f, 0.55f);
-
-                // Huy hiệu "ĐANG PHỤC VỤ" màu xanh lá
-                var badgeGO = MakeRoundedPanel(row, "Badge", COL_TAB_ACTIVE, 14, 0.30f, 0.05f, 0.72f, 0.28f);
-                MakeText(badgeGO, "ĐANG PHỤC VỤ", 12, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
-
-                // Nút BỎ món (màu đỏ gạch nhỏ ở góc dưới phải)
-                var removeBtnGO = MakeRoundedPanel(row, "RemoveBtn", new Color(0.7f, 0.2f, 0.2f, 1f), 14, 0.75f, 0.05f, 0.96f, 0.28f);
-                MakeText(removeBtnGO, "✕ BỎ", 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
-                
-                var capturedItem = item;
-                removeBtnGO.AddComponent<Button>().onClick.AddListener(() => {
-                    servingMenu.Remove(capturedItem);
-                    RefreshServingMenuUI();
-                    RefreshInventoryCardsUI();
-                });
+                if (canEdit)
+                {
+                    var capturedItem = item;
+                    var removeButton = removeBtnGO.AddComponent<Button>();
+                    removeButton.targetGraphic = removeBtnGO.GetComponent<Image>();
+                    removeButton.onClick.AddListener(() => {
+                        servingMenu.Remove(capturedItem);
+                        HasSavedServingMenu = false;
+                        RefreshServingMenuUI();
+                        RefreshInventoryCardsUI();
+                    });
+                }
             }
+        }
+
+        public void SaveServingMenu()
+        {
+            if (!CanEditServingMenu()) return;
+            if (servingMenu.Count == 0)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Cần chọn ít nhất 1 món trước khi lưu thực đơn.");
+                return;
+            }
+
+            isServingInitialized = true;
+            ActiveServingOrderIds.Clear();
+            foreach (MenuItem item in servingMenu)
+            {
+                if (item.orderId >= 0) ActiveServingOrderIds.Add(item.orderId);
+            }
+            HasSavedServingMenu = true;
+            UpdateBusinessActionButton();
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đã lưu {ActiveServingOrderIds.Count} món cho ngày hôm nay.");
+        }
+
+        private void ApplyActiveMenuToDraft()
+        {
+            servingMenu.Clear();
+            HashSet<int> activeIds = GetActiveServingOrderIds();
+            foreach (MenuItem item in allItems)
+            {
+                if (item.isUnlocked && activeIds.Contains(item.orderId))
+                {
+                    servingMenu.Add(item);
+                }
+            }
+        }
+
+        private static bool CanEditServingMenu()
+        {
+            return !Systems.BusinessDayController.HasInstance ||
+                   !Systems.BusinessDayController.Instance.IsManagingGameLoop ||
+                   Systems.BusinessDayController.Instance.CanEditMenu;
+        }
+
+        private void HandleBusinessActionClicked()
+        {
+            if (!Systems.BusinessDayController.HasInstance ||
+                !Systems.BusinessDayController.Instance.IsManagingGameLoop)
+            {
+                SaveServingMenu();
+                return;
+            }
+
+            Systems.BusinessDayController controller = Systems.BusinessDayController.Instance;
+            if (controller.CurrentPhase == BusinessDayPhase.Preparation)
+            {
+                SaveServingMenu();
+            }
+            else if (controller.CurrentPhase == BusinessDayPhase.Trading && controller.RequestEarlyCloseFromMenu())
+            {
+                CloseMenu();
+            }
+        }
+
+        private void UpdateBusinessActionButton()
+        {
+            if (businessActionButton == null || businessActionButtonText == null) return;
+
+            bool interactable = true;
+            Color color = COL_BTN_SERVE;
+            string label = HasSavedServingMenu ? "ĐÃ LƯU THỰC ĐƠN" : "LƯU THỰC ĐƠN";
+
+            if (Systems.BusinessDayController.HasInstance &&
+                Systems.BusinessDayController.Instance.IsManagingGameLoop)
+            {
+                BusinessDayPhase phase = Systems.BusinessDayController.Instance.CurrentPhase;
+                if (phase == BusinessDayPhase.Trading)
+                {
+                    label = "ĐÓNG QUÁN SỚM";
+                    color = new Color(0.68f, 0.22f, 0.16f, 1f);
+                }
+                else if (phase != BusinessDayPhase.Preparation)
+                {
+                    label = "CHỈNH KHI CHUẨN BỊ";
+                    color = COL_BTN_SELECTED;
+                    interactable = false;
+                }
+            }
+
+            businessActionButton.interactable = interactable;
+            businessActionButtonText.text = label;
+            Image image = businessActionButton.GetComponent<Image>();
+            if (image != null) image.color = color;
         }
 
         // ================================================================
@@ -547,12 +744,12 @@ namespace GanhHangRong.UI
         // ================================================================
         private GameObject BuildRecipeTabContent(GameObject parent)
         {
-            var panel = new GameObject("RecipeTabContent");
-            panel.transform.SetParent(parent.transform, false);
-            StretchFull(panel.AddComponent<RectTransform>());
+            var panel = MakeRoundedPanel(parent, "RecipeTabContent", COL_RIGHT_PANEL, 8, 0.005f, 0.005f, 0.995f, 0.995f);
+            MakeText(panel, "SỔ CÔNG THỨC", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.025f, 0.91f, 0.55f, 0.97f);
+            MakeText(panel, "Tra nhanh nguyên liệu và thứ tự pha chế", 14, COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Normal, 0.025f, 0.855f, 0.70f, 0.91f);
 
             var scrollArea = MakeRect(panel, "ScrollArea");
-            SetAnchors(scrollArea, 0.02f, 0.02f, 0.98f, 0.98f);
+            SetAnchors(scrollArea, 0.018f, 0.02f, 0.982f, 0.845f);
             var scroll = scrollArea.gameObject.AddComponent<ScrollRect>();
             scroll.vertical = true; scroll.horizontal = false;
 
@@ -564,25 +761,31 @@ namespace GanhHangRong.UI
             var contentGO = MakeRect(viewport.gameObject, "Content").gameObject;
             var cRT = contentGO.GetComponent<RectTransform>();
             cRT.anchorMin = new Vector2(0, 1); cRT.anchorMax = new Vector2(1, 1);
-            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero;
+            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero; cRT.sizeDelta = Vector2.zero;
 
             var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 16; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(20, 20, 20, 20);
+            vlg.spacing = 10; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(12, 12, 12, 12);
             contentGO.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = cRT; scroll.viewport = viewport;
 
             foreach (var item in allItems)
             {
-                var card = MakeRoundedPanel(contentGO, "Recipe_" + item.name, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+                Color cardColor = item.isUnlocked ? COL_RIGHT_CARD : COL_RIGHT_LOCKED;
+                var card = MakeRoundedPanel(contentGO, "Recipe_" + item.name, cardColor, 8, 0, 0, 1, 1);
                 var le = card.AddComponent<LayoutElement>();
-                le.minHeight = 110; le.preferredHeight = 110;
+                le.minHeight = 118; le.preferredHeight = 118;
                 var shadow = card.AddComponent<Shadow>();
-                shadow.effectColor = new Color(0, 0, 0, 0.15f); shadow.effectDistance = new Vector2(0, -3);
+                shadow.effectColor = new Color(0, 0, 0, 0.10f); shadow.effectDistance = new Vector2(0, -2);
 
-                MakeText(card, item.emoji, 50, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.02f, 0.1f, 0.15f, 0.9f);
-                MakeText(card, item.name, 20, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.16f, 0.65f, 0.50f, 0.95f);
-                MakeText(card, $"🟡 {item.price:N0} VNĐ", 16, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.16f, 0.40f, 0.50f, 0.65f);
-                MakeText(card, item.recipe, 15, new Color(0.3f, 0.3f, 0.3f, 1f), TextAlignmentOptions.Left, FontStyles.Normal, 0.50f, 0.05f, 0.98f, 0.95f);
+                var imageWell = MakeRoundedPanel(card, "RecipeImage", COL_IMAGE_WELL, 6, 0.012f, 0.08f, 0.105f, 0.92f);
+                MakeIcon(imageWell, item.iconKey, item.isUnlocked ? Color.white : new Color(0.5f, 0.52f, 0.5f, 0.7f), 0.06f, 0.06f, 0.94f, 0.94f);
+                MakeText(card, item.category, 11, item.isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.70f, 0.30f, 0.91f);
+                MakeText(card, item.name, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.43f, 0.45f, 0.72f);
+                MakeText(card, $"{item.price:N0} đ", 15, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.16f, 0.40f, 0.43f);
+                MakeText(card, item.isUnlocked ? item.recipe : "Công thức này sẽ xuất hiện khi món được mở khóa.", 14,
+                    item.isUnlocked ? new Color(0.28f, 0.32f, 0.30f, 1f) : COL_TEXT_MUTED,
+                    TextAlignmentOptions.Left, item.isUnlocked ? FontStyles.Normal : FontStyles.Italic,
+                    0.46f, 0.10f, 0.975f, 0.90f);
             }
             return panel;
         }
@@ -596,12 +799,12 @@ namespace GanhHangRong.UI
 
         private GameObject BuildContactTabContent(GameObject parent)
         {
-            var panel = new GameObject("ContactTabContent");
-            panel.transform.SetParent(parent.transform, false);
-            StretchFull(panel.AddComponent<RectTransform>());
+            var panel = MakeRoundedPanel(parent, "ContactTabContent", COL_RIGHT_PANEL, 8, 0.005f, 0.005f, 0.995f, 0.995f);
+            MakeText(panel, "DANH BẠ NHÀ CUNG CẤP", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.025f, 0.91f, 0.62f, 0.97f);
+            MakeText(panel, "Liên hệ dịch vụ hỗ trợ hoạt động bán hàng", 14, COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Normal, 0.025f, 0.855f, 0.72f, 0.91f);
 
             var scrollArea = MakeRect(panel, "ScrollArea");
-            SetAnchors(scrollArea, 0.02f, 0.02f, 0.98f, 0.98f);
+            SetAnchors(scrollArea, 0.018f, 0.02f, 0.982f, 0.845f);
             var scroll = scrollArea.gameObject.AddComponent<ScrollRect>();
             scroll.vertical = true; scroll.horizontal = false;
 
@@ -613,21 +816,21 @@ namespace GanhHangRong.UI
             var contentGO = MakeRect(viewport.gameObject, "Content").gameObject;
             var cRT = contentGO.GetComponent<RectTransform>();
             cRT.anchorMin = new Vector2(0, 1); cRT.anchorMax = new Vector2(1, 1);
-            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero;
+            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero; cRT.sizeDelta = Vector2.zero;
 
             var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 16; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(20, 20, 20, 20);
+            vlg.spacing = 10; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(12, 12, 12, 12);
             contentGO.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = cRT; scroll.viewport = viewport;
 
             // ─── Ông Ba Bán Đá (Special card) ───
             BuildIceVendorCard(contentGO);
 
-            BuildContactEntry(contentGO, "📞", "Chị Ba", "0912 345 678", "Cung cấp nguyên liệu trà, cà phê mỗi sáng");
-            BuildContactEntry(contentGO, "📞", "Nhà Cung Cấp Trà", "0987 654 321", "Giao trà lá tươi, giá sỉ ưu đãi");
-            BuildContactEntry(contentGO, "🔧", "Thợ Sửa Xe", "0901 222 333", "Sửa chữa gánh hàng rong khi bị hỏng");
-            BuildContactEntry(contentGO, "🏥", "Trạm Y Tế Phường", "0909 111 222", "Khám sức khoẻ và phục hồi thể lực khi mệt");
-            BuildContactEntry(contentGO, "👮", "Công An Phường", "0908 888 999", "Hỗ trợ an ninh đường phố và trật tự đô thị");
+            BuildContactEntry(contentGO, "NL", "Chị Ba", "0912 345 678", "Cung cấp nguyên liệu trà, cà phê mỗi sáng");
+            BuildContactEntry(contentGO, "TR", "Nhà Cung Cấp Trà", "0987 654 321", "Giao trà lá tươi, giá sỉ ưu đãi");
+            BuildContactEntry(contentGO, "SC", "Thợ Sửa Xe", "0901 222 333", "Sửa chữa gánh hàng rong khi bị hỏng");
+            BuildContactEntry(contentGO, "YT", "Trạm Y Tế Phường", "0909 111 222", "Khám sức khoẻ và phục hồi thể lực khi mệt");
+            BuildContactEntry(contentGO, "CA", "Công An Phường", "0908 888 999", "Hỗ trợ an ninh đường phố và trật tự đô thị");
 
             // Dialogue overlay (hidden by default)
             BuildIceVendorDialogue(panel);
@@ -642,14 +845,14 @@ namespace GanhHangRong.UI
             Color iceBlueDark = new Color(0.10f, 0.45f, 0.80f, 1f);
             Color iceBlueLight = new Color(0.20f, 0.60f, 0.95f, 1f);
 
-            var card = MakeRoundedPanel(parent, "Contact_OngBa", cardBg, 20, 0, 0, 1, 1);
+            var card = MakeRoundedPanel(parent, "Contact_OngBa", cardBg, 8, 0, 0, 1, 1);
             var le = card.AddComponent<LayoutElement>();
             le.minHeight = 130; le.preferredHeight = 130;
             var shadow = card.AddComponent<Shadow>();
             shadow.effectColor = new Color(0, 0, 0, 0.18f); shadow.effectDistance = new Vector2(0, -4);
 
-            // Icon đá
-            MakeText(card, "🧊", 44, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.01f, 0.15f, 0.13f, 0.88f);
+            var iconWell = MakeRoundedPanel(card, "IceVendorIcon", new Color(0.78f, 0.91f, 0.98f, 1f), 6, 0.015f, 0.14f, 0.125f, 0.88f);
+            MakeIcon(iconWell, "ingredient_ice", Color.white, 0.08f, 0.08f, 0.92f, 0.92f);
 
             // Tên + số
             MakeText(card, "Ông Ba Bán Đá", 20, iceBlueDark, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.62f, 0.60f, 0.92f);
@@ -660,8 +863,8 @@ namespace GanhHangRong.UI
             iceVendorIceTxt = MakeText(card, "Đá: ...%", 15, iceBlueDark, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.22f, 0.60f, 0.40f);
 
             // Nút GỌI
-            var btnGO = MakeRoundedPanel(card, "CallBtn_OngBa", iceBlueLight, 20, 0.63f, 0.10f, 0.97f, 0.45f);
-            MakeText(btnGO, "📞 Gọi (5.000đ)", 15, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            var btnGO = MakeRoundedPanel(card, "CallBtn_OngBa", iceBlueLight, 6, 0.63f, 0.10f, 0.97f, 0.45f);
+            MakeText(btnGO, "GỌI GIAO ĐÁ  5.000đ", 14, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0.02f, 0f, 0.98f, 1f);
             iceVendorCallBtn = btnGO.AddComponent<Button>();
             iceVendorCallBtn.targetGraphic = btnGO.GetComponent<Image>();
             iceVendorCallBtn.onClick.AddListener(OnCallOngBa);
@@ -672,7 +875,7 @@ namespace GanhHangRong.UI
             // Full-panel overlay mờ
             iceVendorDialogueOverlay = MakeRoundedPanel(parent, "IceVendorDialogue", new Color(0.05f, 0.10f, 0.20f, 0.92f), 24, 0.10f, 0.25f, 0.90f, 0.75f);
 
-            MakeText(iceVendorDialogueOverlay, "🧊 Ông Ba Bán Đá", 22, new Color(0.5f, 0.85f, 1f, 1f), TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.72f, 1f, 0.95f);
+            MakeText(iceVendorDialogueOverlay, "ÔNG BA BÁN ĐÁ", 22, new Color(0.5f, 0.85f, 1f, 1f), TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0.72f, 1f, 0.95f);
             iceVendorDialogueTxt = MakeText(iceVendorDialogueOverlay, "", 18, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.04f, 0.35f, 0.96f, 0.70f);
             iceVendorDialogueTxt.enableWordWrapping = true;
 
@@ -768,19 +971,20 @@ namespace GanhHangRong.UI
             {
                 // Hiển thị trạng thái ông Ba đang giao
                 if (isDelivering)
-                    iceVendorIceTxt.text += " — Ông Ba đang trên đường! 🚴";
+                    iceVendorIceTxt.text += " - Ông Ba đang trên đường!";
             }
         }
 
         private void BuildContactEntry(GameObject parent, string icon, string name, string phone, string desc)
         {
-            var card = MakeRoundedPanel(parent, "Contact_" + name, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+            var card = MakeRoundedPanel(parent, "Contact_" + name, COL_RIGHT_CARD, 8, 0, 0, 1, 1);
             var le = card.AddComponent<LayoutElement>();
             le.minHeight = 90; le.preferredHeight = 90;
             var shadow = card.AddComponent<Shadow>();
             shadow.effectColor = new Color(0, 0, 0, 0.15f); shadow.effectDistance = new Vector2(0, -3);
 
-            MakeText(card, icon, 40, Color.white, TextAlignmentOptions.Center, FontStyles.Normal, 0.02f, 0.15f, 0.12f, 0.85f);
+            var iconWell = MakeRoundedPanel(card, "ContactMark", COL_TAB_ACTIVE, 6, 0.025f, 0.18f, 0.105f, 0.82f);
+            MakeText(iconWell, icon, 15, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
             MakeText(card, name, 20, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.14f, 0.55f, 0.55f, 0.90f);
             MakeText(card, phone, 18, COL_TAB_ACTIVE, TextAlignmentOptions.Left, FontStyles.Bold, 0.55f, 0.55f, 0.98f, 0.90f);
             MakeText(card, desc, 15, new Color(0.4f, 0.4f, 0.4f, 1f), TextAlignmentOptions.Left, FontStyles.Italic, 0.14f, 0.10f, 0.98f, 0.50f);
@@ -831,6 +1035,18 @@ namespace GanhHangRong.UI
             return go;
         }
 
+        private static Image MakeIcon(GameObject parent, string iconKey, Color tint, float xMin, float yMin, float xMax, float yMax)
+        {
+            var go = MakeRect(parent, "Icon_" + iconKey).gameObject;
+            SetAnchors(go.GetComponent<RectTransform>(), xMin, yMin, xMax, yMax);
+            var image = go.AddComponent<Image>();
+            image.sprite = GetItemSprite(iconKey);
+            image.color = image.sprite != null ? tint : Color.clear;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
+        }
+
         private static TextMeshProUGUI MakeText(GameObject parent, string content, int fontSize, Color color, TextAlignmentOptions align, FontStyles style, float xMin, float yMin, float xMax, float yMax)
         {
             var go = MakeRect(parent, "Txt_" + content.Substring(0, Mathf.Min(content.Length, 8))).gameObject;
@@ -852,12 +1068,12 @@ namespace GanhHangRong.UI
         // ================================================================
         private GameObject BuildCartTabContent(GameObject parent)
         {
-            var panel = new GameObject("CartTabContent");
-            panel.transform.SetParent(parent.transform, false);
-            StretchFull(panel.AddComponent<RectTransform>());
+            var panel = MakeRoundedPanel(parent, "CartTabContent", COL_RIGHT_PANEL, 8, 0.005f, 0.005f, 0.995f, 0.995f);
+            MakeText(panel, "KHO NGUYÊN LIỆU", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.025f, 0.91f, 0.55f, 0.97f);
+            MakeText(panel, "Theo dõi lượng hàng đang có trên xe", 14, COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Normal, 0.025f, 0.855f, 0.70f, 0.91f);
 
             var scrollArea = MakeRect(panel, "ScrollArea");
-            SetAnchors(scrollArea, 0.02f, 0.02f, 0.98f, 0.98f);
+            SetAnchors(scrollArea, 0.018f, 0.02f, 0.982f, 0.845f);
             var scroll = scrollArea.gameObject.AddComponent<ScrollRect>();
             scroll.vertical = true; scroll.horizontal = false;
 
@@ -869,10 +1085,10 @@ namespace GanhHangRong.UI
             cartTabContainer = MakeRect(viewport.gameObject, "Content").gameObject;
             var cRT = cartTabContainer.GetComponent<RectTransform>();
             cRT.anchorMin = new Vector2(0, 1); cRT.anchorMax = new Vector2(1, 1);
-            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero;
+            cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero; cRT.sizeDelta = Vector2.zero;
 
             var vlg = cartTabContainer.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 16; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(20, 20, 20, 20);
+            vlg.spacing = 10; vlg.childControlWidth = true; vlg.childControlHeight = true; vlg.padding = new RectOffset(12, 12, 12, 12);
             cartTabContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = cRT; scroll.viewport = viewport;
 
@@ -892,33 +1108,32 @@ namespace GanhHangRong.UI
             Player.PlayerStats stats = FindAnyObjectByType<Player.PlayerStats>();
 
             // 1. Tiêu đề: NGUYÊN LIỆU TRÊN XE ĐẨY
-            var titleGO = new GameObject("Title_Cart");
-            titleGO.transform.SetParent(cartTabContainer.transform, false);
+            var titleGO = MakeRect(cartTabContainer, "Title_Cart").gameObject;
             var leTitle = titleGO.AddComponent<LayoutElement>();
             leTitle.minHeight = 35; leTitle.preferredHeight = 35;
-            MakeText(titleGO, "📦 NGUYÊN LIỆU TRÊN XE ĐẨY", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            MakeText(titleGO, "TRÊN XE ĐẨY", 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
 
             if (stats != null)
             {
-                BuildIngredientCartCard("hu_tra", "Hũ Trà Lài", $"{stats.TeaSupply} g");
-                BuildIngredientCartCard("hu_duong", "Hũ Đường Cát", $"{stats.SugarSupply} g");
-                BuildIngredientCartCard("hu_tra", "Hũ Cà Phê Phố Cổ", $"{stats.CoffeeSupply} g");
-                BuildIngredientCartCard("ly_cups", "Lốc Ly Nhựa Sạch", $"{stats.CupSupply} cái");
-                BuildIngredientCartCard("ice_box", "Bình Nước Đun Sôi", $"{GanhHangRong.Interaction.CartItem.BottleWater:F1} L");
+                BuildIngredientCartCard("ingredient_tea", "Trà lài", $"{stats.TeaSupply} g");
+                BuildIngredientCartCard("ingredient_sugar", "Đường cát", $"{stats.SugarSupply} g");
+                BuildIngredientCartCard("ingredient_coffee", "Cà phê rang", $"{stats.CoffeeSupply} g");
+                BuildIngredientCartCard("ingredient_cups", "Ly nhựa sạch", $"{stats.CupSupply} cái");
+                float icePct = stats.IceLevel / Core.Constants.ICE_MAX * 100f;
+                BuildIngredientCartCard("ingredient_ice", "Đá viên", $"{icePct:F0}%");
+                BuildIngredientCartCard("ingredient_water", "Nước đun sôi", $"{GanhHangRong.Interaction.CartItem.BottleWater:F1} L");
             }
 
             // Dãn cách
-            var spacer = new GameObject("Spacer");
-            spacer.transform.SetParent(cartTabContainer.transform, false);
+            var spacer = MakeRect(cartTabContainer, "Spacer").gameObject;
             var leSpacer = spacer.AddComponent<LayoutElement>();
             leSpacer.minHeight = 20; leSpacer.preferredHeight = 20;
 
             // 2. Tiêu đề: VẬT PHẨM ĐÃ MUA (GIỎ HÀNG)
-            var title2GO = new GameObject("Title_Bought");
-            title2GO.transform.SetParent(cartTabContainer.transform, false);
+            var title2GO = MakeRect(cartTabContainer, "Title_Bought").gameObject;
             var leTitle2 = title2GO.AddComponent<LayoutElement>();
             leTitle2.minHeight = 35; leTitle2.preferredHeight = 35;
-            MakeText(title2GO, "🛒 VẬT PHẨM ĐÃ MUA (GIỎ HÀNG)", 22, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
+            MakeText(title2GO, "VẬT PHẨM ĐÃ MUA", 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0f, 0f, 1f, 1f);
 
             if (GanhHangRong.Economy.PlayerInventory.Instance != null && GanhHangRong.Economy.PlayerInventory.Instance.Items != null)
             {
@@ -932,8 +1147,7 @@ namespace GanhHangRong.UI
 
                 if (count == 0)
                 {
-                    var emptyGO = new GameObject("Empty_Cart");
-                    emptyGO.transform.SetParent(cartTabContainer.transform, false);
+                    var emptyGO = MakeRect(cartTabContainer, "Empty_Cart").gameObject;
                     var leEmpty = emptyGO.AddComponent<LayoutElement>();
                     leEmpty.minHeight = 60; leEmpty.preferredHeight = 60;
                     MakeText(emptyGO, "Chưa mua vật phẩm nào từ cửa hàng.", 18, Color.gray, TextAlignmentOptions.Center, FontStyles.Italic, 0f, 0f, 1f, 1f);
@@ -941,50 +1155,25 @@ namespace GanhHangRong.UI
             }
         }
 
-        private void BuildIngredientCartCard(string spriteName, string displayName, string amountStr)
+        private void BuildIngredientCartCard(string iconKey, string displayName, string amountStr)
         {
-            var card = MakeRoundedPanel(cartTabContainer, "Ingredient_" + displayName, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+            var card = MakeRoundedPanel(cartTabContainer, "Ingredient_" + displayName, COL_RIGHT_PANEL, 8, 0, 0, 1, 1);
             var le = card.AddComponent<LayoutElement>();
             le.minHeight = 80; le.preferredHeight = 80;
             var shadow = card.AddComponent<Shadow>();
             shadow.effectColor = new Color(0, 0, 0, 0.15f); shadow.effectDistance = new Vector2(0, -3);
 
-            // Icon Image
-            var iconGO = MakeRect(card, "Icon");
-            SetAnchors(iconGO, 0.02f, 0.1f, 0.12f, 0.9f);
-            var img = iconGO.gameObject.AddComponent<Image>();
-            img.preserveAspect = true;
+            var iconWell = MakeRoundedPanel(card, "IconWell", COL_IMAGE_WELL, 6, 0.015f, 0.10f, 0.105f, 0.90f);
+            MakeIcon(iconWell, iconKey, Color.white, 0.05f, 0.05f, 0.95f, 0.95f);
 
-            // Load Sprite
-#if UNITY_EDITOR
-            string[] guids = UnityEditor.AssetDatabase.FindAssets(spriteName + " t:Sprite");
-            if (guids != null && guids.Length > 0)
-            {
-                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                img.sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            }
-#endif
-            if (img.sprite == null)
-            {
-                Sprite[] allSprites = Resources.FindObjectsOfTypeAll<Sprite>();
-                foreach (Sprite s in allSprites)
-                {
-                    if (s != null && s.name.Equals(spriteName, System.StringComparison.OrdinalIgnoreCase))
-                    {
-                        img.sprite = s;
-                        break;
-                    }
-                }
-            }
-
-            MakeText(card, displayName, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.15f, 0.5f, 0.6f, 0.9f);
-            MakeText(card, "Còn lại trên xe:", 14, Color.gray, TextAlignmentOptions.Left, FontStyles.Normal, 0.15f, 0.15f, 0.6f, 0.5f);
+            MakeText(card, displayName, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.5f, 0.6f, 0.9f);
+            MakeText(card, "Còn lại trên xe", 14, Color.gray, TextAlignmentOptions.Left, FontStyles.Normal, 0.125f, 0.15f, 0.6f, 0.5f);
             MakeText(card, amountStr, 22, COL_TAB_ACTIVE, TextAlignmentOptions.Right, FontStyles.Bold, 0.6f, 0.15f, 0.96f, 0.85f);
         }
 
         private void BuildInventoryCartCard(GanhHangRong.Economy.InventoryItemStack stack)
         {
-            var card = MakeRoundedPanel(cartTabContainer, "Item_" + stack.item.DisplayName, COL_RIGHT_PANEL, 20, 0, 0, 1, 1);
+            var card = MakeRoundedPanel(cartTabContainer, "Item_" + stack.item.DisplayName, COL_RIGHT_PANEL, 8, 0, 0, 1, 1);
             var le = card.AddComponent<LayoutElement>();
             le.minHeight = 80; le.preferredHeight = 80;
             var shadow = card.AddComponent<Shadow>();

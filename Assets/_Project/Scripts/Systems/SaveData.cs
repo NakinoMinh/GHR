@@ -21,6 +21,13 @@ namespace GanhHangRong.Systems
         public int currentDay;
         public int currentChapter = 1;
         public bool chapter1Completed;
+
+        // Vòng ngày kinh doanh
+        public float currentHour = 6f;
+        public int businessDayPhase;
+        public bool lateReturnPenalty;
+        public bool servingMenuSaved;
+        public int[] activeServingOrderIds;
         
         // Story flags có thể được thêm ở đây, vd: Dictionary<string, bool>
     }

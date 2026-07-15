@@ -10,13 +10,16 @@ namespace GanhHangRong.Economy
     {
         [Header("Settings")]
         [SerializeField] private float timeScaleMultiplier = Constants.GAME_MINUTES_PER_REAL_SECOND;
+        [SerializeField] private bool isClockRunning = true;
         
-        private float currentHour = 17f; // Mặc định bắt đầu lúc 17:00 (chuẩn bị bán)
-        private TimeOfDay currentTimeOfDay = TimeOfDay.Evening;
+        private float currentHour = 6f;
+        private TimeOfDay currentTimeOfDay = TimeOfDay.EarlyMorning;
         private int calendarDayOffset = 0;
 
         public float CurrentHour => currentHour;
         public TimeOfDay CurrentTimeOfDay => currentTimeOfDay;
+        public bool IsClockRunning => isClockRunning;
+        public int CalendarDayOffset => calendarDayOffset;
 
         private void Start()
         {
@@ -27,7 +30,7 @@ namespace GanhHangRong.Economy
 
         private void Update()
         {
-            if (!GameManager.HasInstance || !GameManager.Instance.IsPlaying) return;
+            if (!isClockRunning || !GameManager.HasInstance || !GameManager.Instance.IsPlaying) return;
 
             // Chuyển đổi giây thực sang giờ trong game
             // 1 giây thực = timeScaleMultiplier phút game
@@ -65,6 +68,27 @@ namespace GanhHangRong.Economy
         public void SkipToHour(float targetHour)
         {
             currentHour = Mathf.Repeat(targetHour, Constants.HOURS_IN_DAY);
+            EventManager.TriggerHourChanged(currentHour);
+            UpdateTimeOfDay();
+        }
+
+        public void SetRunning(bool shouldRun)
+        {
+            isClockRunning = shouldRun;
+        }
+
+        public void AdvanceMinutes(float gameMinutes)
+        {
+            if (gameMinutes <= 0f) return;
+
+            float targetHour = currentHour + gameMinutes / 60f;
+            while (targetHour >= Constants.HOURS_IN_DAY)
+            {
+                targetHour -= Constants.HOURS_IN_DAY;
+                calendarDayOffset++;
+            }
+
+            currentHour = targetHour;
             EventManager.TriggerHourChanged(currentHour);
             UpdateTimeOfDay();
         }

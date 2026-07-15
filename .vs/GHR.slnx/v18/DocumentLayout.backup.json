@@ -1,10 +1,13 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\G\\GHR\\",
+  "WorkspaceRootPath": "D:\\PRU293\\FinalProject\\GHR\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\pru293\\finalproject\\ghr\\assets\\_project\\scripts\\environment\\environmentsetuphelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\_project\\scripts\\environment\\environmentsetuphelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,15 +22,26 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "EnvironmentSetupHelper.cs",
+              "DocumentMoniker": "D:\\PRU293\\FinalProject\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "RelativeDocumentMoniker": "Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "ToolTip": "D:\\PRU293\\FinalProject\\GHR\\Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "RelativeToolTip": "Assets\\_Project\\Scripts\\Environment\\EnvironmentSetupHelper.cs",
+              "ViewState": "AgIAAEYAAAAAAAAAAAAswFQAAABKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-01T09:20:06.931Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "AgentToolMcpAdapter.cs",
               "DocumentMoniker": "D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
-              "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
+              "RelativeDocumentMoniker": "..\\..\\..\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
               "ToolTip": "D:\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
-              "RelativeToolTip": "Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
-              "ViewState": "AgIAAOQAAAAAAAAAAAAnwO0AAABXAAAAAAAAAA==",
+              "RelativeToolTip": "..\\..\\..\\G\\GHR\\Library\\PackageCache\\com.unity.ai.assistant@bde8e124bc72\\Modules\\Unity.AI.MCP.Editor\\Adapters\\AgentToolMcpAdapter.cs",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-08T04:13:13.927Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-08T04:13:13.927Z"
             }
           ]
         }
