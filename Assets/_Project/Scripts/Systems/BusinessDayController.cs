@@ -60,7 +60,7 @@ namespace GanhHangRong.Systems
         private float previousHour;
         private float nextClosingCheckTime;
         private bool gameplaySceneActive;
-        private int gameplaySceneHandle = -1;
+        private SceneHandle gameplaySceneHandle = SceneHandle.None;
 
         public BusinessDayPhase CurrentPhase => currentPhase;
         public bool IsManagingGameLoop => gameplaySceneActive;
@@ -79,7 +79,18 @@ namespace GanhHangRong.Systems
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameLoopController()
         {
-            Scene scene = SceneManager.GetActiveScene();
+            SceneManager.sceneLoaded -= HandleRuntimeSceneLoaded;
+            SceneManager.sceneLoaded += HandleRuntimeSceneLoaded;
+            EnsureGameLoopController(SceneManager.GetActiveScene());
+        }
+
+        private static void HandleRuntimeSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            EnsureGameLoopController(scene);
+        }
+
+        private static void EnsureGameLoopController(Scene scene)
+        {
             if (!IsGameplaySceneLoaded(scene) || !GameManager.HasInstance) return;
 
             GameObject host = GameManager.Instance.gameObject;
@@ -151,11 +162,11 @@ namespace GanhHangRong.Systems
             gameplaySceneActive = shouldManage;
             if (!shouldManage)
             {
-                gameplaySceneHandle = -1;
+                gameplaySceneHandle = SceneHandle.None;
                 return;
             }
 
-            bool enteredNewGameplayScene = gameplaySceneHandle != scene.handle;
+            bool enteredNewGameplayScene = !gameplaySceneHandle.Equals(scene.handle);
             gameplaySceneHandle = scene.handle;
             ResolveReferences();
             if (enteredNewGameplayScene || !initialized)

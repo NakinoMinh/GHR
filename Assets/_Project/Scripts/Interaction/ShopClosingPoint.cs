@@ -90,6 +90,10 @@ namespace GanhHangRong.Interaction
         private void SetIndicatorColor(Color color)
         {
             if (indicatorRenderer == null) return;
+            if (propertyBlock == null)
+            {
+                propertyBlock = new MaterialPropertyBlock();
+            }
 
             indicatorRenderer.GetPropertyBlock(propertyBlock);
             propertyBlock.SetColor(BaseColorId, color);

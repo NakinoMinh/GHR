@@ -14,7 +14,21 @@ namespace GanhHangRong.UI
     {
         private const int InitialMenuCapacity = 3;
 
-        public static TabMenuUI Instance { get; private set; }
+        private static TabMenuUI instance;
+
+        public static TabMenuUI Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = FindAnyObjectByType<TabMenuUI>();
+                }
+
+                return instance;
+            }
+            private set => instance = value;
+        }
         public static bool IsAnyMenuOpen => Instance != null && Instance.isOpen;
         public static bool HasSavedServingMenu { get; private set; }
 
