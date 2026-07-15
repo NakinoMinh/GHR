@@ -19,6 +19,17 @@ namespace GanhHangRong.Narrative
         private bool advanceRequested;
 
         private static bool isSubscribed;
+        private static bool gameplayIntroHandled;
+
+        public static void RequestGameplayIntro()
+        {
+            gameplayIntroHandled = false;
+        }
+
+        public static void SkipGameplayIntro()
+        {
+            gameplayIntroHandled = true;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallSceneHook()
@@ -39,11 +50,15 @@ namespace GanhHangRong.Narrative
 
         private static void TryShowForScene(Scene scene)
         {
-            // The legacy Chapter1 scene now hosts the continuous business-day game loop.
-            if (scene.name == Constants.GAMEPLAY_SCENE_NAME) return;
+            if (scene.name == Constants.GAMEPLAY_SCENE_NAME && gameplayIntroHandled) return;
 
             if (!TryGetIntro(scene.name, out string title, out string[] sceneLines)) return;
             if (FindAnyObjectByType<ChapterStoryIntro>() != null) return;
+
+            if (scene.name == Constants.GAMEPLAY_SCENE_NAME)
+            {
+                gameplayIntroHandled = true;
+            }
 
             GameObject introObject = new GameObject("ChapterStoryIntro_Runtime");
             ChapterStoryIntro intro = introObject.AddComponent<ChapterStoryIntro>();

@@ -46,6 +46,14 @@ namespace GanhHangRong.Environment
         [SerializeField, Min(0f)] private float nightFogDensity = 0.014f;
         [SerializeField] private AnimationCurve fogDensityCurve = CreateFogDensityCurve();
 
+        [Header("May trang")]
+        [SerializeField, Range(20, 60)] private int visibleCloudCount = 44;
+        [SerializeField] private Vector2 cloudRadiusRange = new Vector2(230f, 800f);
+        [SerializeField] private Vector2 cloudAltitudeRange = new Vector2(190f, 325f);
+        [SerializeField] private Vector2 cloudScaleRange = new Vector2(0.55f, 1.3f);
+
+        private const int CloudSlotCount = 60;
+
         private bool warnedMissingTimeManager;
         private Material sunVisualMaterial;
         private Material moonVisualMaterial;
@@ -363,8 +371,16 @@ namespace GanhHangRong.Environment
                 cloudMaterial = CreateCelestialMaterial("SoftWhiteCloud_Material", new Color(1f, 0.96f, 0.88f, 0.88f));
             }
 
-            int numClouds = 60;
-            for (int i = 0; i < numClouds; i++)
+            int activeCount = Mathf.Clamp(visibleCloudCount, 20, CloudSlotCount);
+            float minRadius = Mathf.Min(cloudRadiusRange.x, cloudRadiusRange.y);
+            float maxRadius = Mathf.Max(cloudRadiusRange.x, cloudRadiusRange.y);
+            float minAltitude = Mathf.Min(cloudAltitudeRange.x, cloudAltitudeRange.y);
+            float maxAltitude = Mathf.Max(cloudAltitudeRange.x, cloudAltitudeRange.y);
+            float minScale = Mathf.Min(cloudScaleRange.x, cloudScaleRange.y);
+            float maxScale = Mathf.Max(cloudScaleRange.x, cloudScaleRange.y);
+            Random.State previousRandomState = Random.state;
+
+            for (int i = 0; i < CloudSlotCount; i++)
             {
                 Transform cloud = cloudRoot.Find("Cloud_" + (i + 1).ToString("00"));
                 if (cloud == null)
@@ -375,21 +391,26 @@ namespace GanhHangRong.Environment
                     BuildCloudCluster(cloud, i);
                 }
 
-                // Tọa độ ngẫu nhiên lan tỏa trên bầu trời
-                // Dùng Pseudo-random dựa vào i để vị trí cố định mỗi lần play
+                // Spread active slots evenly so reducing density does not empty one side of the sky.
+                bool shouldBeVisible = ((i + 1) * activeCount / CloudSlotCount) !=
+                    (i * activeCount / CloudSlotCount);
+                cloud.gameObject.SetActive(shouldBeVisible);
+
+                // Deterministic placement keeps the sky stable between edit and play mode.
                 Random.InitState(i * 12345);
                 float angle = Random.Range(0f, Mathf.PI * 2f);
-                float radius = Random.Range(200f, 900f);
+                float radius = Random.Range(minRadius, maxRadius);
                 float xOffset = Mathf.Cos(angle) * radius;
                 float zOffset = Mathf.Sin(angle) * radius;
-                float yOffset = Random.Range(100f, 250f);
-                
+                float yOffset = Random.Range(minAltitude, maxAltitude);
+
                 cloud.position = visualCenter + new Vector3(xOffset, yOffset, zOffset);
                 cloud.localRotation = Quaternion.Euler(0f, Random.Range(-40f, 40f), 0f);
-                
-                // Reset random state về mặc định
-                Random.InitState((int)System.DateTime.Now.Ticks);
+                float scaleT = ((i * 7) % 11) / 10f;
+                cloud.localScale = Vector3.one * Mathf.Lerp(minScale, maxScale, scaleT);
             }
+
+            Random.state = previousRandomState;
         }
 
         private void BuildCloudCluster(Transform cloud, int index)
@@ -424,8 +445,6 @@ namespace GanhHangRong.Environment
                     renderer.receiveShadows = false;
                 }
             }
-
-            cloud.localScale = Vector3.one * (0.6f + (index % 10) * 0.15f);
         }
 
         private void UpdateClouds(float normalizedTime)
@@ -449,6 +468,11 @@ namespace GanhHangRong.Environment
             for (int i = 0; i < cloudRoot.childCount; i++)
             {
                 Transform cloud = cloudRoot.GetChild(i);
+                if (!cloud.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
                 if (Application.isPlaying)
                 {
                     float drift = Mathf.Sin(Time.time * 0.04f + i * 1.7f) * 8f;

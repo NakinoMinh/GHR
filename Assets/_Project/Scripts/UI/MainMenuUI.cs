@@ -5,6 +5,7 @@ using TMPro;
 using System.Collections;
 using GanhHangRong.Audio;
 using GanhHangRong.Core;
+using GanhHangRong.Narrative;
 
 namespace GanhHangRong.UI
 {
@@ -106,6 +107,7 @@ namespace GanhHangRong.UI
         public void OnPlayClicked()
         {
             if (isTransitioning) return;
+            ChapterStoryIntro.RequestGameplayIntro();
             SetSettingsVisible(false);
             isTransitioning = true;
             StartCoroutine(CinematicTransition());
@@ -190,6 +192,7 @@ namespace GanhHangRong.UI
         private IEnumerator ContinueGame()
         {
             isTransitioning = true;
+            ChapterStoryIntro.SkipGameplayIntro();
             AsyncOperation load = SceneManager.LoadSceneAsync(Constants.GAMEPLAY_SCENE_NAME);
             while (!load.isDone) yield return null;
             yield return null;
