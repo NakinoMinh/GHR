@@ -144,15 +144,16 @@ namespace GanhHangRong.Editor
             // Title
             GameObject titleObj = new GameObject("TitleText");
             titleObj.transform.SetParent(signObj.transform, false);
-            var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+            var titleText = titleObj.AddComponent<Text>();
             titleText.text = "GÁNH HÀNG RONG";
+            titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             titleText.fontSize = 110;
-            titleText.fontStyle = FontStyles.Bold;
-            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.alignment = TextAnchor.MiddleCenter;
             titleText.color = new Color(1f, 0.8f, 0.5f); // Vàng ấm
-            titleText.enableAutoSizing = true;
-            titleText.fontSizeMin = 40;
-            titleText.fontSizeMax = 110;
+            titleText.resizeTextForBestFit = true;
+            titleText.resizeTextMinSize = 40;
+            titleText.resizeTextMaxSize = 110;
             titleText.raycastTarget = false;
             var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = Vector2.zero;
@@ -162,11 +163,12 @@ namespace GanhHangRong.Editor
             // Subtitle
             GameObject subObj = new GameObject("SubtitleText");
             subObj.transform.SetParent(uiLayer.transform, false);
-            var subText = subObj.AddComponent<TextMeshProUGUI>();
+            var subText = subObj.AddComponent<Text>();
             subText.text = "Ánh Đèn Đêm Miền Tây | Hành Trình Mưu Sinh Nơi Miền Biển\nDành cả tuổi trẻ chỉ để giữ một ánh đèn còn sáng giữa đêm.";
+            subText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             subText.fontSize = 28;
-            subText.fontStyle = FontStyles.Italic;
-            subText.alignment = TextAlignmentOptions.Center;
+            subText.fontStyle = FontStyle.Italic;
+            subText.alignment = TextAnchor.MiddleCenter;
             subText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
             subText.raycastTarget = false;
             var subRect = subObj.GetComponent<RectTransform>();
@@ -199,18 +201,18 @@ namespace GanhHangRong.Editor
             CreateMenuButton(panelObj.transform, "BẮT ĐẦU CHƠI", menuUI, "OnPlayClicked");
             CreateMenuButton(panelObj.transform, "TIẾP TỤC", menuUI, "OnContinueClicked");
             CreateMenuButton(panelObj.transform, "CÀI ĐẶT", menuUI, "OnSettingsClicked");
-            CreateMenuButton(panelObj.transform, "THÀNH TÍCH", menuUI, "OnAchievementsClicked");
             CreateMenuButton(panelObj.transform, "VỀ GAME", menuUI, "OnAboutClicked");
             CreateMenuButton(panelObj.transform, "THOÁT", menuUI, "OnQuitClicked");
 
             // Watermark
             GameObject watermark = new GameObject("Watermark");
             watermark.transform.SetParent(uiLayer.transform, false);
-            var wmText = watermark.AddComponent<TextMeshProUGUI>();
+            var wmText = watermark.AddComponent<Text>();
             wmText.text = "GÁNH HÀNG RONG\nKIÊN GIANG\n2018";
+            wmText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             wmText.fontSize = 18;
-            wmText.fontStyle = FontStyles.Bold;
-            wmText.alignment = TextAlignmentOptions.BottomRight;
+            wmText.fontStyle = FontStyle.Bold;
+            wmText.alignment = TextAnchor.LowerRight;
             wmText.color = new Color(1f, 0.72f, 0.3f, 0.7f);
             wmText.raycastTarget = false;
             var wmRect = watermark.GetComponent<RectTransform>();
@@ -282,12 +284,14 @@ namespace GanhHangRong.Editor
             // Chapter text
             GameObject chapterObj = new GameObject("ChapterText");
             chapterObj.transform.SetParent(overlayPanel.transform, false);
-            var chText = chapterObj.AddComponent<TextMeshProUGUI>();
+            var chText = chapterObj.AddComponent<Text>();
             chText.text = "Chương 1: Tiếng Rao Đêm";
+            chText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             chText.fontSize = 72;
-            chText.alignment = TextAlignmentOptions.Center;
-            chText.color = Color.white;
-            chText.alpha = 0f;
+            chText.alignment = TextAnchor.MiddleCenter;
+            Color chColor = Color.white;
+            chColor.a = 0f;
+            chText.color = chColor;
             chText.raycastTarget = false;
             var chRect = chapterObj.GetComponent<RectTransform>();
             chRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -344,15 +348,16 @@ namespace GanhHangRong.Editor
             // Text của nút
             GameObject textObj = new GameObject("Text");
             textObj.transform.SetParent(btnObj.transform, false);
-            var textMesh = textObj.AddComponent<TextMeshProUGUI>();
+            var textMesh = textObj.AddComponent<Text>();
             textMesh.text = text;
+            textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             textMesh.fontSize = 24;
-            textMesh.fontStyle = FontStyles.Bold;
-            textMesh.alignment = TextAlignmentOptions.Center;
+            textMesh.fontStyle = FontStyle.Bold;
+            textMesh.alignment = TextAnchor.MiddleCenter;
             textMesh.color = new Color(1f, 0.87f, 0.67f);
-            textMesh.enableAutoSizing = true;
-            textMesh.fontSizeMin = 14;
-            textMesh.fontSizeMax = 24;
+            textMesh.resizeTextForBestFit = true;
+            textMesh.resizeTextMinSize = 14;
+            textMesh.resizeTextMaxSize = 24;
 
             var textRect = textObj.GetComponent<RectTransform>();
             textRect.anchorMin = new Vector2(0, 0);

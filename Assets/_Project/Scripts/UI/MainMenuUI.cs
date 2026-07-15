@@ -14,14 +14,14 @@ namespace GanhHangRong.UI
         [SerializeField] private RectTransform backgroundRect;
         [SerializeField] private CanvasGroup uiLayerGroup;
         [SerializeField] private CanvasGroup transitionOverlay;
-        [SerializeField] private TextMeshProUGUI chapterText;
+        [SerializeField] private Text chapterText;
         [SerializeField] private Image backgroundImage;
         [SerializeField] private ParticleSystem rainParticles;
 
         [Header("Audio Settings")]
         [SerializeField] private CanvasGroup settingsPanel;
         [SerializeField] private Slider musicVolumeSlider;
-        [SerializeField] private TextMeshProUGUI musicVolumeValueText;
+        [SerializeField] private Text musicVolumeValueText;
 
         [Header("Parallax Settings")]
         [SerializeField] private float parallaxIntensity = 30f;
@@ -31,15 +31,24 @@ namespace GanhHangRong.UI
 
         private bool isTransitioning = false;
         private bool settingsVisible = false;
+        private CanvasGroup aboutPanel;
+        private bool aboutVisible = false;
         private Vector2 parallaxTarget;
         private Vector2 parallaxCurrent;
         private Vector2 bgOriginalSize;
 
         private void Start()
         {
+            Time.timeScale = 1f; // Reset time scale
+            if (GameManager.HasInstance)
+            {
+                GameManager.Instance.SetGamePhase(GamePhase.Playing);
+            }
+
             PlayMenuMusic();
             BuildSettingsPanelIfNeeded();
             InitializeSettingsPanel();
+            BuildAboutPanelIfNeeded();
 
             if (backgroundRect != null)
             {
@@ -58,7 +67,9 @@ namespace GanhHangRong.UI
 
             if (chapterText != null)
             {
-                chapterText.alpha = 0f;
+                Color c = chapterText.color;
+                c.a = 0f;
+                chapterText.color = c;
             }
 
             if (uiLayerGroup != null)
@@ -95,28 +106,39 @@ namespace GanhHangRong.UI
         {
             if (isTransitioning) return;
             SetSettingsVisible(false);
+            SetAboutVisible(false);
             isTransitioning = true;
-            StartCoroutine(CinematicTransition());
+            StartCoroutine(CinematicTransition(false));
         }
 
         public void OnContinueClicked()
         {
-            Debug.Log("[MainMenu] Continue clicked");
+            if (isTransitioning) return;
+            
+            string savePath = System.IO.Path.Combine(Application.persistentDataPath, Constants.SAVE_FILE_NAME);
+            if (System.IO.File.Exists(savePath))
+            {
+                SetSettingsVisible(false);
+                SetAboutVisible(false);
+                isTransitioning = true;
+                StartCoroutine(CinematicTransition(true));
+            }
+            else
+            {
+                Debug.Log("[MainMenu] No save file found.");
+            }
         }
 
         public void OnSettingsClicked()
         {
+            SetAboutVisible(false);
             SetSettingsVisible(!settingsVisible);
-        }
-
-        public void OnAchievementsClicked()
-        {
-            Debug.Log("[MainMenu] Achievements clicked");
         }
 
         public void OnAboutClicked()
         {
-            Debug.Log("[MainMenu] About clicked");
+            SetSettingsVisible(false);
+            SetAboutVisible(!aboutVisible);
         }
 
         public void OnQuitClicked()
@@ -138,7 +160,7 @@ namespace GanhHangRong.UI
             UpdateMusicVolumeText(value);
         }
 
-        private IEnumerator CinematicTransition()
+        private IEnumerator CinematicTransition(bool isContinue = false)
         {
             if (uiLayerGroup != null)
             {
@@ -188,12 +210,48 @@ namespace GanhHangRong.UI
 
             if (chapterText != null)
             {
-                chapterText.text = "Chương 1: Xe Trà Đá Ven Bến Tàu";
+                if (isContinue)
+                {
+                    chapterText.text = "Tiếp Tục Hành Trình...";
+                }
+                else
+                {
+                    chapterText.text = "Chương 1: Xe Trà Đá Ven Bến Tàu";
+                }
                 yield return StartCoroutine(FadeText(chapterText, 0f, 1f, 1.5f));
             }
 
             yield return new WaitForSeconds(2.5f);
-            SceneManager.LoadScene("Chapter1");
+            
+            if (isContinue)
+            {
+                string savePath = System.IO.Path.Combine(Application.persistentDataPath, Constants.SAVE_FILE_NAME);
+                if (System.IO.File.Exists(savePath))
+                {
+                    string json = System.IO.File.ReadAllText(savePath);
+                    var data = JsonUtility.FromJson<Systems.SaveData>(json);
+                    if (data != null && data.currentChapter == 2)
+                    {
+                        GameManager.Instance.StartChapter2();
+                        SceneManager.LoadScene(Constants.CHAPTER2_SCENE_NAME);
+                    }
+                    else
+                    {
+                        GameManager.Instance.StartChapter1();
+                        SceneManager.LoadScene("Chapter1");
+                    }
+                }
+                else
+                {
+                    GameManager.Instance.StartChapter1();
+                    SceneManager.LoadScene("Chapter1");
+                }
+            }
+            else
+            {
+                GameManager.Instance.StartChapter1();
+                SceneManager.LoadScene("Chapter1");
+            }
         }
 
         private void PlayMenuMusic()
@@ -278,8 +336,8 @@ namespace GanhHangRong.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            TextMeshProUGUI title = CreateSettingsText(panelObject.transform, "CÀI ĐẶT ÂM THANH", 26, FontStyles.Bold);
-            title.alignment = TextAlignmentOptions.Center;
+            Text title = CreateSettingsText(panelObject.transform, "CÀI ĐẶT ÂM THANH", 26, FontStyle.Bold);
+            title.alignment = TextAnchor.MiddleCenter;
 
             GameObject row = new GameObject("MusicVolumeRow");
             row.transform.SetParent(panelObject.transform, false);
@@ -293,7 +351,7 @@ namespace GanhHangRong.UI
             rowLayout.childControlWidth = true;
             rowLayout.childForceExpandWidth = false;
 
-            TextMeshProUGUI label = CreateSettingsText(row.transform, "Nhạc", 22, FontStyles.Bold);
+            Text label = CreateSettingsText(row.transform, "Nhạc", 22, FontStyle.Bold);
             LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
             labelLayout.preferredWidth = 82f;
 
@@ -302,8 +360,8 @@ namespace GanhHangRong.UI
             sliderLayout.preferredWidth = 190f;
             sliderLayout.preferredHeight = 34f;
 
-            musicVolumeValueText = CreateSettingsText(row.transform, "18%", 20, FontStyles.Bold);
-            musicVolumeValueText.alignment = TextAlignmentOptions.Right;
+            musicVolumeValueText = CreateSettingsText(row.transform, "18%", 20, FontStyle.Bold);
+            musicVolumeValueText.alignment = TextAnchor.MiddleRight;
             LayoutElement valueLayout = musicVolumeValueText.gameObject.AddComponent<LayoutElement>();
             valueLayout.preferredWidth = 58f;
 
@@ -311,19 +369,73 @@ namespace GanhHangRong.UI
             closeButton.onClick.AddListener(delegate { SetSettingsVisible(false); });
         }
 
-        private TextMeshProUGUI CreateSettingsText(Transform parent, string text, float fontSize, FontStyles style)
+        private void SetAboutVisible(bool visible)
+        {
+            aboutVisible = visible;
+            if (aboutPanel == null) return;
+
+            aboutPanel.alpha = visible ? 1f : 0f;
+            aboutPanel.interactable = visible;
+            aboutPanel.blocksRaycasts = visible;
+        }
+
+        private void BuildAboutPanelIfNeeded()
+        {
+            if (aboutPanel != null) return;
+
+            Canvas canvas = GetComponent<Canvas>();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            GameObject panelObject = new GameObject("AboutPanel");
+            panelObject.transform.SetParent(parent, false);
+
+            RectTransform panelRect = panelObject.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 0.5f);
+            panelRect.anchorMax = new Vector2(1f, 0.5f);
+            panelRect.pivot = new Vector2(1f, 0.5f);
+            panelRect.anchoredPosition = new Vector2(-72f, 0f);
+            panelRect.sizeDelta = new Vector2(500f, 320f);
+
+            Image panelImage = panelObject.AddComponent<Image>();
+            panelImage.color = new Color(0.13f, 0.08f, 0.05f, 0.92f);
+
+            aboutPanel = panelObject.AddComponent<CanvasGroup>();
+
+            VerticalLayoutGroup layout = panelObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(26, 26, 22, 22);
+            layout.spacing = 18f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            Text title = CreateSettingsText(panelObject.transform, "VỀ GAME", 26, FontStyle.Bold);
+            title.alignment = TextAnchor.MiddleCenter;
+
+            Text desc = CreateSettingsText(panelObject.transform, "Gánh Hàng Rong\nMột trò chơi mô phỏng quản lý xe bán nước ven biển miền Tây.\n\nĐội ngũ phát triển: NakinoMinh\nPhiên bản: 1.0", 20, FontStyle.Normal);
+            desc.alignment = TextAnchor.MiddleCenter;
+            desc.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            Button closeButton = CreateSettingsButton(panelObject.transform, "ĐÓNG");
+            closeButton.onClick.AddListener(delegate { SetAboutVisible(false); });
+            
+            SetAboutVisible(false);
+        }
+
+        private Text CreateSettingsText(Transform parent, string text, int fontSize, FontStyle style)
         {
             GameObject textObject = new GameObject(text);
             textObject.transform.SetParent(parent, false);
 
-            TextMeshProUGUI tmp = textObject.AddComponent<TextMeshProUGUI>();
+            Text tmp = textObject.AddComponent<Text>();
             tmp.text = text;
+            tmp.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             tmp.fontSize = fontSize;
             tmp.fontStyle = style;
             tmp.color = new Color(1f, 0.82f, 0.52f, 1f);
-            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            tmp.alignment = TextAnchor.MiddleLeft;
             tmp.raycastTarget = false;
-            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.horizontalOverflow = HorizontalWrapMode.Overflow;
             return tmp;
         }
 
@@ -403,8 +515,8 @@ namespace GanhHangRong.UI
             RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
             buttonRect.sizeDelta = new Vector2(0f, 46f);
 
-            TextMeshProUGUI label = CreateSettingsText(buttonObject.transform, text, 22, FontStyles.Bold);
-            label.alignment = TextAlignmentOptions.Center;
+            Text label = CreateSettingsText(buttonObject.transform, text, 22, FontStyle.Bold);
+            label.alignment = TextAnchor.MiddleCenter;
             RectTransform labelRect = label.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
@@ -429,19 +541,23 @@ namespace GanhHangRong.UI
             group.alpha = to;
         }
 
-        private IEnumerator FadeText(TextMeshProUGUI text, float from, float to, float duration)
+        private IEnumerator FadeText(Text text, float from, float to, float duration)
         {
             float elapsed = 0f;
-            text.alpha = from;
+            Color c = text.color;
+            c.a = from;
+            text.color = c;
 
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                text.alpha = Mathf.Lerp(from, to, elapsed / duration);
+                c.a = Mathf.Lerp(from, to, elapsed / duration);
+                text.color = c;
                 yield return null;
             }
 
-            text.alpha = to;
+            c.a = to;
+            text.color = c;
         }
     }
 }
