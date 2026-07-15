@@ -77,7 +77,7 @@ namespace GanhHangRong.Environment
             CacheLightTransforms();
             ConfigureCoastalNightTiming();
             EnsureCelestialVisuals();
-            EnsureWhiteClouds();
+            // EnsureWhiteClouds(); // Đã tắt tạo mây trắng theo yêu cầu
         }
 
         private void Update()
@@ -407,8 +407,8 @@ namespace GanhHangRong.Environment
                 GameObject puff = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 puff.name = "Puff_" + (i + 1).ToString("00");
                 puff.transform.SetParent(cloud, false);
-                puff.transform.localPosition = offsets[i] * 18f;
-                puff.transform.localScale = new Vector3(15f + i * 3f, 6f + (i % 2) * 3f, 5f);
+                puff.transform.localPosition = offsets[i] * 6f; // Reduced from 18f
+                puff.transform.localScale = new Vector3(8f + i * 1.5f, 3f + (i % 2) * 1.5f, 3f); // Reduced by half
 
                 Collider collider = puff.GetComponent<Collider>();
                 if (collider != null)
@@ -425,7 +425,7 @@ namespace GanhHangRong.Environment
                 }
             }
 
-            cloud.localScale = Vector3.one * (0.6f + (index % 10) * 0.15f);
+            cloud.localScale = Vector3.one * (0.3f + (index % 10) * 0.08f); // Reduced overall cloud size by half
         }
 
         private void UpdateClouds(float normalizedTime)
