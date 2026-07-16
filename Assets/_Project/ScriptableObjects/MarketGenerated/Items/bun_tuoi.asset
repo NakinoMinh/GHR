@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: bun_tuoi
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: bun_tuoi
+  displayName: "B\xFAn t\u01B0\u01A1i"
+  description: "M\u1ED9t ph\u1EA7n b\xFAn g\u1EA1o t\u01B0\u01A1i cho m\u1ED9t t\xF4
+    b\xFAn c\xE1."
+  icon: {fileID: -8329470516777705550, guid: 09c0be5e96090d441973726ca1486e40, type: 3}
+  itemType: 0
+  price: 6000
+  isRecipeBook: 0
+  recipeIdToUnlock: 
+  itemName: 
+  buyPrice: 6000
+  sellPrice: 0

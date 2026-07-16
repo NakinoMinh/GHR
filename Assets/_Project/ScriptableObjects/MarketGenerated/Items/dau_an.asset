@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: dau_an
   displayName: "D\u1EA7u \u0103n"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: -5839061928985715767, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 8000
   isRecipeBook: 0

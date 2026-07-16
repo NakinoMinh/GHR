@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff6754832e9f9c54fba86b36f4bc7988, type: 3}
+  m_Name: banh_canh_ghe
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.RecipeData
+  recipeId: banh_canh_ghe
+  recipeName: "B\xE1nh Canh Gh\u1EB9"
+  recipeIcon: {fileID: 5972329034018721650, guid: 09c0be5e96090d441973726ca1486e40, type: 3}
+  ingredients:
+  - item: {fileID: 11400000, guid: b0f4cc3cef160a649835f57a49045195, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 6b5862d976688c748a7769d80cbd9428, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: cf19b814aeb024c4483733e6220f035f, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 3e8abb0444f09dc4d9e80a846c6b5368, type: 2}
+    amount: 1
+  recipeBookIdRequired: sach_banh_canh_ghe
+  isLockedByRecipeBook: 1
+  baseSellPrice: 52000
+  requiredTea: 1
+  requiredIce: 1
+  requiredSugar: 1
+  preparationTime: 2

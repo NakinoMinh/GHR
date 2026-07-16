@@ -19,6 +19,17 @@ namespace GanhHangRong.Narrative
         private bool advanceRequested;
 
         private static bool isSubscribed;
+        private static bool gameplayIntroHandled;
+
+        public static void RequestGameplayIntro()
+        {
+            gameplayIntroHandled = false;
+        }
+
+        public static void SkipGameplayIntro()
+        {
+            gameplayIntroHandled = true;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallSceneHook()
@@ -39,8 +50,15 @@ namespace GanhHangRong.Narrative
 
         private static void TryShowForScene(Scene scene)
         {
+            if (scene.name == Constants.GAMEPLAY_SCENE_NAME && gameplayIntroHandled) return;
+
             if (!TryGetIntro(scene.name, out string title, out string[] sceneLines)) return;
             if (FindAnyObjectByType<ChapterStoryIntro>() != null) return;
+
+            if (scene.name == Constants.GAMEPLAY_SCENE_NAME)
+            {
+                gameplayIntroHandled = true;
+            }
 
             GameObject introObject = new GameObject("ChapterStoryIntro_Runtime");
             ChapterStoryIntro intro = introObject.AddComponent<ChapterStoryIntro>();
@@ -51,13 +69,13 @@ namespace GanhHangRong.Narrative
         {
             switch (sceneName)
             {
-                case "Chapter1":
-                    title = "Chương 1 - Xe Trà Đá Ven Bến Tàu";
+                case Constants.GAMEPLAY_SCENE_NAME:
+                    title = "XE TRÀ ĐÁ VEN BẾN TÀU";
                     sceneLines = new[]
                     {
-                        "Rạch Giá, năm 2018. Hoàng Hôn bắt đầu buổi tối đầu tiên với chiếc xe trà đá cũ của gia đình.",
-                        "Bến tàu còn sáng đèn. Ngư dân, tài xế và khách đi đảo ghé qua chỉ để tìm một ly nước mát giữa đêm.",
-                        "Kiếm từng đồng không dễ, nhưng đó là cách Hoàng Hôn giữ cho căn nhà nhỏ của mình còn hy vọng."
+                        "Rạch Giá, năm 2018. Hoàng Hôn thức dậy lúc 06:00 để bắt đầu ngày đầu tiên với chiếc xe trà đá cũ của gia đình.",
+                        "Từ sáng sớm đến tối muộn, ngư dân, tài xế và khách đi đảo sẽ ghé qua tìm một ly nước mát.",
+                        "Chuẩn bị nguyên liệu, chọn thực đơn và phục vụ từng vị khách là cách Hoàng Hôn giữ cho căn nhà nhỏ của mình còn hy vọng."
                     };
                     return true;
 

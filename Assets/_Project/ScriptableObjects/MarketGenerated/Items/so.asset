@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: so
   displayName: "S\xF2"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: -6585755128766152237, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 12000
   isRecipeBook: 0

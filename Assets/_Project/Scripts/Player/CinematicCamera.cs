@@ -10,6 +10,11 @@ namespace GanhHangRong.Player
     /// </summary>
     public class CinematicCamera : MonoBehaviour
     {
+        public const string MouseSensitivityPreferenceKey = "GHR_MouseSensitivity";
+        public const float DefaultMouseSensitivity = 2f;
+        public const float MinimumMouseSensitivity = 0.25f;
+        public const float MaximumMouseSensitivity = 5f;
+
         [Header("Mục Tiêu")]
         [SerializeField] private Transform target;
 
@@ -22,7 +27,7 @@ namespace GanhHangRong.Player
         [SerializeField] private Vector3 shoulderOffset = new Vector3(0.7f, 0.15f, 0f);
 
         [Header("Third Person Orbit Settings")]
-        [SerializeField] private float mouseSensitivity = 2f;
+        [SerializeField] private float mouseSensitivity = DefaultMouseSensitivity;
         [SerializeField] private float minPitch = -20f;
         [SerializeField] private float maxPitch = 60f;
         [SerializeField] private float smoothSpeed = 10f;
@@ -66,8 +71,15 @@ namespace GanhHangRong.Player
         private float fpPitch = 30f;
 
         // Raycast cho tương tác vật phẩm trên xe đẩy
+        [SerializeField] private float cartItemRaycastInterval = 0.04f;
         private Interaction.CartItem currentHoveredItem;
         private Interaction.Chapter2FoodItem currentHoveredFoodItem;
+        private Camera cachedCamera;
+        private PlayerController cachedPlayer;
+        private PlayerStats cachedPlayerStats;
+        private Interaction.TeaCart cachedTeaCart;
+        private readonly RaycastHit[] cartItemRaycastBuffer = new RaycastHit[128];
+        private float nextCartItemRaycastTime;
 
         // NPC Focus state
         private bool isFocusingNPC = false;
@@ -76,15 +88,28 @@ namespace GanhHangRong.Player
 
         public bool IsCartOrbitMode => isCartOrbitMode;
         public bool IsCartFirstPersonMode => isCartFirstPersonMode;
+        public float MouseSensitivity => mouseSensitivity;
 
         private void Start()
         {
+            cachedCamera = GetComponent<Camera>();
+            SetMouseSensitivity(PlayerPrefs.GetFloat(MouseSensitivityPreferenceKey, mouseSensitivity), false);
+
             if (target != null)
             {
                 // Lấy góc quay ban đầu của camera
                 yaw = transform.eulerAngles.y;
                 pitch = transform.eulerAngles.x;
                 SnapToTarget();
+            }
+        }
+
+        public void SetMouseSensitivity(float value, bool save = true)
+        {
+            mouseSensitivity = Mathf.Clamp(value, MinimumMouseSensitivity, MaximumMouseSensitivity);
+            if (save)
+            {
+                PlayerPrefs.SetFloat(MouseSensitivityPreferenceKey, mouseSensitivity);
             }
         }
 
@@ -156,8 +181,9 @@ namespace GanhHangRong.Player
                 if (isRightMouseHeld)
                 {
                     Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-                    cartOrbitYaw += mouseDelta.x * cartOrbitSensitivity * 0.1f;
-                    cartOrbitPitch -= mouseDelta.y * cartOrbitSensitivity * 0.1f;
+                    float sensitivityScale = mouseSensitivity / DefaultMouseSensitivity;
+                    cartOrbitYaw += mouseDelta.x * cartOrbitSensitivity * sensitivityScale * 0.1f;
+                    cartOrbitPitch -= mouseDelta.y * cartOrbitSensitivity * sensitivityScale * 0.1f;
                     cartOrbitPitch = Mathf.Clamp(cartOrbitPitch, cartOrbitMinPitch, cartOrbitMaxPitch);
 
                     Cursor.lockState = CursorLockMode.Locked;
@@ -186,6 +212,28 @@ namespace GanhHangRong.Player
 
         private void UpdateCartItemRaycast()
         {
+            if (Mouse.current == null)
+            {
+                return;
+            }
+
+            bool leftClickPressed = Mouse.current.leftButton.wasPressedThisFrame;
+            if (!leftClickPressed && Time.time < nextCartItemRaycastTime)
+            {
+                return;
+            }
+
+            nextCartItemRaycastTime = Time.time + cartItemRaycastInterval;
+
+            if (cachedCamera == null)
+            {
+                cachedCamera = GetComponent<Camera>();
+            }
+
+            if (cachedCamera == null)
+            {
+                return;
+            }
             // Nếu không phải là chế độ góc nhìn thứ 1, và chuột đang bị khóa (đang giữ chuột phải xoay orbit camera)
             if (!isCartFirstPersonMode && Cursor.lockState == CursorLockMode.Locked)
             {
@@ -206,12 +254,12 @@ namespace GanhHangRong.Player
             if (Cursor.lockState == CursorLockMode.Locked)
             {
                 // Khi chuột bị khóa trong góc nhìn thứ 1, bắn raycast từ tâm màn hình
-                ray = GetComponent<Camera>().ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                ray = cachedCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             }
             else
             {
                 // Khi hiện chuột, bắn từ vị trí con trỏ chuột
-                ray = GetComponent<Camera>().ScreenPointToRay(Mouse.current.position.ReadValue());
+                ray = cachedCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
             }
 
             RaycastHit hit;
@@ -247,7 +295,10 @@ namespace GanhHangRong.Player
                         currentHoveredItem.SetHighlighted(true);
 
                         // Hiển thị tên vật phẩm và số lượng hiện có
-                        var stats = FindAnyObjectByType<PlayerStats>();
+                        if (cachedPlayerStats == null)
+                            cachedPlayerStats = FindAnyObjectByType<PlayerStats>();
+
+                        var stats = cachedPlayerStats;
                         string quantityText = "";
                         if (stats != null)
                         {
@@ -286,9 +337,14 @@ namespace GanhHangRong.Player
                     }
 
                     // Click trái để tương tác
-                    if (Mouse.current.leftButton.wasPressedThisFrame)
+                    if (leftClickPressed)
                     {
-                        var player = FindAnyObjectByType<PlayerController>();
+                        if (cachedPlayer == null)
+                        {
+                            cachedPlayer = FindAnyObjectByType<PlayerController>();
+                        }
+
+                        var player = cachedPlayer;
                         if (player != null)
                         {
                             cartItem.OnItemClicked(player);
@@ -313,9 +369,14 @@ namespace GanhHangRong.Player
                         EventManager.TriggerInteractionPromptShow(foodItem.ItemName);
                     }
 
-                    if (Mouse.current.leftButton.wasPressedThisFrame)
+                    if (leftClickPressed)
                     {
-                        var player = FindAnyObjectByType<PlayerController>();
+                        if (cachedPlayer == null)
+                        {
+                            cachedPlayer = FindAnyObjectByType<PlayerController>();
+                        }
+
+                        var player = cachedPlayer;
                         if (player != null)
                         {
                             foodItem.OnItemClicked(player);
@@ -331,7 +392,7 @@ namespace GanhHangRong.Player
                         currentHoveredItem = null;
 
                         // Khôi phục prompt mặc định của xe đẩy
-                        var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                        var cart = GetCachedTeaCart();
                         if (cart != null)
                             EventManager.TriggerInteractionPromptShow(cart.PromptText);
                         else
@@ -342,7 +403,7 @@ namespace GanhHangRong.Player
                         currentHoveredFoodItem.SetHighlighted(false);
                         currentHoveredFoodItem = null;
 
-                        var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                        var cart = GetCachedTeaCart();
                         if (cart != null)
                             EventManager.TriggerInteractionPromptShow(cart.PromptText);
                         else
@@ -357,7 +418,7 @@ namespace GanhHangRong.Player
                     currentHoveredItem.SetHighlighted(false);
                     currentHoveredItem = null;
 
-                    var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                    var cart = GetCachedTeaCart();
                     if (cart != null)
                         EventManager.TriggerInteractionPromptShow(cart.PromptText);
                     else
@@ -368,7 +429,7 @@ namespace GanhHangRong.Player
                     currentHoveredFoodItem.SetHighlighted(false);
                     currentHoveredFoodItem = null;
 
-                    var cart = FindAnyObjectByType<Interaction.TeaCart>();
+                    var cart = GetCachedTeaCart();
                     if (cart != null)
                         EventManager.TriggerInteractionPromptShow(cart.PromptText);
                     else
@@ -385,16 +446,25 @@ namespace GanhHangRong.Player
         /// Bật chế độ góc nhìn thứ 1 từ mặt bàn xe đẩy.
         /// Camera đứng phía sau mặt bàn, nhìn thẳng theo hướng xe.
         /// </summary>
-        private static bool TryGetCartItemHit(Ray ray, out RaycastHit bestHit)
+        private Interaction.TeaCart GetCachedTeaCart()
+        {
+            if (cachedTeaCart == null)
+                cachedTeaCart = FindAnyObjectByType<Interaction.TeaCart>();
+
+            return cachedTeaCart;
+        }
+
+        private bool TryGetCartItemHit(Ray ray, out RaycastHit bestHit)
         {
             bestHit = default;
             bool found = false;
             float bestDistance = float.MaxValue;
 
-            RaycastHit[] hits = Physics.RaycastAll(ray, 15f, ~0, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < hits.Length; i++)
+            int hitCount = Physics.RaycastNonAlloc(ray, cartItemRaycastBuffer, 15f, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hitCount; i++)
             {
-                Collider hitCollider = hits[i].collider;
+                RaycastHit rayHit = cartItemRaycastBuffer[i];
+                Collider hitCollider = rayHit.collider;
                 if (hitCollider == null) continue;
 
                 bool isCartItem = hitCollider.GetComponent<Interaction.CartItem>() != null ||
@@ -402,10 +472,10 @@ namespace GanhHangRong.Player
                                   hitCollider.GetComponent<Interaction.Chapter2FoodItem>() != null ||
                                   hitCollider.GetComponentInParent<Interaction.Chapter2FoodItem>() != null;
 
-                if (!isCartItem || hits[i].distance >= bestDistance) continue;
+                if (!isCartItem || rayHit.distance >= bestDistance) continue;
 
-                bestHit = hits[i];
-                bestDistance = hits[i].distance;
+                bestHit = rayHit;
+                bestDistance = rayHit.distance;
                 found = true;
             }
 
@@ -417,21 +487,32 @@ namespace GanhHangRong.Player
             isCartFirstPersonMode = true;
             cartFPCenter = cartCenter;
 
-            // Lấy góc quay Yaw và Pitch thực tế từ hướng nhìn Forward của cameraViewPoint trong World Space (tránh méo góc do trục model lệch)
-            Vector3 camForward = cartCenter.forward;
-            fpYaw = Mathf.Atan2(camForward.x, camForward.z) * Mathf.Rad2Deg;
-            float horizontalDist = new Vector2(camForward.x, camForward.z).magnitude;
-            fpPitch = -Mathf.Atan2(camForward.y, horizontalDist) * Mathf.Rad2Deg;
-
-            // Cập nhật vị trí và góc quay mục tiêu ban đầu
             RecalcCartFPPose();
+            SetCartFirstPersonAnglesFromRotation(cartFPTargetRot);
 
-            // Snap ngay lập tức để tránh giật
             transform.position = cartFPTargetPos;
             transform.rotation = cartFPTargetRot;
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        }
+
+        private void SetCartFirstPersonAnglesFromRotation(Quaternion targetRotation)
+        {
+            Vector3 camForward = targetRotation * Vector3.forward;
+            if (camForward.sqrMagnitude < 0.001f && cartFPCenter != null)
+            {
+                camForward = cartFPCenter.forward;
+            }
+
+            if (camForward.sqrMagnitude < 0.001f)
+            {
+                camForward = transform.forward;
+            }
+
+            fpYaw = Mathf.Atan2(camForward.x, camForward.z) * Mathf.Rad2Deg;
+            float horizontalDist = new Vector2(camForward.x, camForward.z).magnitude;
+            fpPitch = -Mathf.Atan2(camForward.y, horizontalDist) * Mathf.Rad2Deg;
         }
 
         /// <summary>

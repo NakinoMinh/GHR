@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff6754832e9f9c54fba86b36f4bc7988, type: 3}
+  m_Name: bun_ca_kien_giang
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.RecipeData
+  recipeId: bun_ca_kien_giang
+  recipeName: "B\xFAn C\xE1 Ki\xEAn Giang"
+  recipeIcon: {fileID: 3576392828960293416, guid: 09c0be5e96090d441973726ca1486e40, type: 3}
+  ingredients:
+  - item: {fileID: 11400000, guid: a2c60c41b187a7547b370c0f9b9fd2cd, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 54d9b3b54c1f9164ea28da8c8d7f8391, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: cf19b814aeb024c4483733e6220f035f, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 32175c5b30c770a409b2058a08d7d963, type: 2}
+    amount: 1
+  recipeBookIdRequired: sach_bun_ca_kien_giang
+  isLockedByRecipeBook: 1
+  baseSellPrice: 42000
+  requiredTea: 1
+  requiredIce: 1
+  requiredSugar: 1
+  preparationTime: 2

@@ -5,6 +5,7 @@ using TMPro;
 using System.Collections;
 using GanhHangRong.Audio;
 using GanhHangRong.Core;
+using GanhHangRong.Narrative;
 
 namespace GanhHangRong.UI
 {
@@ -20,8 +21,20 @@ namespace GanhHangRong.UI
 
         [Header("Audio Settings")]
         [SerializeField] private CanvasGroup settingsPanel;
+        [SerializeField] private Slider masterVolumeSlider;
         [SerializeField] private Slider musicVolumeSlider;
+        [SerializeField] private Slider sfxVolumeSlider;
+        [SerializeField] private Slider ambientVolumeSlider;
+        [SerializeField] private TextMeshProUGUI masterVolumeValueText;
         [SerializeField] private TextMeshProUGUI musicVolumeValueText;
+        [SerializeField] private TextMeshProUGUI sfxVolumeValueText;
+        [SerializeField] private TextMeshProUGUI ambientVolumeValueText;
+        [SerializeField] private Toggle fullscreenToggle;
+        [SerializeField] private Button qualityButton;
+        [SerializeField] private TextMeshProUGUI qualityValueText;
+        private CanvasGroup infoPanel;
+        private TextMeshProUGUI infoTitle;
+        private TextMeshProUGUI infoBody;
 
         [Header("Parallax Settings")]
         [SerializeField] private float parallaxIntensity = 30f;
@@ -94,6 +107,7 @@ namespace GanhHangRong.UI
         public void OnPlayClicked()
         {
             if (isTransitioning) return;
+            ChapterStoryIntro.RequestGameplayIntro();
             SetSettingsVisible(false);
             isTransitioning = true;
             StartCoroutine(CinematicTransition());
@@ -101,7 +115,8 @@ namespace GanhHangRong.UI
 
         public void OnContinueClicked()
         {
-            Debug.Log("[MainMenu] Continue clicked");
+            if (isTransitioning) return;
+            StartCoroutine(ContinueGame());
         }
 
         public void OnSettingsClicked()
@@ -109,14 +124,9 @@ namespace GanhHangRong.UI
             SetSettingsVisible(!settingsVisible);
         }
 
-        public void OnAchievementsClicked()
-        {
-            Debug.Log("[MainMenu] Achievements clicked");
-        }
-
         public void OnAboutClicked()
         {
-            Debug.Log("[MainMenu] About clicked");
+            ShowInfo("GÁNH HÀNG RONG", "Một câu chuyện đời thường bên bến tàu Rạch Giá.\n\nDi chuyển, pha chế và phục vụ khách để duy trì gánh hàng.");
         }
 
         public void OnQuitClicked()
@@ -136,6 +146,60 @@ namespace GanhHangRong.UI
             }
 
             UpdateMusicVolumeText(value);
+        }
+
+        public void OnMasterVolumeChanged(float value)
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.SetMasterVolume(value);
+            UpdateVolumeText(masterVolumeValueText, value);
+        }
+
+        public void OnSfxVolumeChanged(float value)
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.SetSfxVolume(value);
+            UpdateVolumeText(sfxVolumeValueText, value);
+        }
+
+        public void OnAmbientVolumeChanged(float value)
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.SetAmbientVolume(value);
+            UpdateVolumeText(ambientVolumeValueText, value);
+        }
+
+        public void OnFullscreenChanged(bool value)
+        {
+            Screen.fullScreen = value;
+            PlayerPrefs.SetInt("GHR_Fullscreen", value ? 1 : 0);
+            PlayerPrefs.Save();
+        }
+
+        public void OnQualityChanged(int value)
+        {
+            if (QualitySettings.names.Length == 0) return;
+            int level = Mathf.Clamp(value, 0, QualitySettings.names.Length - 1);
+            QualitySettings.SetQualityLevel(level, true);
+            PlayerPrefs.SetInt("GHR_Quality", level);
+            PlayerPrefs.Save();
+            if (qualityValueText != null) qualityValueText.text = "Chất lượng: " + QualitySettings.names[level];
+        }
+
+        public void OnQualityClicked()
+        {
+            if (QualitySettings.names.Length == 0) return;
+            OnQualityChanged((QualitySettings.GetQualityLevel() + 1) % QualitySettings.names.Length);
+        }
+
+        private IEnumerator ContinueGame()
+        {
+            isTransitioning = true;
+            ChapterStoryIntro.SkipGameplayIntro();
+            AsyncOperation load = SceneManager.LoadSceneAsync(Constants.GAMEPLAY_SCENE_NAME);
+            while (!load.isDone) yield return null;
+            yield return null;
+            if (GanhHangRong.Systems.SaveManager.Instance != null)
+            {
+                GanhHangRong.Systems.SaveManager.Instance.LoadGame();
+            }
         }
 
         private IEnumerator CinematicTransition()
@@ -188,12 +252,12 @@ namespace GanhHangRong.UI
 
             if (chapterText != null)
             {
-                chapterText.text = "Chương 1: Xe Trà Đá Ven Bến Tàu";
+                chapterText.text = "XE TRÀ ĐÁ VEN BẾN TÀU";
                 yield return StartCoroutine(FadeText(chapterText, 0f, 1f, 1.5f));
             }
 
             yield return new WaitForSeconds(2.5f);
-            SceneManager.LoadScene("Chapter1");
+            SceneManager.LoadScene(Constants.GAMEPLAY_SCENE_NAME);
         }
 
         private void PlayMenuMusic()
@@ -215,27 +279,57 @@ namespace GanhHangRong.UI
         private void InitializeSettingsPanel()
         {
             AudioManager manager = AudioManager.Instance;
+            float masterVolume = manager != null ? manager.MasterVolume : 1f;
             float musicVolume = manager != null ? manager.MusicVolume : Constants.MUSIC_BASE_VOLUME;
+            float sfxVolume = manager != null ? manager.SfxVolume : Constants.SFX_BASE_VOLUME;
+            float ambientVolume = manager != null ? manager.AmbientVolume : Constants.AMBIENT_BASE_VOLUME;
 
-            if (musicVolumeSlider != null)
+            SetupSlider(masterVolumeSlider, masterVolume, OnMasterVolumeChanged);
+            SetupSlider(musicVolumeSlider, musicVolume, OnMusicVolumeChanged);
+            SetupSlider(sfxVolumeSlider, sfxVolume, OnSfxVolumeChanged);
+            SetupSlider(ambientVolumeSlider, ambientVolume, OnAmbientVolumeChanged);
+
+            UpdateVolumeText(masterVolumeValueText, masterVolume);
+            UpdateMusicVolumeText(musicVolume);
+            UpdateVolumeText(sfxVolumeValueText, sfxVolume);
+            UpdateVolumeText(ambientVolumeValueText, ambientVolume);
+
+            bool fullscreen = PlayerPrefs.GetInt("GHR_Fullscreen", Screen.fullScreen ? 1 : 0) == 1;
+            if (fullscreenToggle != null)
             {
-                musicVolumeSlider.minValue = 0f;
-                musicVolumeSlider.maxValue = 1f;
-                musicVolumeSlider.SetValueWithoutNotify(musicVolume);
-                musicVolumeSlider.onValueChanged.RemoveListener(OnMusicVolumeChanged);
-                musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
+                fullscreenToggle.SetIsOnWithoutNotify(fullscreen);
+                fullscreenToggle.onValueChanged.RemoveListener(OnFullscreenChanged);
+                fullscreenToggle.onValueChanged.AddListener(OnFullscreenChanged);
             }
 
-            UpdateMusicVolumeText(musicVolume);
+            if (qualityButton != null)
+            {
+                int quality = Mathf.Clamp(PlayerPrefs.GetInt("GHR_Quality", QualitySettings.GetQualityLevel()), 0, Mathf.Max(0, QualitySettings.names.Length - 1));
+                OnQualityChanged(quality);
+                qualityButton.onClick.RemoveListener(OnQualityClicked);
+                qualityButton.onClick.AddListener(OnQualityClicked);
+            }
             SetSettingsVisible(false);
+        }
+
+        private static void SetupSlider(Slider slider, float value, UnityEngine.Events.UnityAction<float> callback)
+        {
+            if (slider == null) return;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.SetValueWithoutNotify(value);
+            slider.onValueChanged.RemoveListener(callback);
+            slider.onValueChanged.AddListener(callback);
         }
 
         private void UpdateMusicVolumeText(float value)
         {
-            if (musicVolumeValueText != null)
-            {
-                musicVolumeValueText.text = Mathf.RoundToInt(value * 100f) + "%";
-            }
+            UpdateVolumeText(musicVolumeValueText, value);
+        }
+
+        private static void UpdateVolumeText(TextMeshProUGUI target, float value)
+        {
+            if (target != null) target.text = Mathf.RoundToInt(value * 100f) + "%";
         }
 
         private void SetSettingsVisible(bool visible)
@@ -263,7 +357,7 @@ namespace GanhHangRong.UI
             panelRect.anchorMax = new Vector2(1f, 0.5f);
             panelRect.pivot = new Vector2(1f, 0.5f);
             panelRect.anchoredPosition = new Vector2(-72f, 0f);
-            panelRect.sizeDelta = new Vector2(420f, 260f);
+            panelRect.sizeDelta = new Vector2(500f, 610f);
 
             Image panelImage = panelObject.AddComponent<Image>();
             panelImage.color = new Color(0.13f, 0.08f, 0.05f, 0.92f);
@@ -272,17 +366,29 @@ namespace GanhHangRong.UI
 
             VerticalLayoutGroup layout = panelObject.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(26, 26, 22, 22);
-            layout.spacing = 18f;
+            layout.spacing = 12f;
             layout.childControlWidth = true;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            TextMeshProUGUI title = CreateSettingsText(panelObject.transform, "CÀI ĐẶT ÂM THANH", 26, FontStyles.Bold);
+            TextMeshProUGUI title = CreateSettingsText(panelObject.transform, "CÀI ĐẶT", 28, FontStyles.Bold);
             title.alignment = TextAlignmentOptions.Center;
 
-            GameObject row = new GameObject("MusicVolumeRow");
-            row.transform.SetParent(panelObject.transform, false);
+            CreateVolumeRow(panelObject.transform, "Âm lượng", out masterVolumeSlider, out masterVolumeValueText);
+            CreateVolumeRow(panelObject.transform, "Nhạc", out musicVolumeSlider, out musicVolumeValueText);
+            CreateVolumeRow(panelObject.transform, "Hiệu ứng", out sfxVolumeSlider, out sfxVolumeValueText);
+            CreateVolumeRow(panelObject.transform, "Môi trường", out ambientVolumeSlider, out ambientVolumeValueText);
+            CreateDisplayRow(panelObject.transform);
+
+            Button closeButton = CreateSettingsButton(panelObject.transform, "ÁP DỤNG & ĐÓNG");
+            closeButton.onClick.AddListener(delegate { PlayerPrefs.Save(); SetSettingsVisible(false); });
+        }
+
+        private void CreateVolumeRow(Transform parent, string rowLabel, out Slider slider, out TextMeshProUGUI valueText)
+        {
+            GameObject row = new GameObject(rowLabel + "Row");
+            row.transform.SetParent(parent, false);
 
             RectTransform rowRect = row.AddComponent<RectTransform>();
             rowRect.sizeDelta = new Vector2(0f, 54f);
@@ -293,22 +399,102 @@ namespace GanhHangRong.UI
             rowLayout.childControlWidth = true;
             rowLayout.childForceExpandWidth = false;
 
-            TextMeshProUGUI label = CreateSettingsText(row.transform, "Nhạc", 22, FontStyles.Bold);
+            TextMeshProUGUI label = CreateSettingsText(row.transform, rowLabel, 19, FontStyles.Bold);
             LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
-            labelLayout.preferredWidth = 82f;
+            labelLayout.preferredWidth = 112f;
 
-            musicVolumeSlider = CreateMusicSlider(row.transform);
-            LayoutElement sliderLayout = musicVolumeSlider.gameObject.AddComponent<LayoutElement>();
+            slider = CreateMusicSlider(row.transform);
+            LayoutElement sliderLayout = slider.gameObject.AddComponent<LayoutElement>();
             sliderLayout.preferredWidth = 190f;
             sliderLayout.preferredHeight = 34f;
 
-            musicVolumeValueText = CreateSettingsText(row.transform, "18%", 20, FontStyles.Bold);
-            musicVolumeValueText.alignment = TextAlignmentOptions.Right;
-            LayoutElement valueLayout = musicVolumeValueText.gameObject.AddComponent<LayoutElement>();
+            valueText = CreateSettingsText(row.transform, "100%", 18, FontStyles.Bold);
+            valueText.alignment = TextAlignmentOptions.Right;
+            LayoutElement valueLayout = valueText.gameObject.AddComponent<LayoutElement>();
             valueLayout.preferredWidth = 58f;
+        }
 
-            Button closeButton = CreateSettingsButton(panelObject.transform, "ĐÓNG");
-            closeButton.onClick.AddListener(delegate { SetSettingsVisible(false); });
+        private void CreateDisplayRow(Transform parent)
+        {
+            GameObject row = new GameObject("DisplaySettings");
+            row.transform.SetParent(parent, false);
+            RectTransform rect = row.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(0f, 92f);
+            VerticalLayoutGroup vertical = row.AddComponent<VerticalLayoutGroup>();
+            vertical.spacing = 8f;
+
+            fullscreenToggle = CreateToggle(row.transform, "Toàn màn hình");
+
+            qualityButton = CreateSettingsButton(row.transform, "CHẤT LƯỢNG");
+            qualityValueText = qualityButton.GetComponentInChildren<TextMeshProUGUI>();
+            LayoutElement layout = qualityButton.gameObject.AddComponent<LayoutElement>();
+            layout.preferredHeight = 40f;
+        }
+
+        private Toggle CreateToggle(Transform parent, string labelText)
+        {
+            GameObject toggleObject = new GameObject(labelText);
+            toggleObject.transform.SetParent(parent, false);
+            Toggle toggle = toggleObject.AddComponent<Toggle>();
+            Image background = toggleObject.AddComponent<Image>();
+            background.color = new Color(0.25f, 0.15f, 0.08f, 1f);
+            toggle.targetGraphic = background;
+            TextMeshProUGUI label = CreateSettingsText(toggleObject.transform, labelText, 18, FontStyles.Bold);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(14f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            LayoutElement layout = toggleObject.AddComponent<LayoutElement>();
+            layout.preferredHeight = 40f;
+            return toggle;
+        }
+
+        private void ShowInfo(string titleText, string bodyText)
+        {
+            SetSettingsVisible(false);
+            if (infoPanel == null)
+            {
+                Canvas canvas = GetComponent<Canvas>();
+                Transform parent = canvas != null ? canvas.transform : transform;
+                GameObject panel = new GameObject("InfoPanel");
+                panel.transform.SetParent(parent, false);
+                RectTransform rect = panel.AddComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(540f, 330f);
+                Image background = panel.AddComponent<Image>();
+                background.color = new Color(0.09f, 0.055f, 0.035f, 0.97f);
+                infoPanel = panel.AddComponent<CanvasGroup>();
+
+                VerticalLayoutGroup layout = panel.AddComponent<VerticalLayoutGroup>();
+                layout.padding = new RectOffset(34, 34, 28, 28);
+                layout.spacing = 18f;
+                layout.childControlHeight = false;
+                layout.childForceExpandWidth = true;
+
+                infoTitle = CreateSettingsText(panel.transform, titleText, 30, FontStyles.Bold);
+                infoTitle.alignment = TextAlignmentOptions.Center;
+                infoTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
+
+                infoBody = CreateSettingsText(panel.transform, bodyText, 20, FontStyles.Normal);
+                infoBody.alignment = TextAlignmentOptions.Center;
+                infoBody.textWrappingMode = TextWrappingModes.Normal;
+                infoBody.gameObject.AddComponent<LayoutElement>().preferredHeight = 150f;
+
+                Button close = CreateSettingsButton(panel.transform, "ĐÓNG");
+                close.onClick.AddListener(delegate
+                {
+                    infoPanel.alpha = 0f;
+                    infoPanel.interactable = false;
+                    infoPanel.blocksRaycasts = false;
+                });
+            }
+
+            infoTitle.text = titleText;
+            infoBody.text = bodyText;
+            infoPanel.alpha = 1f;
+            infoPanel.interactable = true;
+            infoPanel.blocksRaycasts = true;
         }
 
         private TextMeshProUGUI CreateSettingsText(Transform parent, string text, float fontSize, FontStyles style)

@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: bach_tuoc
   displayName: "B\u1EA1ch tu\u1ED9c"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: -955181462883554695, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 22000
   isRecipeBook: 0

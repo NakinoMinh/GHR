@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: tom
   displayName: "T\xF4m"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: -1883382306487122638, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 15000
   isRecipeBook: 0

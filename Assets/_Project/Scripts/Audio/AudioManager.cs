@@ -21,7 +21,10 @@ namespace GanhHangRong.Audio
         [Range(0f, 1f)] public float sfxVolume = Constants.SFX_BASE_VOLUME;
         [Range(0f, 1f)] public float ambientVolume = Constants.AMBIENT_BASE_VOLUME;
 
+        public float MasterVolume => masterVolume;
         public float MusicVolume => musicVolume;
+        public float SfxVolume => sfxVolume;
+        public float AmbientVolume => ambientVolume;
 
         protected override void OnSingletonAwake()
         {

@@ -19,11 +19,14 @@ namespace GanhHangRong.Player
 
         [Header("Tương Tác")]
         [SerializeField] private float interactionRange = 1.5f;
+        [SerializeField] private float interactionCheckInterval = 0.08f;
 
         // Components
         private Rigidbody rb;
         private PlayerAnimator playerAnimator;
         private PlayerStats playerStats;
+        private Camera cachedMainCamera;
+        private readonly Collider[] interactionOverlapBuffer = new Collider[64];
 
         // State
         private PlayerState currentState = PlayerState.Idle;
@@ -35,6 +38,8 @@ namespace GanhHangRong.Player
         private bool isRunning = false;
         private Interaction.Interactable nearestInteractable;
         private float lastDialogueEndTime = -10f;
+        private float nextInteractionCheckTime;
+        private string lastInteractionPromptText;
 
         public PlayerState CurrentState => currentState;
         public bool FacingRight => transform.forward.x >= 0;
@@ -141,7 +146,12 @@ namespace GanhHangRong.Player
             }
 
             // Tính toán hướng di chuyển tương đối so với Camera
-            Camera mainCam = Camera.main;
+            if (cachedMainCamera == null)
+            {
+                cachedMainCamera = Camera.main;
+            }
+
+            Camera mainCam = cachedMainCamera;
             if (mainCam != null)
             {
                 Vector3 camForward = mainCam.transform.forward;
@@ -169,7 +179,7 @@ namespace GanhHangRong.Player
             }
 
             // Tương tác
-            CheckInteraction();
+            CheckInteraction(false);
             if (currentState != PlayerState.Interacting)
             {
                 // Chờ 0.3s sau khi tắt hội thoại mới nhận input tương tác, tránh click chuột/phím từ hội thoại bị cấn
@@ -185,6 +195,7 @@ namespace GanhHangRong.Player
 
                 if (interactPressed || (leftClickPressed && nearestInteractable is GanhHangRong.Interaction.InteractiveDoor))
                 {
+                    CheckInteraction(true);
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.Interact(this);
@@ -195,6 +206,7 @@ namespace GanhHangRong.Player
                 // Nhấn E để trò chuyện/gọi món
                 if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
                 {
+                    CheckInteraction(true);
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.InteractE(this);
@@ -205,6 +217,7 @@ namespace GanhHangRong.Player
                 // Nhấn Q để phục vụ khách khi mang nước ra cho khách
                 if (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame)
                 {
+                    CheckInteraction(true);
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.InteractQ(this);
@@ -215,6 +228,7 @@ namespace GanhHangRong.Player
                 // Nhấn R để cầm ly dơ / dọn ly
                 if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                 {
+                    CheckInteraction(true);
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.InteractR(this);
@@ -225,6 +239,7 @@ namespace GanhHangRong.Player
                 // Nhấn Z để rửa/đổ bỏ ly đang cầm tại bồn rửa.
                 if (Keyboard.current != null && Keyboard.current.zKey.wasPressedThisFrame)
                 {
+                    CheckInteraction(true);
                     if (nearestInteractable != null)
                     {
                         nearestInteractable.InteractZ(this);
@@ -295,14 +310,25 @@ namespace GanhHangRong.Player
             }
         }
 
-        private void CheckInteraction()
+        private void CheckInteraction(bool force)
         {
+            if (!force && Time.time < nextInteractionCheckTime)
+            {
+                return;
+            }
+
+            nextInteractionCheckTime = Time.time + interactionCheckInterval;
             Interaction.Interactable closest = null;
 
             // 1. Ưu tiên Raycast từ tâm camera (hỗ trợ trỏ tâm ngắm vào xe đẩy)
-            if (Camera.main != null)
+            if (cachedMainCamera == null)
             {
-                Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                cachedMainCamera = Camera.main;
+            }
+
+            if (cachedMainCamera != null)
+            {
+                Ray ray = cachedMainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
                 RaycastHit hit;
                 // Tầm quét rộng hơn một chút cho thoải mái khi xoay camera
                 if (Physics.Raycast(ray, out hit, interactionRange + 2.5f, ~0, QueryTriggerInteraction.Collide))
@@ -328,15 +354,23 @@ namespace GanhHangRong.Player
             // 2. Dự phòng: Quét OverlapSphere nếu không trỏ thẳng tâm camera
             if (closest == null)
             {
-                Collider[] hits = Physics.OverlapSphere(transform.position, interactionRange, ~0, QueryTriggerInteraction.Collide);
+                int hitCount = Physics.OverlapSphereNonAlloc(transform.position, interactionRange, interactionOverlapBuffer, ~0, QueryTriggerInteraction.Collide);
                 float closestDist = float.MaxValue;
 
-                foreach (var hit in hits)
+                for (int i = 0; i < hitCount; i++)
                 {
+                    Collider hit = interactionOverlapBuffer[i];
+                    if (hit == null) continue;
+
                     var interactable = hit.GetComponent<Interaction.Interactable>();
+                    if (interactable == null)
+                    {
+                        interactable = hit.GetComponentInParent<Interaction.Interactable>();
+                    }
+
                     if (interactable != null && interactable.CanInteract)
                     {
-                        float dist = Vector3.Distance(transform.position, hit.transform.position);
+                        float dist = (transform.position - interactable.transform.position).sqrMagnitude;
                         if (dist < closestDist)
                         {
                             closestDist = dist;
@@ -350,9 +384,20 @@ namespace GanhHangRong.Player
             {
                 nearestInteractable = closest;
                 if (nearestInteractable != null)
+                {
+                    lastInteractionPromptText = nearestInteractable.PromptText;
                     EventManager.TriggerInteractionPromptShow(nearestInteractable.PromptText);
+                }
                 else
+                {
+                    lastInteractionPromptText = null;
                     EventManager.TriggerInteractionPromptHide();
+                }
+            }
+            else if (nearestInteractable != null && nearestInteractable.PromptText != lastInteractionPromptText)
+            {
+                lastInteractionPromptText = nearestInteractable.PromptText;
+                EventManager.TriggerInteractionPromptShow(lastInteractionPromptText);
             }
         }
 

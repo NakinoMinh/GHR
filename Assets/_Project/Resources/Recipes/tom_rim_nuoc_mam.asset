@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff6754832e9f9c54fba86b36f4bc7988, type: 3}
+  m_Name: tom_rim_nuoc_mam
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.RecipeData
+  recipeId: tom_rim_nuoc_mam
+  recipeName: "T\xF4m Rim N\u01B0\u1EDBc M\u1EAFm"
+  recipeIcon: {fileID: -8030580134826195431, guid: 1bc54c7159ebdbb488f4dba1669381f6, type: 3}
+  ingredients:
+  - item: {fileID: 11400000, guid: d45e4f85ae8bb124e83a6d5248149305, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: cf19b814aeb024c4483733e6220f035f, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 3c9d69d2bc3484146ac32337fa0482f8, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 907be5796d4a0064caedf16a9f722274, type: 2}
+    amount: 1
+  recipeBookIdRequired: sach_tom_rim_nuoc_mam
+  isLockedByRecipeBook: 1
+  baseSellPrice: 65000
+  requiredTea: 1
+  requiredIce: 1
+  requiredSugar: 1
+  preparationTime: 2

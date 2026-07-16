@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using GanhHangRong.Core;
 using GanhHangRong.Environment;
+using GanhHangRong.Systems;
 
 namespace GanhHangRong.Interaction
 {
@@ -17,8 +18,13 @@ namespace GanhHangRong.Interaction
         [Header("Hiệu ứng mờ dần khi ngủ")]
         [SerializeField] private float fadeOutDuration = 1.5f;
 
+        private TimeOfDayManager timeManager;
+        private BusinessDayController businessDayController;
+
         private void Start()
         {
+            timeManager = FindAnyObjectByType<TimeOfDayManager>();
+            businessDayController = FindAnyObjectByType<BusinessDayController>();
             UpdatePrompt();
         }
 
@@ -30,7 +36,36 @@ namespace GanhHangRong.Interaction
 
         private void UpdatePrompt()
         {
-            var timeManager = FindAnyObjectByType<TimeOfDayManager>();
+            if (businessDayController == null)
+            {
+                businessDayController = FindAnyObjectByType<BusinessDayController>();
+            }
+
+            if (businessDayController != null && businessDayController.IsManagingGameLoop)
+            {
+                canInteract = businessDayController.CanSleep;
+                switch (businessDayController.CurrentPhase)
+                {
+                    case BusinessDayPhase.Trading:
+                        promptText = "Hãy đóng cửa quán trước khi ngủ";
+                        break;
+                    case BusinessDayPhase.Closing:
+                        promptText = "Vẫn còn khách đang được phục vụ";
+                        break;
+                    case BusinessDayPhase.AfterHours:
+                        promptText = "Nhấn F để ngủ và kết thúc ngày";
+                        break;
+                    default:
+                        promptText = "Chưa đến lúc kết thúc ngày";
+                        break;
+                }
+                return;
+            }
+
+            if (timeManager == null)
+            {
+                timeManager = FindAnyObjectByType<TimeOfDayManager>();
+            }
             if (timeManager != null && timeManager.CurrentHour >= sleepAvailableHour)
             {
                 promptText = "Nhấn F để Ngủ và bắt đầu ngày mới";
@@ -46,7 +81,13 @@ namespace GanhHangRong.Interaction
 
         protected override void OnInteract(Player.PlayerController player)
         {
-            var timeManager = FindAnyObjectByType<TimeOfDayManager>();
+            if (businessDayController != null && businessDayController.IsManagingGameLoop)
+            {
+                if (!businessDayController.CanSleep) return;
+                StartCoroutine(SleepRoutine());
+                return;
+            }
+
             if (timeManager == null || timeManager.CurrentHour < sleepAvailableHour)
             {
                 return;
@@ -69,7 +110,14 @@ namespace GanhHangRong.Interaction
                 yield return null;
             }
 
-            // Kết thúc ngày → gọi GameplayLoop.EndDaySummary()
+            if (businessDayController != null && businessDayController.IsManagingGameLoop)
+            {
+                businessDayController.CompleteDayBySleeping();
+                if (player != null) player.EnableMovement();
+                yield break;
+            }
+
+            // Tương thích loop cũ ở các chapter chưa dùng BusinessDayController.
             var loop = FindAnyObjectByType<Systems.GameplayLoop>();
             if (loop != null)
             {

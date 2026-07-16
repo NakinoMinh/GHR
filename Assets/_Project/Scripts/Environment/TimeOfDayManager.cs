@@ -1,4 +1,6 @@
 using System;
+using GanhHangRong.Core;
+using GanhHangRong.Economy;
 using UnityEngine;
 
 namespace GanhHangRong.Environment
@@ -12,17 +14,21 @@ namespace GanhHangRong.Environment
         Night
     }
 
+    /// <summary>
+    /// Adapter thời gian cho UI và môi trường. Khi có DayNightCycle, lớp này không tự chạy
+    /// đồng hồ mà đồng bộ từ nguồn gameplay duy nhất đó.
+    /// </summary>
     public class TimeOfDayManager : MonoBehaviour
     {
         [Header("Thoi gian bat dau")]
-        [SerializeField, Range(0, 23)] private int startHour = 7;
-        [SerializeField, Range(0, 59)] private int startMinute = 0;
+        [SerializeField, Range(0, 23)] private int startHour = 6;
+        [SerializeField, Range(0, 59)] private int startMinute;
         [SerializeField, Min(1)] private int startDay = 1;
 
-        [Header("Toc do thoi gian")]
-        [Tooltip("So phut trong game troi qua moi giay that. Vi du 2 = moi giay that tang 2 phut game.")]
+        [Header("Toc do thoi gian du phong")]
         [SerializeField, Min(0f)] private float timeScale = 2f;
         [SerializeField] private bool runTime = true;
+        [SerializeField] private DayNightCycle gameTimeSource;
 
         [Header("Moc chia thoi diem")]
         [SerializeField, Range(0, 23)] private int earlyMorningStartHour = 5;
@@ -45,22 +51,46 @@ namespace GanhHangRong.Environment
         public float CurrentMinuteOfDay => currentMinuteOfDay;
         public float NormalizedTime => currentMinuteOfDay / 1440f;
         public TimePeriod CurrentPeriod => currentPeriod;
-        public bool IsRunning => runTime;
+        public bool IsRunning => gameTimeSource != null ? gameTimeSource.IsClockRunning : runTime;
 
         private void Awake()
         {
             ResetToStartTime();
+            ResolveGameTimeSource();
+        }
+
+        private void OnEnable()
+        {
+            EventManager.OnHourChanged += HandleGameHourChanged;
+            EventManager.OnNewDay += HandleNewDay;
+        }
+
+        private void Start()
+        {
+            ResolveGameTimeSource();
+            if (gameTimeSource != null)
+            {
+                SyncFromGameClock(gameTimeSource.CurrentHour, true);
+            }
+        }
+
+        private void OnDisable()
+        {
+            EventManager.OnHourChanged -= HandleGameHourChanged;
+            EventManager.OnNewDay -= HandleNewDay;
         }
 
         private void Update()
         {
-            if (!runTime || timeScale <= 0f)
+            if (gameTimeSource == null)
             {
-                return;
+                ResolveGameTimeSource();
             }
 
-            // Cong thoi gian bang phut game de de can chinh toc do trong Inspector.
-            AdvanceTime(Time.deltaTime * timeScale);
+            if (gameTimeSource == null && runTime && timeScale > 0f)
+            {
+                AdvanceFallbackTime(Time.deltaTime * timeScale);
+            }
         }
 
         public void ResetToStartTime()
@@ -74,37 +104,46 @@ namespace GanhHangRong.Environment
         public void SetRunning(bool shouldRun)
         {
             runTime = shouldRun;
+            if (gameTimeSource != null)
+            {
+                gameTimeSource.SetRunning(shouldRun);
+            }
         }
 
         public void SetTime(int hour, int minute)
         {
-            currentMinuteOfDay = Mathf.Clamp(hour, 0, 23) * 60f + Mathf.Clamp(minute, 0, 59);
+            float targetHour = Mathf.Clamp(hour, 0, 23) + Mathf.Clamp(minute, 0, 59) / 60f;
+            if (gameTimeSource != null)
+            {
+                gameTimeSource.SkipToHour(targetHour);
+                return;
+            }
+
+            currentMinuteOfDay = targetHour * 60f;
             NotifyTimeChanged(true);
         }
 
         public void SetDay(int day)
         {
-            currentDay = Mathf.Max(1, day);
-            DayChanged?.Invoke(currentDay);
+            int nextDay = Mathf.Max(1, day);
+            if (nextDay != currentDay)
+            {
+                currentDay = nextDay;
+                DayChanged?.Invoke(currentDay);
+            }
             NotifyTimeChanged(false);
         }
 
         public void AdvanceTime(float gameMinutes)
         {
-            if (gameMinutes <= 0f)
+            if (gameMinutes <= 0f) return;
+            if (gameTimeSource != null)
             {
+                gameTimeSource.AdvanceMinutes(gameMinutes);
                 return;
             }
 
-            currentMinuteOfDay += gameMinutes;
-            while (currentMinuteOfDay >= 1440f)
-            {
-                currentMinuteOfDay -= 1440f;
-                currentDay++;
-                DayChanged?.Invoke(currentDay);
-            }
-
-            NotifyTimeChanged(false);
+            AdvanceFallbackTime(gameMinutes);
         }
 
         public TimePeriod GetCurrentPeriod()
@@ -115,7 +154,6 @@ namespace GanhHangRong.Environment
         public TimePeriod GetPeriodForHour(int hour)
         {
             hour = Mathf.Clamp(hour, 0, 23);
-
             if (IsHourInRange(hour, earlyMorningStartHour, noonStartHour)) return TimePeriod.EarlyMorning;
             if (IsHourInRange(hour, noonStartHour, afternoonStartHour)) return TimePeriod.Noon;
             if (IsHourInRange(hour, afternoonStartHour, eveningStartHour)) return TimePeriod.Afternoon;
@@ -128,6 +166,54 @@ namespace GanhHangRong.Environment
             return GetVietnamesePeriodName(currentPeriod);
         }
 
+        private void ResolveGameTimeSource()
+        {
+            if (gameTimeSource == null)
+            {
+                gameTimeSource = FindAnyObjectByType<DayNightCycle>();
+            }
+        }
+
+        private void HandleGameHourChanged(float hour)
+        {
+            SyncFromGameClock(hour, false);
+        }
+
+        private void HandleNewDay()
+        {
+            int day = GameManager.HasInstance ? GameManager.Instance.CurrentDay : currentDay + 1;
+            if (day != currentDay)
+            {
+                currentDay = day;
+                DayChanged?.Invoke(currentDay);
+            }
+            NotifyTimeChanged(false);
+        }
+
+        private void SyncFromGameClock(float hour, bool forcePeriodEvent)
+        {
+            currentMinuteOfDay = Mathf.Repeat(hour, 24f) * 60f;
+            int day = GameManager.HasInstance ? GameManager.Instance.CurrentDay : currentDay;
+            if (day != currentDay)
+            {
+                currentDay = day;
+                DayChanged?.Invoke(currentDay);
+            }
+            NotifyTimeChanged(forcePeriodEvent);
+        }
+
+        private void AdvanceFallbackTime(float gameMinutes)
+        {
+            currentMinuteOfDay += gameMinutes;
+            while (currentMinuteOfDay >= 1440f)
+            {
+                currentMinuteOfDay -= 1440f;
+                currentDay++;
+                DayChanged?.Invoke(currentDay);
+            }
+            NotifyTimeChanged(false);
+        }
+
         private void NotifyTimeChanged(bool forcePeriodEvent)
         {
             TimePeriod newPeriod = GetCurrentPeriod();
@@ -136,7 +222,6 @@ namespace GanhHangRong.Environment
                 currentPeriod = newPeriod;
                 PeriodChanged?.Invoke(currentPeriod);
             }
-
             TimeChanged?.Invoke(currentDay, CurrentHour, CurrentMinute);
         }
 
@@ -151,16 +236,11 @@ namespace GanhHangRong.Environment
         {
             switch (period)
             {
-                case TimePeriod.EarlyMorning:
-                    return "Sang";
-                case TimePeriod.Noon:
-                    return "Trua";
-                case TimePeriod.Afternoon:
-                    return "Chieu";
-                case TimePeriod.Evening:
-                    return "Toi";
-                default:
-                    return "Dem";
+                case TimePeriod.EarlyMorning: return "Sáng";
+                case TimePeriod.Noon: return "Trưa";
+                case TimePeriod.Afternoon: return "Chiều";
+                case TimePeriod.Evening: return "Tối";
+                default: return "Đêm";
             }
         }
     }

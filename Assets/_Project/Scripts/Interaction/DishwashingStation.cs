@@ -1,4 +1,5 @@
 using UnityEngine;
+using GanhHangRong.Audio;
 using GanhHangRong.Core;
 
 namespace GanhHangRong.Interaction
@@ -80,6 +81,7 @@ namespace GanhHangRong.Interaction
             canInteract = false;
             bool wasDirty = CartItem.IsHoldingDirtyCup;
             EventManager.TriggerInteractionPromptShow("Đang rửa ly...");
+            GameplaySfxManager.Play(GameplaySfxCue.WashCup);
 
             yield return new WaitForSeconds(washDuration);
 
@@ -91,6 +93,7 @@ namespace GanhHangRong.Interaction
             {
                 stats.AddSupplies(0, 0, 1);
             }
+            GameplaySfxManager.Play(GameplaySfxCue.CupPlace);
 
             isWashing = false;
             canInteract = CartItem.HasCupToWash;

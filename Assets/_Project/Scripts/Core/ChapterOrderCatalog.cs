@@ -9,6 +9,14 @@ namespace GanhHangRong.Core
         public const int BanhMiMuoiOt = 20;
         public const int BanhTrangNuong = 21;
         public const int HaiSanXien = 22;
+        public const int BunCaKienGiang = 30;
+        public const int BanhCanhGhe = 31;
+        public const int TomRimNuocMam = 32;
+        public const int MucNuongMuoiOt = 33;
+        public const int NgheuXaoCay = 34;
+        public const int NuocMia = 40;
+        public const int TraChanh = 41;
+        public const int NuocDua = 42;
 
         private readonly struct OrderInfo
         {
@@ -66,10 +74,84 @@ namespace GanhHangRong.Core
                 "-1 xiên hải sản")
         };
 
+        private static readonly OrderInfo[] MarketFoodOrders =
+        {
+            new OrderInfo(
+                BunCaKienGiang,
+                "Bún Cá Kiên Giang",
+                42000,
+                "Nguyên liệu: cá lóc, bún tươi, nước mắm Phú Quốc và ớt bột.\n\nMua sách công thức tại quầy Đặc Sản Kiên Giang để mở khóa, sau đó mua đủ nguyên liệu và nấu trong Sổ Công Thức.",
+                "-1 tô bún cá Kiên Giang"),
+            new OrderInfo(
+                BanhCanhGhe,
+                "Bánh Canh Ghẹ",
+                52000,
+                "Nguyên liệu: ghẹ xanh, sợi bánh canh, nước mắm Phú Quốc và muối.\n\nMua sách công thức tại quầy Đặc Sản Kiên Giang để mở khóa, sau đó mua đủ nguyên liệu và nấu trong Sổ Công Thức.",
+                "-1 tô bánh canh ghẹ"),
+            new OrderInfo(
+                TomRimNuocMam,
+                "Tôm Rim Nước Mắm",
+                65000,
+                "Nguyên liệu: tôm, nước mắm Phú Quốc, đường thốt nốt và dầu ăn.",
+                "-1 phần tôm rim nước mắm"),
+            new OrderInfo(
+                MucNuongMuoiOt,
+                "Mực Nướng Muối Ớt",
+                48000,
+                "Nguyên liệu: mực, muối, ớt bột và dầu ăn.",
+                "-1 phần mực nướng muối ớt"),
+            new OrderInfo(
+                NgheuXaoCay,
+                "Nghêu Xào Cay",
+                52000,
+                "Nguyên liệu: nghêu, nước mắm Phú Quốc, ớt bột và dầu ăn.",
+                "-1 phần nghêu xào cay"),
+            new OrderInfo(
+                NuocMia,
+                "Nước Mía",
+                15000,
+                "Nguyên liệu: 2 phần mía cây. Pha trong Sổ Công Thức rồi phục vụ bằng Space.",
+                "-1 ly nước mía"),
+            new OrderInfo(
+                TraChanh,
+                "Trà Chanh",
+                28000,
+                "Nguyên liệu: lá trà, chanh tươi và đường thốt nốt. Pha trong Sổ Công Thức rồi phục vụ bằng Space.",
+                "-1 ly trà chanh"),
+            new OrderInfo(
+                NuocDua,
+                "Nước Dừa",
+                18000,
+                "Nguyên liệu: 1 trái dừa tươi. Chuẩn bị trong Sổ Công Thức rồi phục vụ bằng Space.",
+                "-1 trái dừa tươi")
+        };
+
+        private static readonly OrderInfo[] DailyOrders =
+        {
+            Chapter1Orders[0],
+            Chapter1Orders[1],
+            MarketFoodOrders[0],
+            MarketFoodOrders[1],
+            MarketFoodOrders[2],
+            MarketFoodOrders[3],
+            MarketFoodOrders[4],
+            MarketFoodOrders[5],
+            MarketFoodOrders[6],
+            MarketFoodOrders[7]
+        };
+
         public static int GetRandomOrderId(int chapter)
         {
-            OrderInfo[] orders = chapter >= 2 ? Chapter2Orders : Chapter1Orders;
-            
+            return GetRandomOrderFrom(DailyOrders);
+        }
+
+        public static int GetRandomDailyDrinkId()
+        {
+            return GetRandomOrderFrom(DailyOrders);
+        }
+
+        private static int GetRandomOrderFrom(OrderInfo[] orders)
+        {
             var activeIds = UI.TabMenuUI.GetActiveServingOrderIds();
             if (activeIds != null && activeIds.Count > 0)
             {
@@ -112,7 +194,32 @@ namespace GanhHangRong.Core
 
         public static bool IsChapter2Order(int orderId)
         {
-            return orderId == BanhMiMuoiOt || orderId == BanhTrangNuong || orderId == HaiSanXien;
+            return orderId == BanhMiMuoiOt ||
+                   orderId == BanhTrangNuong ||
+                   orderId == HaiSanXien ||
+                   orderId == BunCaKienGiang ||
+                   orderId == BanhCanhGhe ||
+                   orderId == TomRimNuocMam ||
+                   orderId == MucNuongMuoiOt ||
+                   orderId == NgheuXaoCay ||
+                   IsMarketDrink(orderId);
+        }
+
+        public static bool IsFoodOrder(int orderId)
+        {
+            return orderId == BanhMiMuoiOt ||
+                   orderId == BanhTrangNuong ||
+                   orderId == HaiSanXien ||
+                   orderId == BunCaKienGiang ||
+                   orderId == BanhCanhGhe ||
+                   orderId == TomRimNuocMam ||
+                   orderId == MucNuongMuoiOt ||
+                   orderId == NgheuXaoCay;
+        }
+
+        public static bool IsMarketDrink(int orderId)
+        {
+            return orderId == NuocMia || orderId == TraChanh || orderId == NuocDua;
         }
 
         private static bool TryFindOrder(int orderId, out OrderInfo info)
@@ -131,6 +238,15 @@ namespace GanhHangRong.Core
                 if (Chapter2Orders[i].Id == orderId)
                 {
                     info = Chapter2Orders[i];
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < MarketFoodOrders.Length; i++)
+            {
+                if (MarketFoodOrders[i].Id == orderId)
+                {
+                    info = MarketFoodOrders[i];
                     return true;
                 }
             }

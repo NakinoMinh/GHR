@@ -31,3 +31,33 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: ca88dade0f8f99b49a1d7d67a12e6228, type: 2}
     priceOverride: 45000
     stockAmount: -1
+  - item: {fileID: 11400000, guid: 54d9b3b54c1f9164ea28da8c8d7f8391, type: 2}
+    priceOverride: 6000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 6b5862d976688c748a7769d80cbd9428, type: 2}
+    priceOverride: 7000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 878c587f4e45c754381799268e4b5002, type: 2}
+    priceOverride: 4000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 0e47c2c1e5bd6aa4eb86eafbf6eff64c, type: 2}
+    priceOverride: 8000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 162a502a4a364b24299c1390e7edd0f4, type: 2}
+    priceOverride: 35000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 249e3017b1a115e4a990a5b86dad6cf0, type: 2}
+    priceOverride: 32000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 420830a69a5b83148998ea171ef1fc5c, type: 2}
+    priceOverride: 28000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 8c7152ab66b3cc94f952abaf8f723a4b, type: 2}
+    priceOverride: 20000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: 39cdbe80b8d88e246bfa29a2eec140ed, type: 2}
+    priceOverride: 25000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: cbcb627b1bd079b43aa553c297004e84, type: 2}
+    priceOverride: 22000
+    stockAmount: -1

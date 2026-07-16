@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: sach_tom_rim_nuoc_mam
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: sach_tom_rim_nuoc_mam
+  displayName: "S\xE1ch c\xF4ng th\u1EE9c T\xF4m Rim N\u01B0\u1EDBc M\u1EAFm"
+  description: "M\u1EDF kh\xF3a m\xF3n T\xF4m Rim N\u01B0\u1EDBc M\u1EAFm trong Tab
+    Menu."
+  icon: {fileID: -4367436377161551244, guid: 1bc54c7159ebdbb488f4dba1669381f6, type: 3}
+  itemType: 1
+  price: 35000
+  isRecipeBook: 1
+  recipeIdToUnlock: tom_rim_nuoc_mam
+  itemName: 
+  buyPrice: 35000
+  sellPrice: 0

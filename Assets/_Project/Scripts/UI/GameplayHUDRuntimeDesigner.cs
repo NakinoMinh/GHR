@@ -280,7 +280,7 @@ namespace GanhHangRong.UI
         {
             if (recipeTitleText == null || !hasActiveOrder) return;
 
-            recipeTitleText.text = "–ON H¿NG: " + activeDrinkName;
+            recipeTitleText.text = "ƒê∆†N H√ÄNG: " + activeDrinkName;
 
             string recipeStr = ChapterOrderCatalog.GetOrderRecipe(activeDrinkId);
             string[] ingredients = ParseIngredients(recipeStr);
@@ -306,9 +306,9 @@ namespace GanhHangRong.UI
             if (string.IsNullOrEmpty(recipeString)) return new string[0];
             string[] lines = recipeString.Split('\n');
             string firstLine = lines[0];
-            if (firstLine.StartsWith("CÙng th?c: "))
+            if (firstLine.StartsWith("C√¥ng th·ª©c: "))
             {
-                firstLine = firstLine.Substring("CÙng th?c: ".Length);
+                firstLine = firstLine.Substring("C√¥ng th·ª©c: ".Length);
             }
             if (firstLine.EndsWith("."))
             {
@@ -367,11 +367,11 @@ namespace GanhHangRong.UI
 
             string lowerText = ingredientText.ToLower();
             string spriteName = null;
-            if (lowerText.Contains("ly") || lowerText.Contains("c?c")) spriteName = "ly";
-            else if (lowerText.Contains("c‡ phÍ") || lowerText.Contains("coffee")) spriteName = "caphe";
-            else if (lowerText.Contains("tr‡")) spriteName = "tra";
-            else if (lowerText.Contains("nu?c") || lowerText.Contains("sÙi")) spriteName = "nuoc";
-            else if (lowerText.Contains("d·") || lowerText.Contains("ice")) spriteName = "da";
+            if (lowerText.Contains("ly") || lowerText.Contains("c·ªëc")) spriteName = "ly";
+            else if (lowerText.Contains("c√† ph√™") || lowerText.Contains("coffee")) spriteName = "caphe";
+            else if (lowerText.Contains("tr√†")) spriteName = "tra";
+            else if (lowerText.Contains("n∆∞·ªõc") || lowerText.Contains("s√¥i")) spriteName = "nuoc";
+            else if (lowerText.Contains("ƒë√°") || lowerText.Contains("ice")) spriteName = "da";
 
             if (!string.IsNullOrEmpty(spriteName))
             {
@@ -406,7 +406,7 @@ namespace GanhHangRong.UI
         {
             if (runtimeMoneyText != null)
             {
-                runtimeMoneyText.text = string.Format("{0:N0} VN–", money);
+                runtimeMoneyText.text = string.Format("{0:N0} VNƒê", money);
             }
         }
 
@@ -422,7 +422,7 @@ namespace GanhHangRong.UI
         {
             if (runtimeDayText != null && GameManager.HasInstance)
             {
-                runtimeDayText.text = string.Format("Ng‡y {0}", GameManager.Instance.CurrentDay);
+                runtimeDayText.text = string.Format("Ng√†y {0}", GameManager.Instance.CurrentDay);
             }
         }
 
@@ -432,19 +432,19 @@ namespace GanhHangRong.UI
             switch (timeOfDay)
             {
                 case TimeOfDay.EarlyMorning:
-                    runtimePeriodText.text = "BÏnh minh";
+                    runtimePeriodText.text = "B√¨nh minh";
                     break;
                 case TimeOfDay.Morning:
-                    runtimePeriodText.text = "Bu?i s·ng";
+                    runtimePeriodText.text = "Bu·ªïi s√°ng";
                     break;
                 case TimeOfDay.Afternoon:
-                    runtimePeriodText.text = "Bu?i chi?u";
+                    runtimePeriodText.text = "Bu·ªïi chi·ªÅu";
                     break;
                 case TimeOfDay.Evening:
-                    runtimePeriodText.text = "Chi?u t?i";
+                    runtimePeriodText.text = "Chi·ªÅu t·ªëi";
                     break;
                 case TimeOfDay.Night:
-                    runtimePeriodText.text = "–Ím b·n";
+                    runtimePeriodText.text = "ƒê√™m b√°n";
                     break;
                 default:
                     runtimePeriodText.text = "Khuya";
