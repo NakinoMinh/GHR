@@ -42,6 +42,8 @@ namespace GanhHangRong.UI
         private readonly List<ShopItemUI> spawnedItems = new List<ShopItemUI>();
         private ShopData currentShop;
         private bool isOpen;
+        private TextMeshProUGUI cartCountText;
+        private TextMeshProUGUI cartEmptyText;
 
         public bool IsOpen => isOpen;
 
@@ -126,7 +128,7 @@ namespace GanhHangRong.UI
         public void OpenShop(ShopData shopData)
         {
             ResolveReferences();
-            EnsureDualColumnCartLayoutRuntime();
+            EnsureMarketLayoutRuntime();
 
             if (shopData == null)
             {
@@ -388,7 +390,8 @@ namespace GanhHangRong.UI
             }
 
             int money = playerInventory != null ? playerInventory.CurrentMoney : 0;
-            moneyText.text = $"{money:N0} VND";
+            moneyText.text = $"TIỀN MẶT  •  {money:N0} VNĐ";
+            UpdateCheckoutState();
         }
 
         private void SetMessage(string message)
@@ -407,7 +410,7 @@ namespace GanhHangRong.UI
             }
         }
 
-        public void AddToCart(ShopStockItem stockItem, int quantity)
+        public void AddToCart(ShopStockItem stockItem, int quantity, int maxQuantity = 99)
         {
             if (stockItem == null || stockItem.item == null || quantity <= 0) return;
             
@@ -422,14 +425,10 @@ namespace GanhHangRong.UI
             }
             else
             {
-                if (shoppingCart.ContainsKey(stockItem))
-                {
-                    shoppingCart[stockItem] += quantity;
-                }
-                else
-                {
-                    shoppingCart[stockItem] = quantity;
-                }
+                int currentQuantity = shoppingCart.TryGetValue(stockItem, out int current) ? current : 0;
+                int stockLimit = stockItem.stockAmount >= 0 ? stockItem.stockAmount : int.MaxValue;
+                int safeLimit = Mathf.Min(Mathf.Max(1, maxQuantity), stockLimit);
+                shoppingCart[stockItem] = Mathf.Clamp(currentQuantity + quantity, 1, safeLimit);
             }
             
             RefreshCartUI();
@@ -467,6 +466,40 @@ namespace GanhHangRong.UI
             {
                 SetMessage("Lỗi: Không tìm thấy túi đồ.");
                 return;
+            }
+
+            foreach (var entry in shoppingCart)
+            {
+                ItemData item = entry.Key != null ? entry.Key.item : null;
+                if (item == null)
+                {
+                    SetMessage("Giỏ hàng có món chưa được cấu hình.");
+                    return;
+                }
+
+                if (!item.IsBook)
+                {
+                    continue;
+                }
+
+                if (recipeUnlockManager == null)
+                {
+                    SetMessage("Không thể mua sách: thiếu RecipeUnlockManager trong scene.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.recipeIdToUnlock))
+                {
+                    SetMessage("Sách công thức chưa được gán món cần mở khóa.");
+                    return;
+                }
+
+                if (IsRecipeBookOwned(item))
+                {
+                    SetMessage("Bạn đã sở hữu một sách công thức trong giỏ.");
+                    RefreshItemRows();
+                    return;
+                }
             }
 
             int totalPrice = 0;
@@ -528,15 +561,79 @@ namespace GanhHangRong.UI
 
             if (totalPriceText != null)
             {
-                totalPriceText.text = $"{totalPrice:N0} VND";
+                totalPriceText.text = $"{totalPrice:N0} VNĐ";
+            }
+
+            int itemCount = 0;
+            foreach (int quantity in shoppingCart.Values)
+            {
+                itemCount += quantity;
+            }
+
+            if (cartCountText != null)
+            {
+                cartCountText.text = $"GIỎ HÀNG  •  {itemCount} MÓN";
+            }
+            if (cartEmptyText != null)
+            {
+                cartEmptyText.gameObject.SetActive(shoppingCart.Count == 0);
+            }
+
+            UpdateCheckoutState();
+        }
+
+        private void EnsureMarketLayoutRuntime()
+        {
+            ShopUIRuntimeLayoutBuilder.Layout layout = ShopUIRuntimeLayoutBuilder.Build(
+                shopPanel,
+                itemListContent,
+                shopNameText,
+                moneyText,
+                transactionMessageText,
+                closeButton);
+
+            if (layout == null)
+            {
+                return;
+            }
+
+            cartListContent = layout.CartListContent;
+            cartItemPrefab = layout.CartItemPrefab;
+            totalPriceText = layout.TotalPriceText;
+            cartCountText = layout.CartCountText;
+            cartEmptyText = layout.CartEmptyText;
+            checkoutButton = layout.CheckoutButton;
+            clearCartButton = layout.ClearCartButton;
+
+            checkoutButton.onClick.RemoveAllListeners();
+            checkoutButton.onClick.AddListener(Checkout);
+            clearCartButton.onClick.RemoveAllListeners();
+            clearCartButton.onClick.AddListener(ClearCart);
+        }
+
+        private void UpdateCheckoutState()
+        {
+            int total = 0;
+            foreach (var entry in shoppingCart)
+            {
+                total += Mathf.Max(0, entry.Key.GetPrice()) * entry.Value;
+            }
+
+            bool hasItems = shoppingCart.Count > 0;
+            bool canAfford = playerInventory != null && playerInventory.CurrentMoney >= total;
+            if (checkoutButton != null)
+            {
+                checkoutButton.interactable = hasItems && canAfford;
+            }
+            if (clearCartButton != null)
+            {
+                clearCartButton.interactable = hasItems;
             }
         }
 
         private void EnsureDualColumnCartLayoutRuntime()
         {
             if (shopPanel == null) return;
-
-            const string VietnameseChars = "AĂÂÁẮẤÀẰẦẢẲẨÃẴẪẠẶẬEÊÉẾÈỀẺỂẼỄẸỆIÍÌỈĨỊOÔƠÓỐỚÒỒỜỎỔỞÕỖỠỌỘỢUƯÚỨÙỪỦỬŨỮỤỰYÝỲỶỸỴaăâáắấàằầảẩãẵẫạặậeêéếèềẻểẽễẹệiíìỉĩịoôơóốớòồờỏổởõỗỡọộợuưúứùừủửũữụựyýỳỷỹỵđĐ";
 
             // 1. Ensure Vietnamese fonts use Dynamic mode
             TextMeshProUGUI[] allTexts = shopPanel.GetComponentsInChildren<TextMeshProUGUI>(true);

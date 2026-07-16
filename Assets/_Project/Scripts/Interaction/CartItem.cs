@@ -922,7 +922,7 @@ private void EnsureInteractionCollider()
 
         public static GameObject CreateStaticPreparedOrderModel(int orderId, Vector3 worldPosition)
         {
-            if (!ChapterOrderCatalog.IsChapter2Order(orderId))
+            if (!ChapterOrderCatalog.IsChapter2Order(orderId) || ChapterOrderCatalog.IsMarketDrink(orderId))
             {
                 return CreateStaticTeaCupModel(worldPosition);
             }
@@ -1308,6 +1308,71 @@ private void EnsureInteractionCollider()
                 AddTopping(root.transform, new Vector3(-0.16f, 0.18f, 0.12f), new Color(0.95f, 0.94f, 0.65f, 1f));
                 AddTopping(root.transform, new Vector3(0.15f, 0.18f, -0.08f), new Color(0.78f, 0.08f, 0.04f, 1f));
                 AddTopping(root.transform, new Vector3(0.02f, 0.19f, 0.02f), new Color(0.15f, 0.65f, 0.18f, 1f));
+            }
+            else if (orderId == ChapterOrderCatalog.BunCaKienGiang || orderId == ChapterOrderCatalog.BanhCanhGhe)
+            {
+                GameObject bowl = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                bowl.transform.SetParent(root.transform, false);
+                bowl.transform.localPosition = new Vector3(0f, 0.16f, 0f);
+                bowl.transform.localScale = new Vector3(0.88f, 0.18f, 0.88f);
+                Object.Destroy(bowl.GetComponent<Collider>());
+                SetRendererColor(bowl, new Color(0.88f, 0.86f, 0.72f, 1f));
+
+                GameObject broth = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                broth.transform.SetParent(root.transform, false);
+                broth.transform.localPosition = new Vector3(0f, 0.36f, 0f);
+                broth.transform.localScale = new Vector3(0.72f, 0.025f, 0.72f);
+                Object.Destroy(broth.GetComponent<Collider>());
+                SetRendererColor(broth, orderId == ChapterOrderCatalog.BunCaKienGiang
+                    ? new Color(0.91f, 0.69f, 0.30f, 1f)
+                    : new Color(0.92f, 0.55f, 0.22f, 1f));
+
+                for (int i = -2; i <= 2; i++)
+                {
+                    GameObject noodle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    noodle.transform.SetParent(root.transform, false);
+                    noodle.transform.localPosition = new Vector3(i * 0.12f, 0.40f, i % 2 == 0 ? 0.06f : -0.07f);
+                    noodle.transform.localScale = new Vector3(0.08f, 0.025f, 0.62f);
+                    noodle.transform.localRotation = Quaternion.Euler(0f, i * 9f, 0f);
+                    Object.Destroy(noodle.GetComponent<Collider>());
+                    SetRendererColor(noodle, new Color(0.96f, 0.94f, 0.82f, 1f));
+                }
+
+                Color toppingColor = orderId == ChapterOrderCatalog.BunCaKienGiang
+                    ? new Color(0.92f, 0.82f, 0.64f, 1f)
+                    : new Color(0.94f, 0.31f, 0.12f, 1f);
+                AddTopping(root.transform, new Vector3(-0.22f, 0.48f, 0.04f), toppingColor);
+                AddTopping(root.transform, new Vector3(0.18f, 0.48f, -0.08f), toppingColor);
+                AddTopping(root.transform, new Vector3(0.02f, 0.49f, 0.18f), new Color(0.18f, 0.62f, 0.22f, 1f));
+            }
+            else if (orderId == ChapterOrderCatalog.TomRimNuocMam ||
+                     orderId == ChapterOrderCatalog.MucNuongMuoiOt ||
+                     orderId == ChapterOrderCatalog.NgheuXaoCay)
+            {
+                GameObject dish = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                dish.transform.SetParent(root.transform, false);
+                dish.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+                dish.transform.localScale = new Vector3(0.9f, 0.09f, 0.9f);
+                Object.Destroy(dish.GetComponent<Collider>());
+                SetRendererColor(dish, orderId == ChapterOrderCatalog.MucNuongMuoiOt
+                    ? new Color(0.82f, 0.70f, 0.52f, 1f)
+                    : new Color(0.55f, 0.20f, 0.08f, 1f));
+
+                Color mainColor = orderId == ChapterOrderCatalog.TomRimNuocMam
+                    ? new Color(0.95f, 0.28f, 0.08f, 1f)
+                    : (orderId == ChapterOrderCatalog.MucNuongMuoiOt
+                        ? new Color(0.94f, 0.80f, 0.60f, 1f)
+                        : new Color(0.72f, 0.48f, 0.24f, 1f));
+
+                for (int i = 0; i < 6; i++)
+                {
+                    float angle = i * Mathf.PI * 2f / 6f;
+                    AddTopping(root.transform,
+                        new Vector3(Mathf.Cos(angle) * 0.34f, 0.30f, Mathf.Sin(angle) * 0.34f),
+                        mainColor);
+                }
+
+                AddTopping(root.transform, new Vector3(0f, 0.34f, 0f), new Color(0.18f, 0.62f, 0.22f, 1f));
             }
             else
             {

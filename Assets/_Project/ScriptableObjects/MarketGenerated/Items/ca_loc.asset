@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: ca_loc
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: ca_loc
+  displayName: "C\xE1 l\xF3c t\u01B0\u01A1i"
+  description: "C\xE1 l\xF3c \u0111\u1ED3ng l\xE0m s\u1EA1ch, d\xF9ng n\u1EA5u n\u01B0\u1EDBc
+    l\xE8o b\xFAn c\xE1."
+  icon: {fileID: 1939066109597900216, guid: 09c0be5e96090d441973726ca1486e40, type: 3}
+  itemType: 0
+  price: 24000
+  isRecipeBook: 0
+  recipeIdToUnlock: 
+  itemName: 
+  buyPrice: 24000
+  sellPrice: 0

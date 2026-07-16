@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: thot_not
   displayName: "Th\u1ED1t n\u1ED1t"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 501925520747540771, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 10000
   isRecipeBook: 0

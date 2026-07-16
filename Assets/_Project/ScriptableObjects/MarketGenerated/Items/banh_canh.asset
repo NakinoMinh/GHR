@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: banh_canh
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: banh_canh
+  displayName: "S\u1EE3i b\xE1nh canh"
+  description: "S\u1EE3i b\xE1nh canh b\u1ED9t g\u1EA1o d\xE0y, d\xF9ng cho m\u1ED9t
+    t\xF4."
+  icon: {fileID: -2101117753413766431, guid: 09c0be5e96090d441973726ca1486e40, type: 3}
+  itemType: 0
+  price: 7000
+  isRecipeBook: 0
+  recipeIdToUnlock: 
+  itemName: 
+  buyPrice: 7000
+  sellPrice: 0

@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: sach_bun_ca_kien_giang
   m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
   itemId: sach_bun_ca_kien_giang
-  displayName: "S\xE1ch n\u1EA5u B\xFAn C\xE1 Ki\xEAn Giang"
-  description: 
-  icon: {fileID: 0}
+  displayName: "S\xE1ch c\xF4ng th\u1EE9c B\xFAn C\xE1 Ki\xEAn Giang"
+  description: "M\u1EDF kh\xF3a m\xF3n B\xFAn C\xE1 Ki\xEAn Giang trong Tab Menu."
+  icon: {fileID: 314038772981323929, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 1
   price: 30000
   isRecipeBook: 1
   recipeIdToUnlock: bun_ca_kien_giang
   itemName: 
-  buyPrice: 0
+  buyPrice: 30000
   sellPrice: 0

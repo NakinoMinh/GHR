@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: duong_thot_not
   displayName: "\u0110\u01B0\u1EDDng th\u1ED1t n\u1ED1t"
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 7035881540367622888, guid: c748c24bec8cca34b98866f8d6911962, type: 3}
   itemType: 0
   price: 12000
   isRecipeBook: 0

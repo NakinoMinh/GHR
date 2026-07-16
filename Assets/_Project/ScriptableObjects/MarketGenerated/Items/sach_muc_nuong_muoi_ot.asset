@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: sach_muc_nuong_muoi_ot
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: sach_muc_nuong_muoi_ot
+  displayName: "S\xE1ch c\xF4ng th\u1EE9c M\u1EF1c N\u01B0\u1EDBng Mu\u1ED1i \u1EDAt"
+  description: "M\u1EDF kh\xF3a m\xF3n M\u1EF1c N\u01B0\u1EDBng Mu\u1ED1i \u1EDAt
+    trong Tab Menu."
+  icon: {fileID: -8014800409189770735, guid: 1bc54c7159ebdbb488f4dba1669381f6, type: 3}
+  itemType: 1
+  price: 32000
+  isRecipeBook: 1
+  recipeIdToUnlock: muc_nuong_muoi_ot
+  itemName: 
+  buyPrice: 32000
+  sellPrice: 0

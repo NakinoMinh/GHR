@@ -31,3 +31,9 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 95da897f39365b1459b415bf26a3cf27, type: 2}
     priceOverride: 12000
     stockAmount: -1
+  - item: {fileID: 11400000, guid: a2c60c41b187a7547b370c0f9b9fd2cd, type: 2}
+    priceOverride: 24000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: b0f4cc3cef160a649835f57a49045195, type: 2}
+    priceOverride: 32000
+    stockAmount: -1

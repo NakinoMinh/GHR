@@ -34,3 +34,57 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 907be5796d4a0064caedf16a9f722274, type: 2}
     priceOverride: 8000
     stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 15000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 5000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 3000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 2000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 2000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 20000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 35000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 5000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 15000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 5000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 3000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 2000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 2000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 20000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 35000
+    stockAmount: -1
+  - item: {fileID: 0}
+    priceOverride: 5000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: a7ce2519fb5e3e64e932ea73f782256c, type: 2}
+    priceOverride: 3000
+    stockAmount: -1
+  - item: {fileID: 11400000, guid: ffea957f2f3f24f4993d1111cee38e20, type: 2}
+    priceOverride: 4000
+    stockAmount: -1

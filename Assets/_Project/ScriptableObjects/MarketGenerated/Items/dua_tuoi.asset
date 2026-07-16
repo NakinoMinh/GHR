@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f2257a52282149b626b23606443ae, type: 3}
+  m_Name: dua_tuoi
+  m_EditorClassIdentifier: Assembly-CSharp::GanhHangRong.Economy.ItemData
+  itemId: dua_tuoi
+  displayName: "D\u1EEBa t\u01B0\u01A1i"
+  description: "D\u1EEBa non nhi\u1EC1u n\u01B0\u1EDBc, d\xF9ng ph\u1EE5c v\u1EE5
+    tr\u1EF1c ti\u1EBFp."
+  icon: {fileID: 3961710798139489455, guid: 1bc54c7159ebdbb488f4dba1669381f6, type: 3}
+  itemType: 0
+  price: 8000
+  isRecipeBook: 0
+  recipeIdToUnlock: 
+  itemName: 
+  buyPrice: 8000
+  sellPrice: 0

@@ -6,6 +6,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using TMPro;
 using GanhHangRong.Core;
+using GanhHangRong.Economy;
+using GanhHangRong.Interaction;
 using System.Collections.Generic;
 
 namespace GanhHangRong.UI
@@ -62,6 +64,7 @@ namespace GanhHangRong.UI
         private Button businessActionButton;
         private TextMeshProUGUI businessActionButtonText;
         private TextMeshProUGUI headerStatusText;
+        private GameObject recipeListContent;
 
         // ================================================================
         //  BẢNG MÀU SỔ BÁN HÀNG
@@ -94,10 +97,11 @@ namespace GanhHangRong.UI
             public string iconKey;
             public string category;
             public string recipe;
-            public bool isUnlocked;
+            public bool unlockedByDefault;
+            public string recipeId;
             public int orderId;
-            public MenuItem(string n, int p, string icon, string group, string r, bool unlocked = true, int id = -1)
-            { name = n; price = p; iconKey = icon; category = group; recipe = r; isUnlocked = unlocked; orderId = id; }
+            public MenuItem(string n, int p, string icon, string group, string r, bool unlocked = true, int id = -1, string unlockRecipeId = null)
+            { name = n; price = p; iconKey = icon; category = group; recipe = r; unlockedByDefault = unlocked; orderId = id; recipeId = unlockRecipeId; }
         }
 
         private static readonly MenuItem[] allItems = new MenuItem[]
@@ -106,13 +110,22 @@ namespace GanhHangRong.UI
                 "Công thức:\n1. Lấy ly sạch\n2. Cho 30g cà phê\n3. Rót 200ml nước sôi\n4. Thêm đá\n5. Phục vụ", true, 1),
             new MenuItem("Trà Đá Nguyên Chất", Constants.TRA_DA_SELL_PRICE, "tea_iced", "ĐỒ UỐNG",
                 "Công thức:\n1. Lấy ly sạch\n2. Cho 50g trà\n3. Rót 200ml nước sôi\n4. Thêm đá\n5. Phục vụ", true, 0),
-            new MenuItem("Nước Chanh Đá", 12000, "lime_iced", "ĐỒ UỐNG", "Mở khóa sau", false, 2),
-            new MenuItem("Nước Mía Tươi", 10000, "sugarcane_juice", "ĐỒ UỐNG", "Mở khóa sau", false, 3),
-            new MenuItem("Trà Sữa Trân Châu", 25000, "bubble_milk_tea", "ĐỒ UỐNG", "Mở khóa sau", false, 4),
-            new MenuItem("Cơm Tấm Sườn Bì", 45000, "broken_rice", "MÓN ĂN", "Mở khóa sau", false, 5),
-            new MenuItem("Phở Bò Hà Nội", 40000, "pho_beef", "MÓN ĂN", "Mở khóa sau", false, 6),
-            new MenuItem("Gỏi Cuốn Tôm Thịt", 15000, "spring_rolls", "MÓN ĂN", "Mở khóa sau", false, 7),
-            new MenuItem("Dừa Tươi Ướp Lạnh", 20000, "coconut_chilled", "ĐỒ UỐNG", "Mở khóa sau", false, 8)
+            new MenuItem("Bún Cá Kiên Giang", 42000, "bun_ca_kien_giang", "MÓN ĂN",
+                "Cá lóc x1 • Bún tươi x1 • Nước mắm x1 • Ớt bột x1", false, ChapterOrderCatalog.BunCaKienGiang, "bun_ca_kien_giang"),
+            new MenuItem("Bánh Canh Ghẹ", 52000, "banh_canh_ghe", "MÓN ĂN",
+                "Ghẹ xanh x1 • Sợi bánh canh x1 • Nước mắm x1 • Muối x1", false, ChapterOrderCatalog.BanhCanhGhe, "banh_canh_ghe"),
+            new MenuItem("Tôm Rim Nước Mắm", 65000, "tom_rim_nuoc_mam", "MÓN ĂN",
+                "Tôm x1 • Nước mắm x1 • Đường thốt nốt x1 • Dầu ăn x1", false, ChapterOrderCatalog.TomRimNuocMam, "tom_rim_nuoc_mam"),
+            new MenuItem("Mực Nướng Muối Ớt", 48000, "muc_nuong_muoi_ot", "MÓN ĂN",
+                "Mực x1 • Muối x1 • Ớt bột x1 • Dầu ăn x1", false, ChapterOrderCatalog.MucNuongMuoiOt, "muc_nuong_muoi_ot"),
+            new MenuItem("Nghêu Xào Cay", 52000, "ngheu_xao_cay", "MÓN ĂN",
+                "Nghêu x1 • Nước mắm x1 • Ớt bột x1 • Dầu ăn x1", false, ChapterOrderCatalog.NgheuXaoCay, "ngheu_xao_cay"),
+            new MenuItem("Nước Mía", 15000, "nuoc_mia", "ĐỒ UỐNG",
+                "Mía cây x2", false, ChapterOrderCatalog.NuocMia, "nuoc_mia"),
+            new MenuItem("Trà Chanh", 28000, "tra_chanh", "ĐỒ UỐNG",
+                "Lá trà x1 • Chanh tươi x1 • Đường thốt nốt x1", false, ChapterOrderCatalog.TraChanh, "tra_chanh"),
+            new MenuItem("Nước Dừa", 18000, "nuoc_dua", "ĐỒ UỐNG",
+                "Dừa tươi x1", false, ChapterOrderCatalog.NuocDua, "nuoc_dua")
         };
 
         private static readonly Dictionary<string, Sprite> itemSpriteCache = new Dictionary<string, Sprite>();
@@ -123,8 +136,25 @@ namespace GanhHangRong.UI
             if (itemSpriteCache.TryGetValue(iconKey, out Sprite cached)) return cached;
 
             Sprite sprite = Resources.Load<Sprite>("UI/TabMenu/" + iconKey);
+            if (sprite == null)
+            {
+                sprite = MarketItemIconLibrary.GetIcon(iconKey);
+            }
             itemSpriteCache[iconKey] = sprite;
             return sprite;
+        }
+
+        private static bool IsItemUnlocked(MenuItem item)
+        {
+            if (item.unlockedByDefault || string.IsNullOrWhiteSpace(item.recipeId))
+            {
+                return item.unlockedByDefault;
+            }
+
+            RecipeUnlockManager manager = RecipeUnlockManager.Instance != null
+                ? RecipeUnlockManager.Instance
+                : FindAnyObjectByType<RecipeUnlockManager>();
+            return manager != null && manager.IsRecipeUnlocked(item.recipeId);
         }
 
         // ================================================================
@@ -211,11 +241,20 @@ namespace GanhHangRong.UI
         public static void RestoreActiveServingOrderIds(int[] orderIds, bool wasSaved)
         {
             ActiveServingOrderIds.Clear();
+            bool restoredAnySavedItem = false;
             if (orderIds != null)
             {
                 for (int i = 0; i < orderIds.Length; i++)
                 {
-                    if (orderIds[i] >= 0) ActiveServingOrderIds.Add(orderIds[i]);
+                    for (int itemIndex = 0; itemIndex < allItems.Length; itemIndex++)
+                    {
+                        MenuItem item = allItems[itemIndex];
+                        if (item.orderId == orderIds[i] && IsItemUnlocked(item))
+                        {
+                            restoredAnySavedItem |= ActiveServingOrderIds.Add(item.orderId);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -226,7 +265,7 @@ namespace GanhHangRong.UI
             }
 
             isServingInitialized = true;
-            HasSavedServingMenu = wasSaved;
+            HasSavedServingMenu = wasSaved && restoredAnySavedItem;
             if (Instance != null)
             {
                 Instance.ApplyActiveMenuToDraft();
@@ -254,11 +293,30 @@ namespace GanhHangRong.UI
             if (servingMenu.Count == 0)
             {
                 foreach (var item in allItems)
-                    if (item.isUnlocked) servingMenu.Add(item);
+                    if (IsItemUnlocked(item)) servingMenu.Add(item);
             }
 
             BuildFullUI();
             CloseMenu();
+        }
+
+        private void OnEnable()
+        {
+            RecipeUnlockManager manager = RecipeUnlockManager.Instance;
+            if (manager != null)
+            {
+                manager.RecipeUnlocked -= HandleRecipeUnlocked;
+                manager.RecipeUnlocked += HandleRecipeUnlocked;
+            }
+        }
+
+        private void OnDisable()
+        {
+            RecipeUnlockManager manager = RecipeUnlockManager.Instance;
+            if (manager != null)
+            {
+                manager.RecipeUnlocked -= HandleRecipeUnlocked;
+            }
         }
 
         private void OnDestroy()
@@ -319,7 +377,15 @@ namespace GanhHangRong.UI
             RefreshHeaderStatus();
             RefreshServingMenuUI();
             RefreshInventoryCardsUI();
+            RefreshRecipeCardsUI();
             RefreshCartTabUI();
+        }
+
+        private void HandleRecipeUnlocked(string recipeId)
+        {
+            HasSavedServingMenu = false;
+            RefreshInventoryCardsUI();
+            RefreshRecipeCardsUI();
         }
 
         public void CloseMenu()
@@ -561,31 +627,32 @@ namespace GanhHangRong.UI
         {
             bool canEdit = CanEditServingMenu();
             bool isAlreadyServing = servingMenu.Exists(m => m.name == item.name);
-            Color cardColor = item.isUnlocked ? (isAlreadyServing ? new Color(0.91f, 0.96f, 0.92f, 1f) : COL_RIGHT_CARD) : COL_RIGHT_LOCKED;
+            bool isUnlocked = IsItemUnlocked(item);
+            Color cardColor = isUnlocked ? (isAlreadyServing ? new Color(0.91f, 0.96f, 0.92f, 1f) : COL_RIGHT_CARD) : COL_RIGHT_LOCKED;
             var card = MakeRoundedPanel(parent, "InvCard_" + item.name.Replace(" ", ""), cardColor, 8, 0, 0, 1, 1);
             var shadow = card.AddComponent<Shadow>();
             shadow.effectColor = new Color(0, 0, 0, 0.10f); shadow.effectDistance = new Vector2(0, -2);
 
             var imageWell = MakeRoundedPanel(card, "ImageWell", COL_IMAGE_WELL, 6, 0.045f, 0.37f, 0.955f, 0.955f);
-            MakeIcon(imageWell, item.iconKey, item.isUnlocked ? Color.white : new Color(0.52f, 0.55f, 0.53f, 0.75f), 0.04f, 0.04f, 0.96f, 0.96f);
-            MakeText(imageWell, item.category, 11, item.isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED,
+            MakeIcon(imageWell, item.iconKey, isUnlocked ? Color.white : new Color(0.52f, 0.55f, 0.53f, 0.75f), 0.04f, 0.04f, 0.96f, 0.96f);
+            MakeText(imageWell, item.category, 11, isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED,
                 TextAlignmentOptions.TopLeft, FontStyles.Bold, 0.04f, 0.77f, 0.72f, 0.97f);
-            if (!item.isUnlocked)
+            if (!isUnlocked)
             {
-                MakeText(imageWell, "CHƯA MỞ KHÓA", 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0.12f, 0.38f, 0.88f, 0.64f);
+                MakeText(imageWell, "MUA SÁCH Ở CHỢ", 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0.08f, 0.38f, 0.92f, 0.64f);
             }
 
-            Color primaryText = item.isUnlocked ? COL_TEXT_DARK : new Color(0.32f, 0.35f, 0.33f, 1f);
+            Color primaryText = isUnlocked ? COL_TEXT_DARK : new Color(0.32f, 0.35f, 0.33f, 1f);
             MakeText(card, item.name, 16, primaryText, TextAlignmentOptions.Left, FontStyles.Bold, 0.055f, 0.22f, 0.70f, 0.36f);
-            MakeText(card, $"{item.price:N0} đ", 15, item.isUnlocked ? COL_PRICE_GOLD : COL_TEXT_MUTED,
+            MakeText(card, $"{item.price:N0} đ", 15, isUnlocked ? COL_PRICE_GOLD : COL_TEXT_MUTED,
                 TextAlignmentOptions.Right, FontStyles.Bold, 0.68f, 0.22f, 0.945f, 0.36f);
 
-            Color btnColor = !item.isUnlocked ? COL_BTN_LOCKED : (isAlreadyServing || !canEdit ? COL_BTN_SELECTED : COL_BTN_SERVE);
-            string btnText = !item.isUnlocked ? "KHÓA" : (isAlreadyServing ? "ĐÃ CHỌN" : (canEdit ? "THÊM MÓN" : "ĐÃ CHỐT CA"));
+            Color btnColor = !isUnlocked ? COL_BTN_LOCKED : (isAlreadyServing || !canEdit ? COL_BTN_SELECTED : COL_BTN_SERVE);
+            string btnText = !isUnlocked ? "CHƯA CÓ CÔNG THỨC" : (isAlreadyServing ? "ĐÃ CHỌN" : (canEdit ? "THÊM MÓN" : "KHÓA TRONG CA"));
             var btnGO = MakeRoundedPanel(card, "MenuActionBtn", btnColor, 6, 0.05f, 0.035f, 0.95f, 0.19f);
             MakeText(btnGO, btnText, 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0f, 0f, 1f, 1f);
 
-            if (item.isUnlocked && !isAlreadyServing && canEdit)
+            if (isUnlocked && !isAlreadyServing && canEdit)
             {
                 var btn = btnGO.AddComponent<Button>();
                 btn.targetGraphic = btnGO.GetComponent<Image>();
@@ -674,7 +741,7 @@ namespace GanhHangRong.UI
             HashSet<int> activeIds = GetActiveServingOrderIds();
             foreach (MenuItem item in allItems)
             {
-                if (item.isUnlocked && activeIds.Contains(item.orderId))
+                if (IsItemUnlocked(item) && activeIds.Contains(item.orderId))
                 {
                     servingMenu.Add(item);
                 }
@@ -759,6 +826,7 @@ namespace GanhHangRong.UI
             viewport.gameObject.AddComponent<Mask>().showMaskGraphic = false;
 
             var contentGO = MakeRect(viewport.gameObject, "Content").gameObject;
+            recipeListContent = contentGO;
             var cRT = contentGO.GetComponent<RectTransform>();
             cRT.anchorMin = new Vector2(0, 1); cRT.anchorMax = new Vector2(1, 1);
             cRT.pivot = new Vector2(0.5f, 1); cRT.anchoredPosition = Vector2.zero; cRT.sizeDelta = Vector2.zero;
@@ -768,26 +836,118 @@ namespace GanhHangRong.UI
             contentGO.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = cRT; scroll.viewport = viewport;
 
-            foreach (var item in allItems)
-            {
-                Color cardColor = item.isUnlocked ? COL_RIGHT_CARD : COL_RIGHT_LOCKED;
-                var card = MakeRoundedPanel(contentGO, "Recipe_" + item.name, cardColor, 8, 0, 0, 1, 1);
-                var le = card.AddComponent<LayoutElement>();
-                le.minHeight = 118; le.preferredHeight = 118;
-                var shadow = card.AddComponent<Shadow>();
-                shadow.effectColor = new Color(0, 0, 0, 0.10f); shadow.effectDistance = new Vector2(0, -2);
-
-                var imageWell = MakeRoundedPanel(card, "RecipeImage", COL_IMAGE_WELL, 6, 0.012f, 0.08f, 0.105f, 0.92f);
-                MakeIcon(imageWell, item.iconKey, item.isUnlocked ? Color.white : new Color(0.5f, 0.52f, 0.5f, 0.7f), 0.06f, 0.06f, 0.94f, 0.94f);
-                MakeText(card, item.category, 11, item.isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.70f, 0.30f, 0.91f);
-                MakeText(card, item.name, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.43f, 0.45f, 0.72f);
-                MakeText(card, $"{item.price:N0} đ", 15, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.16f, 0.40f, 0.43f);
-                MakeText(card, item.isUnlocked ? item.recipe : "Công thức này sẽ xuất hiện khi món được mở khóa.", 14,
-                    item.isUnlocked ? new Color(0.28f, 0.32f, 0.30f, 1f) : COL_TEXT_MUTED,
-                    TextAlignmentOptions.Left, item.isUnlocked ? FontStyles.Normal : FontStyles.Italic,
-                    0.46f, 0.10f, 0.975f, 0.90f);
-            }
+            RefreshRecipeCardsUI();
             return panel;
+        }
+
+        private void RefreshRecipeCardsUI()
+        {
+            if (recipeListContent == null)
+            {
+                return;
+            }
+
+            foreach (Transform child in recipeListContent.transform)
+            {
+                Destroy(child.gameObject);
+            }
+
+            foreach (MenuItem item in allItems)
+            {
+                BuildRecipeCard(recipeListContent, item);
+            }
+        }
+
+        private void BuildRecipeCard(GameObject parent, MenuItem item)
+        {
+            bool isUnlocked = IsItemUnlocked(item);
+            bool isFoodRecipe = !string.IsNullOrWhiteSpace(item.recipeId);
+            RecipeData recipeData = isFoodRecipe ? MarketRecipeCatalog.GetRecipe(item.recipeId) : null;
+            bool canCook = false;
+            string cookStatus = string.Empty;
+            if (isFoodRecipe && isUnlocked && CookingManager.Instance != null && recipeData != null)
+            {
+                canCook = CookingManager.Instance.CanCookRecipe(recipeData, out cookStatus);
+            }
+
+            Color cardColor = isUnlocked ? COL_RIGHT_CARD : COL_RIGHT_LOCKED;
+            GameObject card = MakeRoundedPanel(parent, "Recipe_" + item.name, cardColor, 8, 0, 0, 1, 1);
+            LayoutElement layout = card.AddComponent<LayoutElement>();
+            layout.minHeight = 132f;
+            layout.preferredHeight = 132f;
+            Shadow shadow = card.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0, 0, 0, 0.10f);
+            shadow.effectDistance = new Vector2(0, -2);
+
+            GameObject imageWell = MakeRoundedPanel(card, "RecipeImage", COL_IMAGE_WELL, 6, 0.012f, 0.08f, 0.105f, 0.92f);
+            MakeIcon(imageWell, item.iconKey, isUnlocked ? Color.white : new Color(0.5f, 0.52f, 0.5f, 0.7f), 0.06f, 0.06f, 0.94f, 0.94f);
+            MakeText(card, item.category, 11, isUnlocked ? COL_TAB_ACTIVE : COL_TEXT_MUTED, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.70f, 0.30f, 0.91f);
+            MakeText(card, item.name, 18, COL_TEXT_DARK, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.43f, 0.42f, 0.72f);
+            MakeText(card, $"{item.price:N0} đ", 15, COL_PRICE_GOLD, TextAlignmentOptions.Left, FontStyles.Bold, 0.125f, 0.16f, 0.32f, 0.43f);
+
+            string recipeText = isUnlocked
+                ? item.recipe
+                : "Mua sách công thức tại quầy Đặc Sản Kiên Giang để mở khóa.";
+            MakeText(card, recipeText, 14,
+                isUnlocked ? new Color(0.28f, 0.32f, 0.30f, 1f) : COL_TEXT_MUTED,
+                TextAlignmentOptions.Left, isUnlocked ? FontStyles.Normal : FontStyles.Italic,
+                0.36f, 0.18f, isFoodRecipe ? 0.76f : 0.975f, 0.86f);
+
+            if (!isFoodRecipe)
+            {
+                return;
+            }
+
+            string buttonLabel = !isUnlocked
+                ? "CHƯA MỞ KHÓA"
+                : (canCook
+                    ? (item.category == "ĐỒ UỐNG" ? "PHA 1 LY" : "NẤU 1 PHẦN")
+                    : "THIẾU NGUYÊN LIỆU");
+            Color buttonColor = !isUnlocked || !canCook ? COL_BTN_LOCKED : COL_BTN_SERVE;
+            GameObject cookButtonObject = MakeRoundedPanel(card, "CookButton", buttonColor, 6, 0.79f, 0.22f, 0.97f, 0.56f);
+            MakeText(cookButtonObject, buttonLabel, 13, Color.white, TextAlignmentOptions.Center, FontStyles.Bold, 0.03f, 0.03f, 0.97f, 0.97f);
+
+            string statusText = isUnlocked
+                ? (canCook ? "Đủ nguyên liệu trong kho" : cookStatus)
+                : "Cần sách công thức";
+            MakeText(card, statusText, 11, canCook ? COL_TAB_ACTIVE : COL_TEXT_MUTED,
+                TextAlignmentOptions.Center, FontStyles.Normal, 0.79f, 0.07f, 0.97f, 0.20f);
+
+            if (isUnlocked && canCook)
+            {
+                Button cookButton = cookButtonObject.AddComponent<Button>();
+                cookButton.targetGraphic = cookButtonObject.GetComponent<Image>();
+                MenuItem captured = item;
+                cookButton.onClick.AddListener(() => TryCookMenuItem(captured));
+            }
+        }
+
+        private void TryCookMenuItem(MenuItem item)
+        {
+            if (CartItem.HasPreparedTea)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", $"Đang cầm {CartItem.PreparedDrinkName}. Hãy phục vụ trước khi nấu món khác.");
+                return;
+            }
+
+            RecipeData recipe = MarketRecipeCatalog.GetRecipe(item.recipeId);
+            if (recipe == null || CookingManager.Instance == null)
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", "Không tìm thấy dữ liệu công thức trong scene.");
+                return;
+            }
+
+            if (!CookingManager.Instance.CookRecipe(recipe, out string result))
+            {
+                EventManager.TriggerDialogueLine("Hoàng Hôn", result);
+                RefreshRecipeCardsUI();
+                return;
+            }
+
+            CartItem.PrepareReadyOrder(item.orderId);
+            EventManager.TriggerDialogueLine("Hoàng Hôn", $"{result} Món đã sẵn sàng để phục vụ.");
+            RefreshRecipeCardsUI();
+            RefreshCartTabUI();
         }
 
         // ── Ice Vendor dialogue overlay references ──

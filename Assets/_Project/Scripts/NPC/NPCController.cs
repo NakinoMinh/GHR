@@ -563,7 +563,7 @@ namespace GanhHangRong.NPC
             orderedDrink = ChapterOrderCatalog.GetRandomDailyDrinkId();
             string drinkName = GetDrinkName(orderedDrink);
             string text = $"Cho tui một ly {drinkName} nha!";
-            if (ChapterOrderCatalog.IsChapter2Order(orderedDrink))
+            if (ChapterOrderCatalog.IsFoodOrder(orderedDrink))
             {
                 text = $"Cho tui một phần {drinkName} nha!";
             }
