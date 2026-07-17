@@ -52,6 +52,13 @@ namespace GanhHangRong.Player
         [SerializeField] private float cartOrbitMaxPitch = 60f;
         [SerializeField] private float cartOrbitSmoothSpeed = 12f;
 
+        [Header("NPC Dialogue Close-up")]
+        [SerializeField, Min(0.75f)] private float npcFocusDistance = 1.25f;
+        [SerializeField] private float npcFocusSideOffset = 0.04f;
+        [SerializeField, Range(25f, 55f)] private float npcFocusFieldOfView = 36f;
+        [SerializeField, Min(1f)] private float npcFocusSmoothSpeed = 8f;
+        [SerializeField] private float npcFallbackFaceHeight = 1.5f;
+
         private float yaw = 0f;
         private float pitch = 12f;
         private Vector3 currentVelocity = Vector3.zero;
@@ -85,6 +92,18 @@ namespace GanhHangRong.Player
         private bool isFocusingNPC = false;
         private Vector3 focusPos;
         private Quaternion focusRot;
+        private Transform focusedNPC;
+        private Transform focusedPlayer;
+        private Transform focusedHead;
+        private Transform focusedLeftShoulder;
+        private Transform focusedRightShoulder;
+        private Transform focusedHips;
+        private float fieldOfViewBeforeNPCFocus = 60f;
+        private float savedYawBeforeNPCFocus;
+        private float savedPitchBeforeNPCFocus;
+        private CursorLockMode cursorLockBeforeNPCFocus;
+        private bool cursorVisibleBeforeNPCFocus;
+        private bool isRestoringNPCFocusFieldOfView;
 
         public bool IsCartOrbitMode => isCartOrbitMode;
         public bool IsCartFirstPersonMode => isCartFirstPersonMode;
@@ -93,6 +112,10 @@ namespace GanhHangRong.Player
         private void Start()
         {
             cachedCamera = GetComponent<Camera>();
+            if (cachedCamera != null)
+            {
+                fieldOfViewBeforeNPCFocus = cachedCamera.fieldOfView;
+            }
             SetMouseSensitivity(PlayerPrefs.GetFloat(MouseSensitivityPreferenceKey, mouseSensitivity), false);
 
             if (target != null)
@@ -118,9 +141,32 @@ namespace GanhHangRong.Player
             // ═══ CHẾ ĐỘ FOCUS VÀO NPC (HỘI THOẠI) ═══
             if (isFocusingNPC)
             {
-                transform.position = Vector3.Lerp(transform.position, focusPos, Time.deltaTime * customViewSmoothSpeed);
-                transform.rotation = Quaternion.Slerp(transform.rotation, focusRot, Time.deltaTime * customViewSmoothSpeed);
+                if (focusedNPC == null || focusedPlayer == null)
+                {
+                    ResetFocus(focusedPlayer != null ? focusedPlayer : target);
+                    return;
+                }
+
+                UpdateNPCFocusTarget();
+                float blend = 1f - Mathf.Exp(-npcFocusSmoothSpeed * Time.unscaledDeltaTime);
+                transform.position = Vector3.Lerp(transform.position, focusPos, blend);
+                transform.rotation = Quaternion.Slerp(transform.rotation, focusRot, blend);
+                if (cachedCamera != null)
+                {
+                    cachedCamera.fieldOfView = Mathf.Lerp(cachedCamera.fieldOfView, npcFocusFieldOfView, blend);
+                }
                 return;
+            }
+
+            if (cachedCamera != null && isRestoringNPCFocusFieldOfView)
+            {
+                float fovBlend = 1f - Mathf.Exp(-npcFocusSmoothSpeed * Time.unscaledDeltaTime);
+                cachedCamera.fieldOfView = Mathf.Lerp(cachedCamera.fieldOfView, fieldOfViewBeforeNPCFocus, fovBlend);
+                if (Mathf.Abs(cachedCamera.fieldOfView - fieldOfViewBeforeNPCFocus) < 0.05f)
+                {
+                    cachedCamera.fieldOfView = fieldOfViewBeforeNPCFocus;
+                    isRestoringNPCFocusFieldOfView = false;
+                }
             }
 
             // ═══ CHẾ ĐỘ NHÌN THỨ 1 TỪ MẶT BÀN XE ĐẨY ═══
@@ -706,18 +752,33 @@ namespace GanhHangRong.Player
 
         public void FocusOnNPC(Transform npc, Transform player)
         {
-            isFocusingNPC = true;
-            // Tính toán vị trí góc nhìn thứ nhất (từ mắt người chơi nhìn về NPC)
-            Vector3 dirToNPC = (npc.position - player.position).normalized;
-            dirToNPC.y = 0;
-            if (dirToNPC.sqrMagnitude < 0.01f) dirToNPC = player.forward;
-            dirToNPC.Normalize();
+            if (npc == null || player == null)
+            {
+                return;
+            }
 
-            // Góc nhìn thứ nhất: Đặt camera ngay tại vị trí mắt của người chơi (cao 1.6m), nhích lên trước 0.2m để không bị vướng model
-            focusPos = player.position + Vector3.up * 1.6f + dirToNPC * 0.2f;
-            
-            // Nhìn thẳng vào mặt NPC (cao khoảng 1.5m)
-            focusRot = Quaternion.LookRotation(npc.position + Vector3.up * 1.5f - focusPos);
+            if (!isFocusingNPC)
+            {
+                savedYawBeforeNPCFocus = yaw;
+                savedPitchBeforeNPCFocus = pitch;
+                cursorLockBeforeNPCFocus = Cursor.lockState;
+                cursorVisibleBeforeNPCFocus = Cursor.visible;
+                if (cachedCamera == null)
+                {
+                    cachedCamera = GetComponent<Camera>();
+                }
+                if (cachedCamera != null)
+                {
+                    fieldOfViewBeforeNPCFocus = cachedCamera.fieldOfView;
+                }
+            }
+
+            isFocusingNPC = true;
+            isRestoringNPCFocusFieldOfView = false;
+            focusedNPC = npc;
+            focusedPlayer = player;
+            CacheFocusedNPCRig();
+            UpdateNPCFocusTarget();
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -725,15 +786,178 @@ namespace GanhHangRong.Player
 
         public void ResetFocus(Transform playerTransform)
         {
-            isFocusingNPC = false;
-            target = playerTransform;
-            
-            // Xoay hướng nhìn về phía người chơi đang đứng
-            yaw = playerTransform.eulerAngles.y;
-            pitch = 12f;
+            if (!isFocusingNPC)
+            {
+                return;
+            }
 
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            isFocusingNPC = false;
+            isRestoringNPCFocusFieldOfView = cachedCamera != null;
+            focusedNPC = null;
+            focusedPlayer = null;
+            focusedHead = null;
+            focusedLeftShoulder = null;
+            focusedRightShoulder = null;
+            focusedHips = null;
+            if (playerTransform != null)
+            {
+                target = playerTransform;
+            }
+            yaw = savedYawBeforeNPCFocus;
+            pitch = savedPitchBeforeNPCFocus;
+
+            Cursor.lockState = cursorLockBeforeNPCFocus;
+            Cursor.visible = cursorVisibleBeforeNPCFocus;
+        }
+
+        private void UpdateNPCFocusTarget()
+        {
+            Vector3 facePosition = ResolveNPCFacePosition(focusedNPC);
+            Vector3 faceForward = ResolveNPCFaceForward();
+            faceForward = Vector3.ProjectOnPlane(faceForward, Vector3.up);
+            if (faceForward.sqrMagnitude < 0.01f)
+            {
+                faceForward = Vector3.ProjectOnPlane(focusedNPC.forward, Vector3.up);
+            }
+            faceForward.Normalize();
+
+            Vector3 side = Vector3.Cross(Vector3.up, faceForward).normalized;
+            focusPos = facePosition
+                + faceForward * npcFocusDistance
+                + side * npcFocusSideOffset
+                + Vector3.up * 0.03f;
+            focusRot = Quaternion.LookRotation(facePosition - focusPos, Vector3.up);
+        }
+
+        private void CacheFocusedNPCRig()
+        {
+            focusedHead = null;
+            focusedLeftShoulder = null;
+            focusedRightShoulder = null;
+            focusedHips = null;
+
+            if (focusedNPC == null)
+            {
+                return;
+            }
+
+            Animator animator = focusedNPC.GetComponentInChildren<Animator>(true);
+            if (animator != null && animator.isHuman)
+            {
+                focusedHead = animator.GetBoneTransform(HumanBodyBones.Head);
+                focusedLeftShoulder = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+                focusedRightShoulder = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                focusedHips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            }
+
+            Transform[] bones = focusedNPC.GetComponentsInChildren<Transform>(true);
+            if (focusedHead == null)
+            {
+                focusedHead = FindNamedBone(bones, "head");
+            }
+            if (focusedLeftShoulder == null)
+            {
+                focusedLeftShoulder = FindNamedBone(bones, "leftshoulder", "leftupperarm", "leftarm");
+            }
+            if (focusedRightShoulder == null)
+            {
+                focusedRightShoulder = FindNamedBone(bones, "rightshoulder", "rightupperarm", "rightarm");
+            }
+            if (focusedHips == null)
+            {
+                focusedHips = FindNamedBone(bones, "hips", "pelvis");
+            }
+        }
+
+        private Vector3 ResolveNPCFaceForward()
+        {
+            if (focusedLeftShoulder != null && focusedRightShoulder != null)
+            {
+                Vector3 bodyRight = focusedRightShoulder.position - focusedLeftShoulder.position;
+                Vector3 bodyUp = focusedHead != null && focusedHips != null
+                    ? focusedHead.position - focusedHips.position
+                    : Vector3.up;
+
+                if (bodyRight.sqrMagnitude > 0.0001f && bodyUp.sqrMagnitude > 0.0001f)
+                {
+                    Vector3 rigForward = Vector3.Cross(bodyRight.normalized, bodyUp.normalized);
+                    if (rigForward.sqrMagnitude > 0.0001f)
+                    {
+                        return rigForward.normalized;
+                    }
+                }
+            }
+
+            return focusedNPC != null ? focusedNPC.forward : transform.forward;
+        }
+
+        private static Transform FindNamedBone(Transform[] bones, params string[] nameTokens)
+        {
+            if (bones == null || nameTokens == null)
+            {
+                return null;
+            }
+
+            foreach (string token in nameTokens)
+            {
+                foreach (Transform bone in bones)
+                {
+                    if (bone == null) continue;
+
+                    string normalizedName = bone.name
+                        .Replace("mixamorig:", string.Empty)
+                        .Replace("_", string.Empty)
+                        .Replace(" ", string.Empty)
+                        .ToLowerInvariant();
+                    if (normalizedName == token)
+                    {
+                        return bone;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private Vector3 ResolveNPCFacePosition(Transform npc)
+        {
+            if (npc == null)
+            {
+                return transform.position + transform.forward * npcFocusDistance;
+            }
+
+            if (focusedHead != null)
+            {
+                return focusedHead.position + Vector3.up * 0.06f;
+            }
+
+            Renderer[] renderers = npc.GetComponentsInChildren<Renderer>(false);
+            Bounds bounds = default;
+            bool hasBounds = false;
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null || renderer is SpriteRenderer)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (hasBounds && bounds.size.y > 0.1f)
+            {
+                return new Vector3(bounds.center.x, Mathf.Lerp(bounds.min.y, bounds.max.y, 0.88f), bounds.center.z);
+            }
+
+            return npc.position + Vector3.up * npcFallbackFaceHeight;
         }
     }
 }

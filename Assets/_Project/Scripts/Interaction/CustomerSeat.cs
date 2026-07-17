@@ -314,7 +314,7 @@ namespace GanhHangRong.Interaction
             }
             else if (seatNPC.CurrentState == NPCState.Waiting)
             {
-                EventManager.TriggerDialogueLine("Khách hàng", "Đang chờ nước nè, có nước chưa em?");
+                seatNPC.StartWaitingDialogue(player);
             }
         }
     }

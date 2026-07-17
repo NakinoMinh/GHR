@@ -35,6 +35,10 @@ namespace GanhHangRong.Player
         [SerializeField] private Vector3 rightForeArmOffset = new Vector3(-96f, -8f, 18f);
         [Tooltip("Điều chỉnh góc xoay bàn tay phải khi cầm ly")]
         [SerializeField] private Vector3 rightHandOffset = new Vector3(12f, -62f, 72f);
+        [Tooltip("Vị trí bàn tay phải khi cầm ly, tính theo local space của Player.")]
+        [SerializeField] private Vector3 rightHoldHandLocalPosition = new Vector3(0.12f, 1.18f, 0.34f);
+        [Tooltip("Hướng cùi chỏ phải khi cầm ly, tính theo local space của Player.")]
+        [SerializeField] private Vector3 rightHoldElbowPoleLocalPosition = new Vector3(0.72f, 1.00f, 0.02f);
 
         [SerializeField] private Vector3 leftArmOffset = new Vector3(-8f, 0f, 10f);
         [SerializeField] private Vector3 leftForeArmOffset = new Vector3(-10f, 0f, 0f);
@@ -128,7 +132,7 @@ namespace GanhHangRong.Player
                     animator.SetFloat("Speed", currentSpeed);
 
                 // Cập nhật trạng thái bưng ly vào Animator
-                bool isHolding = Interaction.CartItem.IsHoldingCup;
+                bool isHolding = Interaction.CartItem.IsCarryingCupVisual;
                 if (HasParameter("IsHoldingCup"))
                 {
                     animator.SetBool("IsHoldingCup", isHolding);
@@ -254,7 +258,7 @@ namespace GanhHangRong.Player
         {
             if (animator == null || rightArmBone == null || leftArmBone == null) return;
 
-            bool isHoldingCup = Interaction.CartItem.IsHoldingCup;
+            bool isHoldingCup = Interaction.CartItem.IsCarryingCupVisual;
 
             // Hạ tay xuống khi đứng nghỉ (tránh A-pose)
             if (currentState == PlayerState.Idle)
@@ -299,10 +303,7 @@ namespace GanhHangRong.Player
                         rightForeArmBone.localRotation = rightForeArmBaseRot;
                         if (rightHandBone != null) rightHandBone.localRotation = rightHandBaseRot;
 
-                        // Sử dụng góc xoay chuẩn tối ưu cho Meshy AI rig để ôm ly tự nhiên trước ngực, lòng bàn tay hướng vào ly
-                        if (rightArmBone != null) rightArmBone.localEulerAngles = new Vector3(85.24f, 88.36f, 98.37f);
-                        if (rightForeArmBone != null) rightForeArmBone.localEulerAngles = new Vector3(6.48f, 12.85f, 87.18f);
-                        if (rightHandBone != null) rightHandBone.localEulerAngles = new Vector3(285.62f, 158.36f, 206.57f);
+                        ApplyRightCupHoldPose();
                     }
 
                     // ============================================================
@@ -316,6 +317,53 @@ namespace GanhHangRong.Player
                     }
                 }
             }
+        }
+
+        private void ApplyRightCupHoldPose()
+        {
+            if (rightArmBone == null || rightForeArmBone == null || rightHandBone == null)
+                return;
+
+            Vector3 handTarget = transform.TransformPoint(rightHoldHandLocalPosition);
+            Vector3 elbowPole = transform.TransformPoint(rightHoldElbowPoleLocalPosition);
+
+            SolveRightArmToTarget(handTarget, elbowPole);
+            rightHandBone.localEulerAngles = rightHandOffset;
+        }
+
+        private void SolveRightArmToTarget(Vector3 handTarget, Vector3 elbowPole)
+        {
+            const int iterationCount = 12;
+
+            for (int i = 0; i < iterationCount; i++)
+            {
+                RotateBoneTowardTarget(rightForeArmBone, rightHandBone, handTarget);
+                RotateBoneTowardTarget(rightArmBone, rightHandBone, handTarget);
+            }
+
+            Vector3 shoulderToHand = rightHandBone.position - rightArmBone.position;
+            Vector3 shoulderToPole = elbowPole - rightArmBone.position;
+            if (shoulderToHand.sqrMagnitude < 0.0001f || shoulderToPole.sqrMagnitude < 0.0001f)
+                return;
+
+            Vector3 planeNormal = shoulderToHand.normalized;
+            Vector3 elbowDirection = Vector3.ProjectOnPlane(rightForeArmBone.position - rightArmBone.position, planeNormal).normalized;
+            Vector3 poleDirection = Vector3.ProjectOnPlane(shoulderToPole, planeNormal).normalized;
+            if (elbowDirection.sqrMagnitude < 0.0001f || poleDirection.sqrMagnitude < 0.0001f)
+                return;
+
+            float poleAngle = Vector3.SignedAngle(elbowDirection, poleDirection, planeNormal);
+            rightArmBone.rotation = Quaternion.AngleAxis(poleAngle * 0.45f, planeNormal) * rightArmBone.rotation;
+        }
+
+        private static void RotateBoneTowardTarget(Transform bone, Transform endEffector, Vector3 target)
+        {
+            Vector3 toEnd = endEffector.position - bone.position;
+            Vector3 toTarget = target - bone.position;
+            if (toEnd.sqrMagnitude < 0.000001f || toTarget.sqrMagnitude < 0.000001f)
+                return;
+
+            bone.rotation = Quaternion.FromToRotation(toEnd, toTarget) * bone.rotation;
         }
 
         private void FindArmBones()

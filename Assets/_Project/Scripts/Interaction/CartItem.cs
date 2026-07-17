@@ -38,9 +38,9 @@ namespace GanhHangRong.Interaction
         [Tooltip("Prefab mô hình ly trà đá (WaterCup FBX). Nếu để trống sẽ dùng primitive Cylinder thay thế.")]
         [SerializeField] private GameObject teaCupHeldPrefab;
         [Tooltip("Vị trí của ly khi cầm trên tay (Local Position)")]
-        [SerializeField] private Vector3 heldLocalPosition = new Vector3(0.015f, 0.045f, 0.015f);
+        [SerializeField] private Vector3 heldLocalPosition = new Vector3(0.012f, 0.045f, 0.022f);
         [Tooltip("Góc xoay của ly khi cầm trên tay (Local Rotation)")]
-        [SerializeField] private Vector3 heldLocalRotation = new Vector3(0f, 0f, 90f);
+        [SerializeField] private Vector3 heldLocalRotation = Vector3.zero;
 
         // State
         private bool isHighlighted = false;
@@ -77,6 +77,7 @@ namespace GanhHangRong.Interaction
 
         private static bool isHoldingCup = false;
         public static bool IsHoldingCup => isHoldingCup;
+        public static bool IsCarryingCupVisual => isHoldingCup || (hasPreparedTea && heldTeaCupObj != null);
         public static bool IsHoldingDirtyCup { get; private set; } = false;
         public static bool IsCupClean => isHoldingCup && !IsHoldingDirtyCup && teaInCup == 0 && coffeeInCup == 0 && waterInCup <= 0.001f && iceInCup <= 0.001f && !hasPreparedTea && !HasRuinedDrink;
         public static bool IsCupDirty => (isHoldingCup && !IsCupClean) || hasPreparedTea;
@@ -115,6 +116,33 @@ namespace GanhHangRong.Interaction
         private static GameObject heldTeaCupObj = null;
         private static int returnedCleanCupVisualIndex = 0;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticStateOnEnterPlayMode()
+        {
+            activeInstance = null;
+            activeCoolDownCoroutine = null;
+            returnedCleanCupVisualIndex = 0;
+            ResetCupStateFields();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void RemoveHeldCupVisualsOnSceneStart()
+        {
+            heldTeaCupObj = null;
+
+            GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (GameObject go in allObjects)
+            {
+                if (go == null)
+                    continue;
+
+                if (go.name == "HeldTeaCup" || go.name == "HeldEmptyCup")
+                {
+                    Destroy(go);
+                }
+            }
+        }
+
         public static void ResetBrewingState()
         {
             isBoilingWater = false;
@@ -128,6 +156,12 @@ namespace GanhHangRong.Interaction
 
         public static void ResetCupState()
         {
+            ResetCupStateFields();
+            DetachTeaCup();
+        }
+
+        private static void ResetCupStateFields()
+        {
             isHoldingCup = false;
             IsHoldingDirtyCup = false;
             teaInCup = 0;
@@ -137,7 +171,6 @@ namespace GanhHangRong.Interaction
             hasPreparedTea = false;
             HasRuinedDrink = false;
             preparedDrinkId = -1;
-            DetachTeaCup();
         }
 
         public static void PrepareReadyOrder(int orderId)
@@ -718,8 +751,8 @@ private void EnsureInteractionCollider()
 
             if (attachPoint != null)
             {
-                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
-                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(0f, 0f, 90f);
+                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.012f, 0.045f, 0.022f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : Vector3.zero;
                 AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
@@ -764,31 +797,12 @@ private void EnsureInteractionCollider()
                 Destroy(cupGO.GetComponent<CartItem>());
                 foreach (var col in cupGO.GetComponentsInChildren<Collider>()) Destroy(col);
                 targetWorldScale = cupTemplate.transform.lossyScale;
-                
-                // Add a simple tea liquid inside the cloned mesh
-                GameObject teaLiquid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                teaLiquid.transform.SetParent(cupGO.transform, false);
-                // Adjust position/scale relative to the cup template's bounds
-                var mf = cupTemplate.GetComponent<MeshFilter>();
-                if(mf != null && mf.sharedMesh != null) {
-                    float h = mf.sharedMesh.bounds.size.y;
-                    teaLiquid.transform.localPosition = mf.sharedMesh.bounds.center + new Vector3(0, h * 0.1f, 0);
-                    teaLiquid.transform.localScale = new Vector3(mf.sharedMesh.bounds.size.x * 0.85f, h * 0.4f, mf.sharedMesh.bounds.size.z * 0.85f);
-                } else {
-                    teaLiquid.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-                    teaLiquid.transform.localScale = new Vector3(0.04f, 0.04f, 0.04f);
-                }
-                Object.Destroy(teaLiquid.GetComponent<Collider>());
-                var rend = teaLiquid.GetComponent<Renderer>();
-                if (rend != null)
-                {
-                    Material mat = CreateCupMaterial("FallbackTeaCup_Liquid", new Color(0.75f, 0.42f, 0.12f, 0.85f), true, 3001);
-                    if (mat != null) rend.material = mat;
-                }
+                AddPreparedDrinkContents(cupGO);
             }
             else if (teaCupHeldPrefab != null)
             {
                 cupGO = Instantiate(teaCupHeldPrefab);
+                AddPreparedDrinkContents(cupGO);
             }
             else
             {
@@ -797,8 +811,8 @@ private void EnsureInteractionCollider()
 
             if (attachPoint != null)
             {
-                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.015f, 0.045f, 0.015f);
-                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : new Vector3(0f, 0f, 90f);
+                Vector3 targetPos = cupTemplate != null ? cupTemplate.heldLocalPosition : new Vector3(0.012f, 0.045f, 0.022f);
+                Vector3 targetRot = cupTemplate != null ? cupTemplate.heldLocalRotation : Vector3.zero;
                 AttachCupToHand(cupGO, attachPoint, targetWorldScale, targetPos, targetRot);
             }
             else
@@ -876,6 +890,7 @@ private void EnsureInteractionCollider()
                 cupGO.transform.position = worldPosition;
                 cupGO.transform.rotation = Quaternion.identity;
                 cupGO.transform.localScale = cupTemplate.transform.lossyScale;
+                AddPreparedDrinkContents(cupGO);
             }
             else
             {
@@ -904,6 +919,7 @@ private void EnsureInteractionCollider()
                     cupGO.transform.position = worldPosition;
                     cupGO.transform.rotation = Quaternion.identity;
                     cupGO.transform.localScale = Vector3.one * 7.34f;
+                    AddPreparedDrinkContents(cupGO);
                 }
                 else
                 {
@@ -916,7 +932,7 @@ private void EnsureInteractionCollider()
             }
 
             cupGO.name = "PlacedTeaCup";
-            AlignMeshBottomToPosition(cupGO, worldPosition);
+            StandCupUprightOnTable(cupGO, worldPosition);
             return cupGO;
         }
 
@@ -954,6 +970,45 @@ private void EnsureInteractionCollider()
                     go.transform.position += new Vector3(0f, diff, 0f);
                 }
             }
+        }
+
+        private static void StandCupUprightOnTable(GameObject cupGO, Vector3 worldPosition)
+        {
+            if (cupGO == null) return;
+
+            Quaternion baseRotation = cupGO.transform.rotation;
+            Quaternion[] rotationCandidates =
+            {
+                baseRotation,
+                baseRotation * Quaternion.Euler(0f, 0f, 90f),
+                baseRotation * Quaternion.Euler(0f, 0f, -90f),
+                baseRotation * Quaternion.Euler(90f, 0f, 0f),
+                baseRotation * Quaternion.Euler(-90f, 0f, 0f),
+                baseRotation * Quaternion.Euler(0f, 90f, 0f),
+                baseRotation * Quaternion.Euler(0f, -90f, 0f)
+            };
+
+            Quaternion bestRotation = baseRotation;
+            float bestScore = float.MinValue;
+            foreach (Quaternion candidate in rotationCandidates)
+            {
+                cupGO.transform.position = worldPosition;
+                cupGO.transform.rotation = candidate;
+
+                if (!TryGetRendererBounds(cupGO, out Bounds bounds)) continue;
+
+                float footprint = Mathf.Max(bounds.size.x, bounds.size.z);
+                float score = bounds.size.y - footprint * 0.2f;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestRotation = candidate;
+                }
+            }
+
+            cupGO.transform.position = worldPosition;
+            cupGO.transform.rotation = bestRotation * Quaternion.Euler(0f, 180f, 0f);
+            AlignMeshBottomToPosition(cupGO, worldPosition);
         }
 
         public static GameObject ReturnCleanCupToCart()
@@ -1120,8 +1175,118 @@ private void EnsureInteractionCollider()
             var renderers = cup.GetComponentsInChildren<Renderer>(true);
             foreach (var renderer in renderers)
             {
+                if (renderer.name.StartsWith("PreparedDrink"))
+                    continue;
+
                 renderer.sharedMaterial = cupMaterial;
             }
+        }
+
+        private static void AddPreparedDrinkContents(GameObject cupGO)
+        {
+            if (cupGO == null || cupGO.transform.Find("PreparedDrinkLiquid") != null)
+                return;
+
+            Bounds localBounds;
+            if (!TryGetLocalRendererBounds(cupGO, out localBounds))
+            {
+                localBounds = new Bounds(Vector3.zero, new Vector3(0.08f, 0.12f, 0.08f));
+            }
+
+            float diameterX = Mathf.Max(localBounds.size.x * 0.68f, 0.00001f);
+            float diameterZ = Mathf.Max(localBounds.size.z * 0.68f, 0.00001f);
+            float liquidHeight = Mathf.Max(localBounds.size.y * 0.16f, 0.00001f);
+            float liquidY = localBounds.min.y + localBounds.size.y * 0.42f;
+
+            GameObject liquid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            liquid.name = "PreparedDrinkLiquid";
+            liquid.transform.SetParent(cupGO.transform, false);
+            liquid.transform.localPosition = new Vector3(localBounds.center.x, liquidY, localBounds.center.z);
+            liquid.transform.localScale = new Vector3(diameterX, liquidHeight, diameterZ);
+            Object.Destroy(liquid.GetComponent<Collider>());
+
+            Renderer liquidRenderer = liquid.GetComponent<Renderer>();
+            if (liquidRenderer != null)
+            {
+                Material mat = CreateCupMaterial("PreparedDrink_TeaLiquid", new Color(0.76f, 0.43f, 0.12f, 0.78f), true, 3001);
+                if (mat != null) liquidRenderer.material = mat;
+            }
+
+            Vector3 iceScale = new Vector3(diameterX, liquidHeight, diameterZ) * 0.18f;
+            Vector3[] iceOffsets =
+            {
+                new Vector3(diameterX * 0.18f, liquidHeight * 1.6f, diameterZ * 0.08f),
+                new Vector3(-diameterX * 0.12f, liquidHeight * 1.9f, -diameterZ * 0.14f),
+                new Vector3(diameterX * 0.03f, liquidHeight * 2.15f, diameterZ * 0.18f)
+            };
+            Vector3[] iceRotations =
+            {
+                new Vector3(22f, 35f, 14f),
+                new Vector3(-28f, 12f, 41f),
+                new Vector3(12f, -48f, -18f)
+            };
+
+            for (int i = 0; i < iceOffsets.Length; i++)
+            {
+                GameObject ice = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                ice.name = "PreparedDrinkIce_" + (i + 1);
+                ice.transform.SetParent(cupGO.transform, false);
+                ice.transform.localPosition = liquid.transform.localPosition + iceOffsets[i];
+                ice.transform.localRotation = Quaternion.Euler(iceRotations[i]);
+                ice.transform.localScale = iceScale;
+                Object.Destroy(ice.GetComponent<Collider>());
+
+                Renderer iceRenderer = ice.GetComponent<Renderer>();
+                if (iceRenderer != null)
+                {
+                    Material mat = CreateCupMaterial("PreparedDrink_Ice", new Color(0.92f, 0.96f, 1f, 0.7f), true, 3002);
+                    if (mat != null) iceRenderer.material = mat;
+                }
+            }
+        }
+
+        private static bool TryGetLocalRendererBounds(GameObject root, out Bounds localBounds)
+        {
+            localBounds = new Bounds();
+            bool hasBounds = false;
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null || renderer.name.StartsWith("PreparedDrink"))
+                    continue;
+
+                Bounds worldBounds = renderer.bounds;
+                Vector3 min = worldBounds.min;
+                Vector3 max = worldBounds.max;
+                Vector3[] corners =
+                {
+                    new Vector3(min.x, min.y, min.z),
+                    new Vector3(min.x, min.y, max.z),
+                    new Vector3(min.x, max.y, min.z),
+                    new Vector3(min.x, max.y, max.z),
+                    new Vector3(max.x, min.y, min.z),
+                    new Vector3(max.x, min.y, max.z),
+                    new Vector3(max.x, max.y, min.z),
+                    new Vector3(max.x, max.y, max.z)
+                };
+
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    Vector3 localCorner = root.transform.InverseTransformPoint(corners[i]);
+                    if (!hasBounds)
+                    {
+                        localBounds = new Bounds(localCorner, Vector3.zero);
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        localBounds.Encapsulate(localCorner);
+                    }
+                }
+            }
+
+            return hasBounds;
         }
 
         private static Material CreateCupMaterial(string name, Color color, bool transparent, int renderQueue)
@@ -1208,6 +1373,7 @@ private void EnsureInteractionCollider()
 
             // 2. Nước trà bên trong (Cylinder màu hổ phách/cam trà)
             GameObject teaLiquid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            teaLiquid.name = "PreparedDrinkLiquid";
             teaLiquid.transform.SetParent(cup.transform, false);
             teaLiquid.transform.localPosition = new Vector3(0f, -0.05f, 0f);
             teaLiquid.transform.localScale = new Vector3(0.92f, 0.5f, 0.92f);
@@ -1245,6 +1411,7 @@ private void EnsureInteractionCollider()
             for (int i = 0; i < 3; i++)
             {
                 GameObject iceCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                iceCube.name = "PreparedDrinkIce_" + (i + 1);
                 iceCube.transform.SetParent(cup.transform, false);
                 iceCube.transform.localPosition = icePositions[i];
                 iceCube.transform.localRotation = Quaternion.Euler(iceRotations[i]);

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 #endif
 using GanhHangRong.Economy;
 using GanhHangRong.Player;
@@ -44,12 +46,14 @@ namespace GanhHangRong.UI
         private bool isOpen;
         private TextMeshProUGUI cartCountText;
         private TextMeshProUGUI cartEmptyText;
+        private CanvasGroup shopCanvasGroup;
 
         public bool IsOpen => isOpen;
 
         private void Awake()
         {
             ResolveReferences();
+            EnsureEventSystemReady();
 
             if (closeButton != null)
             {
@@ -128,6 +132,7 @@ namespace GanhHangRong.UI
         public void OpenShop(ShopData shopData)
         {
             ResolveReferences();
+            EnsureEventSystemReady();
             EnsureMarketLayoutRuntime();
 
             if (shopData == null)
@@ -341,6 +346,7 @@ namespace GanhHangRong.UI
                 }
 
                 ShopItemUI row = Instantiate(itemUIPrefab, itemListContent);
+                row.gameObject.SetActive(true);
                 row.Initialize(this, stockItem);
                 spawnedItems.Add(row);
             }
@@ -406,6 +412,21 @@ namespace GanhHangRong.UI
         {
             if (shopPanel != null)
             {
+                if (shopCanvasGroup == null || shopCanvasGroup.gameObject != shopPanel)
+                {
+                    shopCanvasGroup = shopPanel.GetComponent<CanvasGroup>();
+                }
+
+                // Unity's destroyed-object references are not CLR null, so the null-coalescing
+                // operator can retain a missing component instead of creating a replacement.
+                if (shopCanvasGroup == null)
+                {
+                    shopCanvasGroup = shopPanel.AddComponent<CanvasGroup>();
+                }
+
+                shopCanvasGroup.alpha = visible ? 1f : 0f;
+                shopCanvasGroup.interactable = visible;
+                shopCanvasGroup.blocksRaycasts = visible;
                 shopPanel.SetActive(visible);
             }
         }
@@ -413,6 +434,12 @@ namespace GanhHangRong.UI
         public void AddToCart(ShopStockItem stockItem, int quantity, int maxQuantity = 99)
         {
             if (stockItem == null || stockItem.item == null || quantity <= 0) return;
+
+            if (stockItem.stockAmount == 0)
+            {
+                SetMessage("Mặt hàng này hiện đã hết.");
+                return;
+            }
             
             if (stockItem.item.IsBook)
             {
@@ -432,6 +459,7 @@ namespace GanhHangRong.UI
             }
             
             RefreshCartUI();
+            SetMessage($"Đã thêm {stockItem.item.DisplayName} vào giỏ hàng.");
         }
 
         public void RemoveFromCart(ShopStockItem stockItem, int quantity)
@@ -826,6 +854,36 @@ namespace GanhHangRong.UI
             {
                 playerControlLock = FindAnyObjectByType<SimplePlayerControlLock>();
             }
+        }
+
+        private static void EnsureEventSystemReady()
+        {
+            EventSystem eventSystem = EventSystem.current != null
+                ? EventSystem.current
+                : FindAnyObjectByType<EventSystem>();
+
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObject = new GameObject("EventSystem_Auto");
+                eventSystem = eventSystemObject.AddComponent<EventSystem>();
+            }
+
+#if ENABLE_INPUT_SYSTEM
+            InputSystemUIInputModule inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+            if (inputModule == null)
+            {
+                inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            }
+            if (inputModule.actionsAsset == null)
+            {
+                inputModule.AssignDefaultActions();
+            }
+#else
+            if (eventSystem.GetComponent<StandaloneInputModule>() == null)
+            {
+                eventSystem.gameObject.AddComponent<StandaloneInputModule>();
+            }
+#endif
         }
 
         private static bool WasClosePressed()
