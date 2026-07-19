@@ -39,6 +39,7 @@ namespace GanhHangRong.NPC
         private int orderedDrink = 0; // 0: Trà đá, 1: Cà phê
         private NPCInteractable interactable;
         private Player.PlayerController interactingPlayer;
+        private bool completesOrderAfterDialogue;
         private Transform visualRoot;
         private Transform visualModel;
         private Animator visualAnimator;
@@ -105,6 +106,7 @@ namespace GanhHangRong.NPC
         private void OnDisable()
         {
             EventManager.OnDialogueEnded -= HandleDialogueEnded;
+            ReleaseDialogueCamera();
         }
 
         private void OnDestroy()
@@ -115,7 +117,8 @@ namespace GanhHangRong.NPC
             }
         }
 
-        public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd)
+        public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd,
+            float patienceMultiplier = 1f, float minimumWaitSeconds = 0f)
         {
             if (profile == null || seat == null || exit == null)
             {
@@ -132,7 +135,8 @@ namespace GanhHangRong.NPC
             SnapToGround();
             this.startY = transform.position.y;
             
-            this.maxWaitTime = Random.Range(profile.minPatience, profile.maxPatience);
+            float scaledWaitTime = Random.Range(profile.minPatience, profile.maxPatience) * Mathf.Max(0.1f, patienceMultiplier);
+            this.maxWaitTime = Mathf.Max(Mathf.Max(0f, minimumWaitSeconds), scaledWaitTime);
             this.drinkDuration = Random.Range(profile.minDrinkTime, profile.maxDrinkTime);
             
             // Gọi factory tạo model
@@ -552,12 +556,13 @@ namespace GanhHangRong.NPC
 
         public void StartOrderingDialogue(Player.PlayerController player)
         {
-            interactingPlayer = player;
-            HideSpeechBubble();
+            if (player == null || profile == null || Narrative.DialogueManager.Instance.IsDialogueActive)
+            {
+                return;
+            }
 
-            // Đổi góc camera sang NPC
-            var cam = FindAnyObjectByType<Player.CinematicCamera>();
-            if (cam != null) cam.FocusOnNPC(transform, player.transform);
+            completesOrderAfterDialogue = true;
+            HideSpeechBubble();
 
             // Chọn món trong thực đơn đã chốt cho ngày hiện tại.
             orderedDrink = ChapterOrderCatalog.GetRandomDailyDrinkId();
@@ -568,7 +573,31 @@ namespace GanhHangRong.NPC
                 text = $"Cho tui một phần {drinkName} nha!";
             }
 
-            // Kích hoạt thoại
+            BeginCustomerDialogue(player, text);
+        }
+
+        public void StartWaitingDialogue(Player.PlayerController player)
+        {
+            if (player == null || profile == null || Narrative.DialogueManager.Instance.IsDialogueActive)
+            {
+                return;
+            }
+
+            completesOrderAfterDialogue = false;
+            HideSpeechBubble();
+            BeginCustomerDialogue(player, "Đang chờ nước nè, có nước chưa em?");
+        }
+
+        private void BeginCustomerDialogue(Player.PlayerController player, string text)
+        {
+            interactingPlayer = player;
+
+            var cam = FindAnyObjectByType<Player.CinematicCamera>();
+            if (cam != null)
+            {
+                cam.FocusOnNPC(transform, player.transform);
+            }
+
             Narrative.DialogueManager.Instance.StartSingleDialogue(profile.npcType.ToString(), text);
         }
 
@@ -576,11 +605,14 @@ namespace GanhHangRong.NPC
         {
             if (interactingPlayer != null)
             {
-                // Reset camera
-                var cam = FindAnyObjectByType<Player.CinematicCamera>();
-                if (cam != null) cam.ResetFocus(interactingPlayer.transform);
+                bool shouldCompleteOrder = completesOrderAfterDialogue;
+                ReleaseDialogueCamera();
 
-                interactingPlayer = null;
+                if (!shouldCompleteOrder)
+                {
+                    ShowSpeechBubble(GetDrinkName(orderedDrink));
+                    return;
+                }
 
                 // Chuyển state
                 EventManager.TriggerCustomerArrived(profile.npcType);
@@ -589,6 +621,23 @@ namespace GanhHangRong.NPC
                 EventManager.TriggerCustomerOrderPlaced(orderedDrink, drinkName);
                 ShowSpeechBubble(drinkName);
             }
+        }
+
+        private void ReleaseDialogueCamera()
+        {
+            if (interactingPlayer == null)
+            {
+                return;
+            }
+
+            var cam = FindAnyObjectByType<Player.CinematicCamera>();
+            if (cam != null)
+            {
+                cam.ResetFocus(interactingPlayer.transform);
+            }
+
+            interactingPlayer = null;
+            completesOrderAfterDialogue = false;
         }
 
         private static string GetDrinkName(int drinkId)

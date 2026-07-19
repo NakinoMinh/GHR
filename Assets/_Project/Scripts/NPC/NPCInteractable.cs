@@ -76,7 +76,7 @@ namespace GanhHangRong.NPC
             }
             else if (controller != null && controller.CurrentState == Core.NPCState.Waiting)
             {
-                EventManager.TriggerDialogueLine("Khách hàng", "Đang chờ nước nè, có nước chưa em?");
+                controller.StartWaitingDialogue(player);
             }
         }
     }

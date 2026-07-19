@@ -26,6 +26,7 @@ namespace GanhHangRong.UI
         private ShopUIController controller;
         private ShopStockItem stockItem;
         private bool visualStyleApplied;
+        private Button rowButton;
 
         public int MaxQuantity => Mathf.Max(1, maxQuantity);
 
@@ -53,6 +54,7 @@ namespace GanhHangRong.UI
             ApplyVisualStyle();
             ItemData item = stockItem.item;
             bool ownedBook = controller != null && controller.IsRecipeBookOwned(item);
+            bool canAddToCart = !ownedBook && stockItem.stockAmount != 0;
 
             if (iconImage != null)
             {
@@ -83,7 +85,9 @@ namespace GanhHangRong.UI
                     : new Color(0.70f, 0.76f, 0.72f);
             }
 
-            SetInteractable(increaseButton, !ownedBook);
+            SetInteractable(increaseButton, canAddToCart);
+            SetInteractable(buyButton, canAddToCart);
+            SetInteractable(rowButton, canAddToCart);
         }
 
         public void AddToCart()
@@ -99,17 +103,46 @@ namespace GanhHangRong.UI
 
         private void WireButtons()
         {
+            ResolveButtonReferences();
+
             if (increaseButton != null)
             {
                 increaseButton.onClick.RemoveListener(AddToCart);
                 increaseButton.onClick.AddListener(AddToCart);
             }
 
-            Button rootButton = GetComponent<Button>();
-            if (rootButton != null)
+            if (buyButton != null && buyButton != increaseButton)
             {
-                rootButton.onClick.RemoveListener(AddToCart);
-                rootButton.onClick.AddListener(AddToCart);
+                buyButton.onClick.RemoveListener(AddToCart);
+                buyButton.onClick.AddListener(AddToCart);
+            }
+
+            rowButton = GetComponent<Button>() ?? gameObject.AddComponent<Button>();
+            rowButton.targetGraphic = GetComponent<Image>();
+            rowButton.onClick.RemoveListener(AddToCart);
+            rowButton.onClick.AddListener(AddToCart);
+        }
+
+        private void ResolveButtonReferences()
+        {
+            Button[] buttons = GetComponentsInChildren<Button>(true);
+            foreach (Button button in buttons)
+            {
+                if (button == null) continue;
+
+                string buttonName = button.name.ToLowerInvariant();
+                if (increaseButton == null && (buttonName == "+" || buttonName.Contains("plus") || buttonName.Contains("add")))
+                {
+                    increaseButton = button;
+                }
+                else if (decreaseButton == null && (buttonName == "-" || buttonName.Contains("minus") || buttonName.Contains("remove")))
+                {
+                    decreaseButton = button;
+                }
+                else if (buyButton == null && (buttonName.Contains("mua") || buttonName.Contains("buy")))
+                {
+                    buyButton = button;
+                }
             }
         }
 
@@ -150,21 +183,30 @@ namespace GanhHangRong.UI
 
             if (selectedQuantityText != null) selectedQuantityText.gameObject.SetActive(false);
             if (decreaseButton != null) decreaseButton.gameObject.SetActive(false);
-            if (buyButton != null) buyButton.gameObject.SetActive(false);
             if (statusText != null) statusText.gameObject.SetActive(false);
 
-            if (increaseButton != null)
+            Button primaryButton = buyButton != null ? buyButton : increaseButton;
+            if (buyButton != null)
             {
-                LayoutElement buttonLayout = increaseButton.GetComponent<LayoutElement>() ?? increaseButton.gameObject.AddComponent<LayoutElement>();
-                buttonLayout.preferredWidth = 74f;
-                buttonLayout.minWidth = 66f;
-                Image buttonImage = increaseButton.GetComponent<Image>();
+                buyButton.gameObject.SetActive(true);
+            }
+            if (increaseButton != null && increaseButton != primaryButton)
+            {
+                increaseButton.gameObject.SetActive(false);
+            }
+
+            if (primaryButton != null)
+            {
+                LayoutElement buttonLayout = primaryButton.GetComponent<LayoutElement>() ?? primaryButton.gameObject.AddComponent<LayoutElement>();
+                buttonLayout.preferredWidth = 82f;
+                buttonLayout.minWidth = 74f;
+                Image buttonImage = primaryButton.GetComponent<Image>();
                 if (buttonImage != null)
                 {
                     buttonImage.color = new Color(0.13f, 0.55f, 0.36f, 1f);
                 }
 
-                TextMeshProUGUI buttonLabel = increaseButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                TextMeshProUGUI buttonLabel = primaryButton.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (buttonLabel != null)
                 {
                     buttonLabel.text = "THÊM";

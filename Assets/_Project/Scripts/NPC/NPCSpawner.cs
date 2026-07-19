@@ -31,6 +31,12 @@ namespace GanhHangRong.NPC
         [SerializeField] private Transform[] exitPoints;
         [SerializeField] private List<NPCProfile> availableProfiles;
 
+        [Header("Game loop pacing")]
+        [Tooltip("Thời gian tối thiểu khách sẽ chờ được phục vụ (giây).")]
+        [SerializeField, Min(0f)] private float minimumCustomerWaitSeconds = 25f;
+        [Tooltip("Hệ số nhân thời gian khách chờ được phục vụ.")]
+        [SerializeField, Min(0.1f)] private float customerPatienceMultiplier = 1.5f;
+
         [Header("Customer traffic by hour")]
         [SerializeField] private float defaultTrafficMultiplier = 1.05f;
         [SerializeField] private CustomerTrafficWindow[] trafficSchedule =
@@ -161,7 +167,7 @@ namespace GanhHangRong.NPC
             npcObj.transform.position = spawnPoint.position;
             
             var controller = npcObj.AddComponent<NPCController>();
-            controller.Initialize(profile, emptySeat, exitPoint, speed);
+            controller.Initialize(profile, emptySeat, exitPoint, speed, customerPatienceMultiplier, minimumCustomerWaitSeconds);
             currentCustomerCount++;
         }
 
