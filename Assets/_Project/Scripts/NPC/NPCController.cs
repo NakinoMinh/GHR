@@ -117,7 +117,8 @@ namespace GanhHangRong.NPC
             }
         }
 
-        public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd)
+        public void Initialize(NPCProfile profile, CustomerSeat seat, Transform exit, float walkSpd,
+            float patienceMultiplier = 1f, float minimumWaitSeconds = 0f)
         {
             if (profile == null || seat == null || exit == null)
             {
@@ -134,7 +135,8 @@ namespace GanhHangRong.NPC
             SnapToGround();
             this.startY = transform.position.y;
             
-            this.maxWaitTime = Random.Range(profile.minPatience, profile.maxPatience);
+            float scaledWaitTime = Random.Range(profile.minPatience, profile.maxPatience) * Mathf.Max(0.1f, patienceMultiplier);
+            this.maxWaitTime = Mathf.Max(Mathf.Max(0f, minimumWaitSeconds), scaledWaitTime);
             this.drinkDuration = Random.Range(profile.minDrinkTime, profile.maxDrinkTime);
             
             // Gọi factory tạo model
